@@ -1,0 +1,43 @@
+.sw-button {
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 12px 20px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: filter 0.15s ease, background-color 0.15s ease;
+}
+
+.sw-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.sw-button--full {
+  width: 100%;
+}
+
+.sw-button--primary {
+  background: var(--color-gold);
+  color: var(--color-ink);
+}
+
+.sw-button--primary:hover:not(:disabled) {
+  background: var(--color-gold-dark);
+}
+
+.sw-button--secondary {
+  background: transparent;
+  border-color: var(--color-border);
+  color: var(--color-ink);
+}
+
+.sw-button--secondary:hover:not(:disabled) {
+  background: var(--color-cream);
+}
+
+.sw-button:focus-visible {
+  outline: 2px solid var(--color-forest);
+  outline-offset: 2px;
+}
