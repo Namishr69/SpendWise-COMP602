@@ -4,3 +4,81 @@
 @import '@fontsource/plus-jakarta-sans/700.css';
 @import '@fontsource/ibm-plex-mono/500.css';
 @import '@fontsource/ibm-plex-mono/600.css';
+
+:root {
+  /* Brand palette — derived from SpendWise UI mockups */
+  --color-forest: #1f3b2c;
+  --color-forest-dark: #16291f;
+  --color-sage: #7c9473;
+  --color-gold: #e8c468;
+  --color-gold-dark: #d9b65b;
+  --color-cream: #f5f1e6;
+  --color-tan: #f3e6c8;
+  --color-white: #ffffff;
+  --color-ink: #1a1a1a;
+  --color-ink-soft: #5c6b60;
+  --color-border: #e2ddd0;
+  --color-danger: #c14b4b;
+  --color-danger-bg: #fbeaea;
+  --color-success: #3f7d54;
+
+  --font-heading: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --shadow-card: 0 4px 12px rgba(31, 59, 44, 0.08);
+
+  font: 16px/150% var(--font-body);
+  color: var(--color-ink);
+  background: var(--color-cream);
+  color-scheme: light;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  min-height: 100svh;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-heading);
+  color: var(--color-ink);
+  margin: 0;
+  font-weight: 600;
+}
+
+h1 { font-size: 40px; letter-spacing: -0.5px; }
+h2 { font-size: 28px; letter-spacing: -0.3px; }
+h3 { font-size: 20px; }
+
+p {
+  margin: 0;
+  color: var(--color-ink-soft);
+}
+
+.money {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+a {
+  color: inherit;
+}
