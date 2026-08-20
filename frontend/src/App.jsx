@@ -120,10 +120,9 @@
 // }
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-
-function LoginPage() { return <div>Login page</div> }
-function SignupPage() { return <div>Signup page</div> }
-function DashboardPage() { return <div>Dashboard page</div> }
+import LoginPage from './pages/LoginPage.jsx'
+import SignupPage from './pages/SignupPage.jsx'
+import DashboardPage from './pages/DashboardPage.jsx'
 
 function App() {
   return (
