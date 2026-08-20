@@ -1,0 +1,46 @@
+.auth-layout {
+  display: flex;
+  min-height: 100svh;
+}
+
+.auth-layout__brand {
+  flex: 1;
+  background: var(--color-forest);
+  color: var(--color-white);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-md);
+  padding: var(--space-2xl);
+}
+
+.auth-layout__brand h1 {
+  color: var(--color-white);
+  font-size: 36px;
+}
+
+.auth-layout__brand p {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.auth-layout__logo {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: var(--space-lg);
+}
+
+.auth-layout__form {
+  flex: 1;
+  background: var(--color-sage);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl);
+}
+
+@media (max-width: 768px) {
+  .auth-layout {
+    flex-direction: column;
+  }
+}
