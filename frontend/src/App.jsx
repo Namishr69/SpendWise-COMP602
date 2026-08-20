@@ -119,9 +119,23 @@
 //   )
 // }
 
-// export default App
-import Button from './components/ui/Button.jsx'
-import Input from './components/ui/Input.jsx'
-import Card from './components/ui/Card.jsx' 
-function App() { return ( <div style={{ padding: 40, display: 'flex', gap: 16 }}> <Card> <Input id="email" label="Email" placeholder="john.doe@gmail.com" /> <Input id="pass" label="Password" type="password" error="Invalid password" /> <Button variant="primary" fullWidth>Login</Button> </Card> <Card tone="forest"> <p>Spent this month</p> <h2 className="money">$342.80</h2> <Button variant="secondary">Secondary</Button> </Card> </div> ) } export default App
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 
+function LoginPage() { return <div>Login page</div> }
+function SignupPage() { return <div>Signup page</div> }
+function DashboardPage() { return <div>Dashboard page</div> }
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+      </Routes>
+    </BrowserRouter>
+  )
+}
+
+export default App
