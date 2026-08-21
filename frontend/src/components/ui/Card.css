@@ -1,0 +1,20 @@
+.sw-card {
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.sw-card--cream {
+  background: var(--color-white);
+  color: var(--color-ink);
+}
+
+.sw-card--forest {
+  background: var(--color-forest);
+  color: var(--color-white);
+}
+
+.sw-card--forest .sw-field__label,
+.sw-card--forest p {
+  color: rgba(255, 255, 255, 0.75);
+}
