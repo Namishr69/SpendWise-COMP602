@@ -2,6 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
 import exampleRoutes from './routes/exampleRoutes.js';
+app.use('/api', userRoutes);
+import userRoutes from './routes/userRoutes.js';    
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
