@@ -1,28 +1,29 @@
 import './AppShell.css'
+import { NavLink } from 'react-router-dom'
 
 const NAV_ITEMS = [
-  { label: 'Dashboard', icon: '🏠' },
-  { label: 'Subscriptions', icon: '🗂️' },
-  { label: 'Insights', icon: '📊' },
-  { label: 'Alerts', icon: '🔔' },
-  { label: 'Settings', icon: '⚙️' },
+  { label: 'Dashboard', icon: '🏠', path: '/dashboard' },
+  { label: 'Subscriptions', icon: '🗂️', path: '/subscriptions' },
+  { label: 'Insights', icon: '📊', path: '/insights' },
+  { label: 'Alerts', icon: '🔔', path: '/alerts' },
+  { label: 'Settings', icon: '⚙️', path: '/settings' },
 ]
 
-function AppShell({ activeNav = 'Dashboard', children }) {
+function AppShell({ activeNav = '', children }) {
   return (
     <div className="app-shell">
       <aside className="app-shell__sidebar">
         <div className="app-shell__logo">🌱 SpendWise</div>
         <nav className="app-shell__nav">
           {NAV_ITEMS.map((item) => (
-            <a
+            <NavLink
               key={item.label}
-              className={`app-shell__nav-item ${item.label === activeNav ? 'app-shell__nav-item--active' : ''}`}
-              href="#"
+              className={({ isActive }) => `app-shell__nav-item ${isActive ? 'app-shell__nav-item--active' : ''}`}
+              to={item.path}
             >
               <span>{item.icon}</span>
               {item.label}
-            </a>
+            </NavLink>
           ))}
         </nav>
       </aside>
