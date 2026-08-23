@@ -124,6 +124,7 @@ import LoginPage from './pages/LoginPage.jsx'
 import SignupPage from './pages/SignupPage.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
 import SubscriptionsPage from './pages/SubscriptionsPage'
+import SubscriptionDetailPage from './pages/SubscriptionDetailPage'
 
 function App() {
   return (
@@ -134,6 +135,10 @@ function App() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/subscriptions" element={<SubscriptionsPage />} />
+        <Route
+          path="/subscriptions/:subscriptionId"
+          element={<SubscriptionDetailPage />}
+        />
       </Routes>
     </BrowserRouter>
   )
