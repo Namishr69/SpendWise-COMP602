@@ -125,6 +125,7 @@ import SignupPage from './pages/SignupPage.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
 import SubscriptionsPage from './pages/SubscriptionsPage'
 import SubscriptionDetailPage from './pages/SubscriptionDetailPage'
+import EditSubscriptionPage from './pages/EditSubscriptionPage'
 
 function App() {
   return (
@@ -138,6 +139,10 @@ function App() {
         <Route
           path="/subscriptions/:subscriptionId"
           element={<SubscriptionDetailPage />}
+        />
+        <Route
+          path="/subscriptions/:subscriptionId/edit"
+          element={<EditSubscriptionPage />}
         />
       </Routes>
     </BrowserRouter>
