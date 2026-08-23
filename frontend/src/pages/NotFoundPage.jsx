@@ -1,5 +1,6 @@
 import AuthLayout from '../layouts/AuthLayout.jsx'
 import Card from '../components/ui/Card.jsx'
+import { Link } from 'react-router-dom'
 
 function NotFoundPage() {
   return (
