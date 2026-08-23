@@ -1,11 +1,12 @@
+import { Link } from 'react-router-dom'
 import './AppShell.css'
 
 const NAV_ITEMS = [
-  { label: 'Dashboard', icon: '🏠' },
-  { label: 'Subscriptions', icon: '🗂️' },
-  { label: 'Insights', icon: '📊' },
-  { label: 'Alerts', icon: '🔔' },
-  { label: 'Settings', icon: '⚙️' },
+  { label: 'Dashboard', icon: '🏠', to: '/dashboard' },
+  { label: 'Subscriptions', icon: '🗂️', to: '/subscriptions' },
+  { label: 'Insights', icon: '📊', to: '/insights' },
+  { label: 'Alerts', icon: '🔔', to: '/alerts' },
+  { label: 'Settings', icon: '⚙️', to: '/settings' },
 ]
 
 function AppShell({ activeNav = 'Dashboard', children }) {
@@ -15,14 +16,14 @@ function AppShell({ activeNav = 'Dashboard', children }) {
         <div className="app-shell__logo">🌱 SpendWise</div>
         <nav className="app-shell__nav">
           {NAV_ITEMS.map((item) => (
-            <a
+            <Link
               key={item.label}
+              to={item.to}
               className={`app-shell__nav-item ${item.label === activeNav ? 'app-shell__nav-item--active' : ''}`}
-              href="#"
             >
               <span>{item.icon}</span>
               {item.label}
-            </a>
+            </Link>
           ))}
         </nav>
       </aside>
