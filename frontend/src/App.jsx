@@ -120,19 +120,30 @@
 // }
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import PublicRoute from './context/PublicRoute.jsx'
+import PrivateRoute from './context/PrivateRoute.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import SignupPage from './pages/SignupPage.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
+import NotFoundPage from './pages/NotFoundPage.jsx'
+import SubscriptionPage from './pages/SubscriptionPage.jsx'
+import SettingsPage from './pages/SettingsPage.jsx'
+import AuthProvider from './context/AuthProvider.jsx'
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+          <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
+          <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
+          <Route path="/subscriptions" element={<PrivateRoute><SubscriptionPage /></PrivateRoute>} />
+          <Route path="/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   )
 }
