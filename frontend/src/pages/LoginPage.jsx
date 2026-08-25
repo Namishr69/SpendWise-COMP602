@@ -58,10 +58,13 @@ function LoginPage() {
               {showPassword ? 'Hide' : 'Show'}
             </button>
           </div>
-          <label className="auth-form__checkbox-row">
-            <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} disabled={submitting} />
-            Remember me
-          </label>
+          <div className="auth-form__checkbox-row">
+            <label>
+              <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} disabled={submitting} />
+              Remember me
+            </label>
+            <Link to="/forgot-password">Forgot Password?</Link>
+          </div>
           {error && <p role="alert" className="auth-form__error">{error}</p>}
           <Button type="submit" fullWidth disabled={submitting}>
             {submitting ? 'Logging in...' : 'Login'}
