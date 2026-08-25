@@ -1,9 +1,10 @@
 import { auth } from '../firebase.js'
 
-// VITE_API_BASE_URL should be just the server origin (e.g. http://localhost:3000),
-// WITHOUT a trailing slash or /api. We append the /api prefix ourselves below,
-// so a teammate can't accidentally break every request by mis-typing it in .env.
-const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').replace(/\/+$/, '')
+// VITE_API_BASE_URL can be set either way — with or without a trailing /api —
+// since teammates have configured it differently. We normalize it here so
+// both work, and always end up with exactly one /api segment.
+const RAW_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').replace(/\/+$/, '')
+const API_ORIGIN = RAW_BASE.replace(/\/api$/, '')
 const API_BASE = `${API_ORIGIN}/api`
 
 /**
