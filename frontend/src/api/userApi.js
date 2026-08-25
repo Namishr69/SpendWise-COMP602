@@ -1,6 +1,10 @@
 import { auth } from '../firebase.js'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
+// VITE_API_BASE_URL should be just the server origin (e.g. http://localhost:3000),
+// WITHOUT a trailing slash or /api. We append the /api prefix ourselves below,
+// so a teammate can't accidentally break every request by mis-typing it in .env.
+const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').replace(/\/+$/, '')
+const API_BASE = `${API_ORIGIN}/api`
 
 /**
  * Calls the backend with the current user's Firebase ID token attached.
