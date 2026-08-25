@@ -122,9 +122,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import AuthProvider from './context/AuthProvider.jsx'
 import PrivateRoute from './context/PrivateRoute.jsx'
+import PublicRoute from './context/PublicRoute.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import SignupPage from './pages/SignupPage.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
+import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx'
 
 function App() {
   return (
@@ -142,6 +144,11 @@ function App() {
               </PrivateRoute>
             }
           />
+          <Route path="/forgot-password" element={
+            <PublicRoute>
+              <ForgotPasswordPage />
+            </PublicRoute>
+          } />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
