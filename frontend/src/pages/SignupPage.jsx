@@ -92,7 +92,7 @@ function SignupPage() {
             onChange={(e) => setConfirmPassword(e.target.value)}
             disabled={submitting}
           />
-          <label className="auth-form__checkbox-row">
+          <label className="auth-form__terms-row">
             <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} disabled={submitting} />
             I agree to the Terms and Privacy Policy
           </label>
