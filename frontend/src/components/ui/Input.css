@@ -30,6 +30,11 @@
 .sw-field__input--error {
   border-color: var(--color-danger);
 }
+.sw-field__input:disabled {
+  background: var(--color-cream);
+  color: var(--color-ink-soft);
+  cursor: not-allowed;
+}
 
 .sw-field__error {
   font-size: 13px;
