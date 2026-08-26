@@ -1,20 +1,21 @@
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
 import './DashboardPage.css'
+import { formatCurrency } from '../utils/formatCurrency.js'
 
 // Mock data — replace with real Firestore data once the backend endpoints exist
 const STATS = [
-  { label: 'Spent this month', value: '$342.80' },
+  { label: 'Spent this month', amount: 342.80, currency: 'NZD' },
   { label: 'Active subs', value: '9' },
-  { label: 'Due this week', value: '$74.98' },
+  { label: 'Due this week', amount: 74.98, currency: 'NZD' },
   { label: 'Alerts', value: '3' },
 ]
 
 const UPCOMING_BILLS = [
-  { name: 'Netflix', due: 'Due Aug', amount: '$15.99' },
-  { name: 'Spotify', due: 'Due Aug', amount: '$9.99' },
-  { name: 'iCloud', due: 'Due Aug', amount: '$2.99' },
-  { name: 'Gym membership', due: 'Due Aug', amount: '$49.00' },
+  { name: 'Netflix', due: 'Due Aug', amount: 25.99, currency: 'NZD' },
+  { name: 'Spotify', due: 'Due Aug', amount: 16.99, currency: 'NZD' },
+  { name: 'iCloud', due: 'Due Aug', amount: 4.99, currency: 'NZD' },
+  { name: 'Gym membership', due: 'Due Aug', amount: 49.00, currency: 'NZD' },
 ]
 
 const ALERTS = ['2 trials ending soon', '1 unused subscription']
@@ -28,7 +29,11 @@ function DashboardPage() {
         {STATS.map((stat) => (
           <Card key={stat.label} tone="forest" className="dashboard-stat">
             <p>{stat.label}</p>
-            <h2 className="money">{stat.value}</h2>
+            <h2 className="money">
+              {stat.amount !== undefined
+                ? formatCurrency(stat.amount, stat.currency)
+                : stat.value}
+            </h2>
           </Card>
         ))}
       </div>
@@ -43,7 +48,9 @@ function DashboardPage() {
                   <p className="dashboard-list__name">{bill.name}</p>
                   <p className="dashboard-list__due">{bill.due}</p>
                 </div>
-                <span className="money">{bill.amount}</span>
+                <span className="money">
+                  {formatCurrency(bill.amount, bill.currency)}
+                </span>
               </li>
             ))}
           </ul>
