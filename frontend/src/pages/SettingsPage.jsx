@@ -2,17 +2,19 @@ import { useContext, useState } from 'react'
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
 import { AuthContext } from '../context/AuthProvider.jsx'
+import { CurrencyContext } from '../context/CurrencyProvider.jsx'
 import { updatePreferredCurrency } from '../api/currencyApi.js'
-import {
-  DEFAULT_CURRENCY,
-  SUPPORTED_CURRENCIES,
-} from '../constants/currencies.js'
+import { SUPPORTED_CURRENCIES } from '../constants/currencies.js'
 import './SettingsPage.css'
 
 function SettingsPage() {
   const { currentUser } = useContext(AuthContext)
 
-  const [preferredCurrency, setPreferredCurrency] = useState(DEFAULT_CURRENCY)
+  const {
+    preferredCurrency,
+    setPreferredCurrency,
+  } = useContext(CurrencyContext)
+
   const [isPersonaliseOpen, setIsPersonaliseOpen] = useState(false)
   const [message, setMessage] = useState('')
 

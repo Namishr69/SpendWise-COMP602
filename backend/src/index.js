@@ -3,6 +3,7 @@ import cors from 'cors';
 import 'dotenv/config';
 import exampleRoutes from './routes/exampleRoutes.js';
 import currencyRoutes from './routes/currencyRoutes.js';
+import exchangeRateRoutes from './routes/exchangeRateRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,6 +17,7 @@ app.get('/', (req, res) => {
 
 app.use('/api', exampleRoutes);
 app.use('/api', currencyRoutes);
+app.use('/api', exchangeRateRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
