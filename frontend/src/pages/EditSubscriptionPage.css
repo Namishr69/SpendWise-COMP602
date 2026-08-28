@@ -19,3 +19,8 @@
   align-items: center;
   gap: 1rem;
 }
+
+.edit-form-error {
+  color: #b91c1c;
+  margin: 0 0 1rem;
+}

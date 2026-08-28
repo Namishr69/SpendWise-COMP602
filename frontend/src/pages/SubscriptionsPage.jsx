@@ -5,7 +5,23 @@ import { useSubscriptions } from '../context/subscriptionsContext'
 import './SubscriptionsPage.css'
 
 function SubscriptionsPage() {
-  const { subscriptions } = useSubscriptions()
+  const { subscriptions, loading, error } = useSubscriptions()
+
+  if (loading) {
+    return (
+      <AppShell activeNav="Subscriptions">
+        <p>Loading subscriptions…</p>
+      </AppShell>
+    )
+  }
+
+  if (error) {
+    return (
+      <AppShell activeNav="Subscriptions">
+        <p>Could not load subscriptions: {error.message}</p>
+      </AppShell>
+    )
+  }
 
   return (
     <AppShell activeNav="Subscriptions">
@@ -17,28 +33,32 @@ function SubscriptionsPage() {
         </div>
       </header>
 
-      <section className="subscriptions-grid">
-        {subscriptions.map((subscription) => (
-          <Card key={subscription.id} className="subscription-card">
-            <div>
-              <h2>{subscription.name}</h2>
-              <p>
-                ${subscription.amount.toFixed(2)} /{' '}
-                {subscription.billingCycle.toLowerCase()}
-              </p>
-              <p>Next payment: {subscription.nextPaymentDate}</p>
-              <p>Status: {subscription.status}</p>
-            </div>
+      {subscriptions.length === 0 ? (
+        <p>No subscriptions yet.</p>
+      ) : (
+        <section className="subscriptions-grid">
+          {subscriptions.map((subscription) => (
+            <Card key={subscription.id} className="subscription-card">
+              <div>
+                <h2>{subscription.name}</h2>
+                <p>
+                  ${subscription.amount.toFixed(2)} /{' '}
+                  {subscription.billingCycle.toLowerCase()}
+                </p>
+                <p>Next payment: {subscription.nextPaymentDate}</p>
+                <p>Status: {subscription.status}</p>
+              </div>
 
-            <Link
-              className="subscription-link"
-              to={`/subscriptions/${subscription.id}`}
-            >
-              View details
-            </Link>
-          </Card>
-        ))}
-      </section>
+              <Link
+                className="subscription-link"
+                to={`/subscriptions/${subscription.id}`}
+              >
+                View details
+              </Link>
+            </Card>
+          ))}
+        </section>
+      )}
     </AppShell>
   )
 }

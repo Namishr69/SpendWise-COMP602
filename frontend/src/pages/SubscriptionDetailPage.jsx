@@ -6,8 +6,16 @@ import './SubscriptionDetailPage.css'
 
 function SubscriptionDetailPage() {
   const { subscriptionId } = useParams()
-  const { getSubscription } = useSubscriptions()
+  const { loading, getSubscription } = useSubscriptions()
   const subscription = getSubscription(subscriptionId)
+
+  if (loading) {
+    return (
+      <AppShell activeNav="Subscriptions">
+        <p>Loading subscription…</p>
+      </AppShell>
+    )
+  }
 
   if (!subscription) {
     return (
@@ -18,7 +26,8 @@ function SubscriptionDetailPage() {
     )
   }
 
-  const totalSpent = subscription.paymentHistory.reduce(
+  const paymentHistory = subscription.paymentHistory || []
+  const totalSpent = paymentHistory.reduce(
     (total, payment) => total + payment.amount,
     0,
   )
@@ -64,7 +73,7 @@ function SubscriptionDetailPage() {
       <Card className="payment-history">
         <h2>Payment history</h2>
 
-        {subscription.paymentHistory.length === 0 ? (
+        {paymentHistory.length === 0 ? (
           <p>No payment history is available.</p>
         ) : (
           <table>
@@ -76,7 +85,7 @@ function SubscriptionDetailPage() {
             </thead>
 
             <tbody>
-              {subscription.paymentHistory.map((payment) => (
+              {paymentHistory.map((payment) => (
                 <tr key={payment.id}>
                   <td>{payment.date}</td>
                   <td>${payment.amount.toFixed(2)}</td>

@@ -10,18 +10,35 @@ import './EditSubscriptionPage.css'
 function EditSubscriptionPage() {
   const { subscriptionId } = useParams()
   const navigate = useNavigate()
-  const { getSubscription, updateSubscription } = useSubscriptions()
+  const { loading, getSubscription, updateSubscription } = useSubscriptions()
   const subscription = getSubscription(subscriptionId)
 
-  const [name, setName] = useState(subscription?.name ?? '')
-  const [amount, setAmount] = useState(
-    subscription ? String(subscription.amount) : '',
-  )
-  const [errors, setErrors] = useState({})
+  if (loading) {
+    return (
+      <AppShell activeNav="Subscriptions">
+        <p>Loading subscription…</p>
+      </AppShell>
+    )
+  }
 
   if (!subscription) {
     return <Navigate to="/subscriptions" replace />
   }
+
+  return (
+    <EditSubscriptionForm
+      key={subscription.id}
+      subscription={subscription}
+      updateSubscription={updateSubscription}
+      onSaved={() => navigate(`/subscriptions/${subscription.id}`)}
+    />
+  )
+}
+
+function EditSubscriptionForm({ subscription, updateSubscription, onSaved }) {
+  const [name, setName] = useState(subscription.name)
+  const [amount, setAmount] = useState(String(subscription.amount))
+  const [errors, setErrors] = useState({})
 
   function validateForm() {
     const nextErrors = {}
@@ -40,19 +57,22 @@ function EditSubscriptionPage() {
     return Object.keys(nextErrors).length === 0
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
 
     if (!validateForm()) {
       return
     }
 
-    updateSubscription(subscription.id, {
-      name: name.trim(),
-      amount: Number(amount),
-    })
-
-    navigate(`/subscriptions/${subscription.id}`)
+    try {
+      await updateSubscription(subscription.id, {
+        name: name.trim(),
+        amount: Number(amount),
+      })
+      onSaved()
+    } catch (err) {
+      setErrors({ form: err.message })
+    }
   }
 
   return (
@@ -65,6 +85,8 @@ function EditSubscriptionPage() {
         <Card className="edit-form-card">
           <h1>Edit subscription</h1>
           <p>Update the subscription name or payment amount.</p>
+
+          {errors.form && <p className="edit-form-error">{errors.form}</p>}
 
           <form onSubmit={handleSubmit} noValidate>
             <Input
