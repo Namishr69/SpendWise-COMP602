@@ -120,31 +120,64 @@
 // }
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import AuthProvider from './context/AuthProvider.jsx'
+import PrivateRoute from './context/PrivateRoute.jsx'
+import PublicRoute from './context/PublicRoute.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import SignupPage from './pages/SignupPage.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
 import SubscriptionsPage from './pages/SubscriptionsPage'
 import SubscriptionDetailPage from './pages/SubscriptionDetailPage'
 import EditSubscriptionPage from './pages/EditSubscriptionPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx'
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/subscriptions" element={<SubscriptionsPage />} />
-        <Route
-          path="/subscriptions/:subscriptionId"
-          element={<SubscriptionDetailPage />}
-        />
-        <Route
-          path="/subscriptions/:subscriptionId/edit"
-          element={<EditSubscriptionPage />}
-        />
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <DashboardPage />
+              </PrivateRoute>
+            }
+          />
+          <Route path="/forgot-password" element={
+            <PublicRoute>
+              <ForgotPasswordPage />
+            </PublicRoute>
+          } />
+          <Route
+            path="/subscriptions"
+            element={
+              <PrivateRoute>
+                <SubscriptionsPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/subscriptions/:subscriptionId"
+            element={
+              <PrivateRoute>
+                <SubscriptionDetailPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/subscriptions/:subscriptionId/edit"
+            element={
+              <PrivateRoute>
+                <EditSubscriptionPage />
+              </PrivateRoute>
+            }
+          />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   )
 }
