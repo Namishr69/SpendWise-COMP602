@@ -88,7 +88,7 @@ function SubscriptionDetailPage() {
 
         <Card>
           <h2>Next payment</h2>
-          <p>{subscription.nextPaymentDate}</p>
+          <p>{subscription.nextPaymentDate || 'Not set'}</p>
         </Card>
 
         <Card>
