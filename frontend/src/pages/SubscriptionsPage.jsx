@@ -31,6 +31,10 @@ function SubscriptionsPage() {
           <h1>Subscriptions</h1>
           <p>View and manage your recurring payments.</p>
         </div>
+
+        <Link className="subscriptions-add" to="/subscriptions/new">
+          + Add subscription
+        </Link>
       </header>
 
       {subscriptions.length === 0 ? (

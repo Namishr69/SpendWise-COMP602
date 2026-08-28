@@ -127,6 +127,10 @@ import LoginPage from './pages/LoginPage.jsx'
 import SignupPage from './pages/SignupPage.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx'
+import SubscriptionsPage from './pages/SubscriptionsPage.jsx'
+import SubscriptionDetailPage from './pages/SubscriptionDetailPage.jsx'
+import EditSubscriptionPage from './pages/EditSubscriptionPage.jsx'
+import AddSubscriptionPage from './pages/AddSubscriptionPage.jsx'
 
 function App() {
   return (
@@ -149,6 +153,38 @@ function App() {
               <ForgotPasswordPage />
             </PublicRoute>
           } />
+          <Route
+            path="/subscriptions"
+            element={
+              <PrivateRoute>
+                <SubscriptionsPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/subscriptions/new"
+            element={
+              <PrivateRoute>
+                <AddSubscriptionPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/subscriptions/:subscriptionId"
+            element={
+              <PrivateRoute>
+                <SubscriptionDetailPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/subscriptions/:subscriptionId/edit"
+            element={
+              <PrivateRoute>
+                <EditSubscriptionPage />
+              </PrivateRoute>
+            }
+          />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

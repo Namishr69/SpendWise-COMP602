@@ -59,9 +59,22 @@ export function SubscriptionsProvider({ children }) {
     return updated
   }
 
+  async function createSubscription(data) {
+    const created = await subscriptionApi.createSubscription(data)
+    setSubscriptions((currentSubscriptions) => [created, ...currentSubscriptions])
+    return created
+  }
+
   return (
     <SubscriptionsContext.Provider
-      value={{ subscriptions, loading, error, getSubscription, updateSubscription }}
+      value={{
+        subscriptions,
+        loading,
+        error,
+        getSubscription,
+        updateSubscription,
+        createSubscription,
+      }}
     >
       {children}
     </SubscriptionsContext.Provider>
