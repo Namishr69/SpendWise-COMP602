@@ -3,6 +3,7 @@ import cors from 'cors';
 import 'dotenv/config';
 import exampleRoutes from './routes/exampleRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import subscriptionRoutes from './routes/subscriptionRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,6 +17,7 @@ app.get('/', (req, res) => {
 
 app.use('/api', exampleRoutes);
 app.use('/api', userRoutes);
+app.use('/api', subscriptionRoutes);
 
 // 404 for any unmatched route
 app.use((req, res) => {
