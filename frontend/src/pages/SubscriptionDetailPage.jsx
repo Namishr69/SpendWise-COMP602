@@ -1,13 +1,41 @@
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import AppShell from '../layouts/AppShell'
 import Card from '../components/ui/Card'
 import { useSubscriptions } from '../context/subscriptionsContext'
+import { getPayments } from '../api/subscriptionApi'
 import './SubscriptionDetailPage.css'
 
 function SubscriptionDetailPage() {
   const { subscriptionId } = useParams()
   const { loading, getSubscription } = useSubscriptions()
   const subscription = getSubscription(subscriptionId)
+
+  const [payments, setPayments] = useState([])
+  const [paymentsLoading, setPaymentsLoading] = useState(true)
+
+  useEffect(() => {
+    if (!subscription) return
+
+    let cancelled = false
+
+    async function loadPayments() {
+      try {
+        const data = await getPayments(subscription.id)
+        if (!cancelled) setPayments(data)
+      } catch {
+        if (!cancelled) setPayments([])
+      } finally {
+        if (!cancelled) setPaymentsLoading(false)
+      }
+    }
+
+    loadPayments()
+
+    return () => {
+      cancelled = true
+    }
+  }, [subscription])
 
   if (loading) {
     return (
@@ -26,8 +54,7 @@ function SubscriptionDetailPage() {
     )
   }
 
-  const paymentHistory = subscription.paymentHistory || []
-  const totalSpent = paymentHistory.reduce(
+  const totalSpent = payments.reduce(
     (total, payment) => total + payment.amount,
     0,
   )
@@ -73,7 +100,9 @@ function SubscriptionDetailPage() {
       <Card className="payment-history">
         <h2>Payment history</h2>
 
-        {paymentHistory.length === 0 ? (
+        {paymentsLoading ? (
+          <p>Loading payment history…</p>
+        ) : payments.length === 0 ? (
           <p>No payment history is available.</p>
         ) : (
           <table>
@@ -85,7 +114,7 @@ function SubscriptionDetailPage() {
             </thead>
 
             <tbody>
-              {paymentHistory.map((payment) => (
+              {payments.map((payment) => (
                 <tr key={payment.id}>
                   <td>{payment.date}</td>
                   <td>${payment.amount.toFixed(2)}</td>

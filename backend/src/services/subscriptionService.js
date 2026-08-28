@@ -76,6 +76,36 @@ const subscriptionService = {
 
         return await subscriptionRepo.update(userId, subscriptionId, update);
     },
+
+    async listPayments(userId, subscriptionId) {
+        const subscription = await subscriptionRepo.getById(userId, subscriptionId);
+        if (!subscription) {
+            throw new Error('Subscription not found');
+        }
+        return await subscriptionRepo.listPayments(userId, subscriptionId);
+    },
+
+    async createPayment(userId, subscriptionId, data) {
+        const subscription = await subscriptionRepo.getById(userId, subscriptionId);
+        if (!subscription) {
+            throw new Error('Subscription not found');
+        }
+
+        const date = (data.date || '').trim();
+        const amount = Number(data.amount);
+
+        if (!date) {
+            throw new Error('Date is required');
+        }
+        if (!Number.isFinite(amount) || amount <= 0) {
+            throw new Error('Amount must be greater than zero');
+        }
+
+        return await subscriptionRepo.createPayment(userId, subscriptionId, {
+            date,
+            amount,
+        });
+    },
 };
 
 export default subscriptionService;

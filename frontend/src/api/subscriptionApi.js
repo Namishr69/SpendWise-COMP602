@@ -47,3 +47,14 @@ export function updateSubscription(id, changes) {
     body: JSON.stringify(changes),
   })
 }
+
+export function getPayments(subscriptionId) {
+  return apiRequest(`/subscriptions/${subscriptionId}/payments`)
+}
+
+export function createPayment(subscriptionId, payment) {
+  return apiRequest(`/subscriptions/${subscriptionId}/payments`, {
+    method: 'POST',
+    body: JSON.stringify(payment),
+  })
+}

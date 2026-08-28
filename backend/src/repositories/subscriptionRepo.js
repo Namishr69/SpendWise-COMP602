@@ -23,6 +23,23 @@ const subscriptionRepo = {
         const updated = await docRef.get();
         return { id: updated.id, ...updated.data() };
     },
+
+    async listPayments(userId, subscriptionId) {
+        const snapshot = await db.collection('users').doc(userId)
+            .collection('subscriptions').doc(subscriptionId)
+            .collection('payments')
+            .orderBy('date', 'desc')
+            .get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    },
+
+    async createPayment(userId, subscriptionId, data) {
+        const docRef = await db.collection('users').doc(userId)
+            .collection('subscriptions').doc(subscriptionId)
+            .collection('payments')
+            .add(data);
+        return { id: docRef.id, ...data };
+    },
 };
 
 export default subscriptionRepo;

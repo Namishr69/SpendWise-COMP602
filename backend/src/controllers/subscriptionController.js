@@ -41,6 +41,28 @@ const subscriptionController = {
             res.status(status).json({ error: error.message });
         }
     },
+
+    // GET /api/subscriptions/:id/payments — list a subscription's payments
+    async listPayments(req, res) {
+        try {
+            const payments = await subscriptionService.listPayments(req.userId, req.params.id);
+            res.json(payments);
+        } catch (error) {
+            const status = error.message === 'Subscription not found' ? 404 : 500;
+            res.status(status).json({ error: error.message });
+        }
+    },
+
+    // POST /api/subscriptions/:id/payments — add a payment to a subscription
+    async createPayment(req, res) {
+        try {
+            const payment = await subscriptionService.createPayment(req.userId, req.params.id, req.body);
+            res.status(201).json(payment);
+        } catch (error) {
+            const status = error.message === 'Subscription not found' ? 404 : 400;
+            res.status(status).json({ error: error.message });
+        }
+    },
 };
 
 export default subscriptionController;
