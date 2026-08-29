@@ -4,6 +4,7 @@ import 'dotenv/config';
 import exampleRoutes from './routes/exampleRoutes.js';
 import currencyRoutes from './routes/currencyRoutes.js';
 import exchangeRateRoutes from './routes/exchangeRateRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,6 +19,19 @@ app.get('/', (req, res) => {
 app.use('/api', exampleRoutes);
 app.use('/api', currencyRoutes);
 app.use('/api', exchangeRateRoutes);
+app.use('/api', userRoutes);
+
+// 404 for any unmatched route
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
+
+// Global error handler — catches anything thrown outside a controller's
+// own try/catch so the client always gets JSON instead of an HTML error page.
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Something went wrong' });
+});
 
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
