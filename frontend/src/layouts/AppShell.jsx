@@ -1,4 +1,6 @@
-import { NavLink } from 'react-router-dom'
+import { useContext } from 'react'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { AuthContext } from '../context/AuthProvider.jsx'
 import './AppShell.css'
 
 const NAV_ITEMS = [
@@ -10,6 +12,14 @@ const NAV_ITEMS = [
 ]
 
 function AppShell({ activeNav = '', children }) {
+  const { signOut } = useContext(AuthContext)
+  const navigate = useNavigate()
+
+  async function handleLogout() {
+    await signOut()
+    navigate('/login', { replace: true })
+  }
+
   return (
     <div className="app-shell">
       <aside className="app-shell__sidebar">
@@ -42,7 +52,7 @@ function AppShell({ activeNav = '', children }) {
 
           <div className="app-shell__topbar-actions">
             <input className="app-shell__search" placeholder="Search" />
-            <div className="app-shell__avatar" />
+            <button className="app-shell__avatar" onClick={handleLogout} aria-label="Logout" />
           </div>
         </header>
 

@@ -6,9 +6,10 @@ import { CurrencyContext } from '../context/CurrencyProvider.jsx'
 import { updatePreferredCurrency } from '../api/currencyApi.js'
 import { SUPPORTED_CURRENCIES } from '../constants/currencies.js'
 import './SettingsPage.css'
+import { useNavigate } from 'react-router-dom'
 
 function SettingsPage() {
-  const { currentUser } = useContext(AuthContext)
+  const { currentUser, signOut } = useContext(AuthContext)
 
   const {
     preferredCurrency,
@@ -17,6 +18,13 @@ function SettingsPage() {
 
   const [isPersonaliseOpen, setIsPersonaliseOpen] = useState(false)
   const [message, setMessage] = useState('')
+
+  const navigate = useNavigate()
+
+  async function handleLogout() {
+  await signOut()
+  navigate('/login', { replace: true })
+}
 
   return (
     <AppShell activeNav="Settings">
@@ -88,6 +96,9 @@ function SettingsPage() {
           </div>
         )}
       </Card>
+      <button type="button" onClick={handleLogout} style={{ marginTop: 16 }}>
+        Logout
+      </button>
     </AppShell>
   )
 }

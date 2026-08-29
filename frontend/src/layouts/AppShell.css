@@ -98,8 +98,10 @@
   height: 36px;
   border-radius: 50%;
   background: var(--color-forest);
+  border: none;
+  cursor: pointer;
+  padding: 0;
 }
-
 .app-shell__content {
   padding: 0 var(--space-xl) var(--space-xl);
   flex: 1;
