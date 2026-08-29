@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
 import exampleRoutes from './routes/exampleRoutes.js';
+import currencyRoutes from './routes/currencyRoutes.js';
+import exchangeRateRoutes from './routes/exchangeRateRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 
 const app = express();
@@ -15,6 +17,8 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api', exampleRoutes);
+app.use('/api', currencyRoutes);
+app.use('/api', exchangeRateRoutes);
 app.use('/api', userRoutes);
 
 // 404 for any unmatched route
@@ -23,8 +27,7 @@ app.use((req, res) => {
 });
 
 // Global error handler — catches anything thrown outside a controller's
-// own try/catch (e.g. Firestore/network failures) so the client always
-// gets clean JSON instead of an HTML stack trace.
+// own try/catch so the client always gets JSON instead of an HTML error page.
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Something went wrong' });
