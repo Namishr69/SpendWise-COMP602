@@ -7,6 +7,11 @@
   margin-top: 1.5rem;
 }
 
+.edit-form-card h1 {
+  margin: 0 0 0.5rem;
+  line-height: 1.2;
+}
+
 .edit-form-card form {
   display: grid;
   gap: 1.25rem;
