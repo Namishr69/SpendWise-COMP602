@@ -1,6 +1,6 @@
 import { auth } from '../firebase.js'
 
-const RAW_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').replace(/\/+$/, '')
+const RAW_BASE = (import.meta.env.VITE_API_BASE_URL || 'https://spendwise-comp602.onrender.com').replace(/\/+$/, '')
 const API_ORIGIN = RAW_BASE.replace(/\/api$/, '')
 const API_BASE = `${API_ORIGIN}/api`
 
