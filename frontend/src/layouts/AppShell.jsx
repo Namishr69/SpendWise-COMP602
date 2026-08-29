@@ -41,15 +41,7 @@ function AppShell({ activeNav = '', children }) {
           </div>
 
           <div className="app-shell__topbar-actions">
-            <input
-              className="app-shell__search"
-              placeholder="Search"
-            />
-
-            <button className="app-shell__add">
-              + Add
-            </button>
-
+            <input className="app-shell__search" placeholder="Search" />
             <div className="app-shell__avatar" />
           </div>
         </header>

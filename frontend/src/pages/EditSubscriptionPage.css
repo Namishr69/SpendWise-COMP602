@@ -1,0 +1,26 @@
+.edit-page {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.edit-form-card {
+  margin-top: 1.5rem;
+}
+
+.edit-form-card form {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.edit-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 1rem;
+}
+
+.edit-form-error {
+  color: #b91c1c;
+  margin: 0 0 1rem;
+}

@@ -3,4 +3,4 @@ export function formatCurrency(amount, currency) {
     style: 'currency',
     currency,
   }).format(amount)
-}   
+}

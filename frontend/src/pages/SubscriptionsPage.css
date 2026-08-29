@@ -1,0 +1,50 @@
+.subscriptions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 2rem;
+}
+
+.subscriptions-add {
+  display: inline-block;
+  padding: 0.65rem 1.1rem;
+  background: #283618;
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+.subscriptions-eyebrow {
+  margin-bottom: 0.4rem;
+  font-weight: 700;
+  color: #5f6f52;
+}
+
+.subscriptions-header h1 {
+  margin: 0;
+}
+
+.subscriptions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+
+.subscription-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 210px;
+}
+
+.subscription-card h2 {
+  margin-top: 0;
+}
+
+.subscription-link {
+  align-self: flex-start;
+  margin-top: 1rem;
+  font-weight: 700;
+  color: #283618;
+}
