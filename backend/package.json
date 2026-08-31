@@ -8,6 +8,7 @@
     "start": "node src/index.js",
     "anz:jwks": "node scripts/print-anz-jwks.js",
     "anz:test": "node scripts/test-anz-connection.js",
+    "anz:probe": "node scripts/probe-anz-paths.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

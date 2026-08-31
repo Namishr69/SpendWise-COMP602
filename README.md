@@ -139,6 +139,18 @@ cd backend && npm run anz:test
 
 That requests a client-credentials token and creates a consent, which is everything the flow does before a browser is involved. It forces live mode, so it still tests ANZ even while `ANZ_MOCK=true`. Failures come back with the likely cause: `invalid_client` means `ANZ_CLIENT_ID`/`ANZ_KEY_ID` do not match the registered key, and a 404 on the consent step means `ANZ_RESOURCE_BASE_URL` is wrong.
 
+If the consent step 404s, find the right path:
+
+```bash
+cd backend && npm run anz:probe
+```
+
+The sandbox gateway answers unknown routes with an Express 404 page and real routes with something else, so the probe can tell which paths exist. Pass candidates to check a specific path from your onboarding pack — a bare path is joined to `ANZ_ISSUER`, and a full URL lets you test a different resource host:
+
+```bash
+cd backend && npm run anz:probe -- account-information/v3.0 https://some-host/path
+```
+
 If ANZ rejects the authorization request itself, set `ANZ_RESPONSE_TYPE="code id_token"` — the callback page already handles both response styles.
 
 ## Environment Variables
@@ -167,3 +179,4 @@ Backend (run from `backend/`):
 - `npm start` starts the API server
 - `npm run anz:jwks` prints the public JWKS for your ANZ signing key
 - `npm run anz:test` checks your ANZ credentials and endpoints without a browser
+- `npm run anz:probe` finds the Account Information base path if the consent step 404s
