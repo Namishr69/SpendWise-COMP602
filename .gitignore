@@ -18,6 +18,12 @@ ui-debug.log
 .runtimeconfig.json
 serviceAccountKey.json
 
+# Private keys / certificates (ANZ Open Banking signing key lives here)
+*.pem
+*.key
+*.p12
+*.pfx
+
 # React build output
 build/
 dist/

@@ -111,6 +111,36 @@ npm run dev
  
 The app runs on http://localhost:5173
  
+## Connecting to ANZ (Open Banking)
+
+SpendWise connects to ANZ through the Payments NZ API Centre sandbox using OAuth. The user logs in at ANZ, so their bank password is never entered into SpendWise and never reaches our servers. Only ANZ-issued tokens are stored, and they stay on the backend.
+
+### Running without ANZ credentials
+
+`ANZ_MOCK=true` (the default in `backend/.env.example`) runs the whole flow on sample data. The consent, state, PKCE and callback handling are all real — only the three network calls to ANZ are skipped. Use this to develop and demo without credentials.
+
+Open Settings, expand **Connected accounts**, and click **Connect ANZ**.
+
+### Running against the live sandbox
+
+You need three things from the API Centre portal:
+
+1. **A client registration** — set `ANZ_CLIENT_ID` and `ANZ_KEY_ID` in `backend/.env`.
+2. **The PS512 signing key** — save it as `backend/anz-private-key.pem`. This is a real secret; `*.pem` is gitignored and it must never be committed. If ANZ needs your public key, run `npm run anz:jwks` from `backend/` and register the output.
+3. **A registered redirect URI** — must match `ANZ_REDIRECT_URI` byte-for-byte. The default is `http://localhost:5173/anz/callback`.
+
+Then set `ANZ_MOCK=false` and confirm `ANZ_RESOURCE_BASE_URL` matches the Account Information version in your onboarding pack.
+
+Test your credentials on their own before trying the browser flow — it isolates credential problems from redirect problems:
+
+```bash
+cd backend && npm run anz:test
+```
+
+That requests a client-credentials token and creates a consent, which is everything the flow does before a browser is involved. It forces live mode, so it still tests ANZ even while `ANZ_MOCK=true`. Failures come back with the likely cause: `invalid_client` means `ANZ_CLIENT_ID`/`ANZ_KEY_ID` do not match the registered key, and a 404 on the consent step means `ANZ_RESOURCE_BASE_URL` is wrong.
+
+If ANZ rejects the authorization request itself, set `ANZ_RESPONSE_TYPE="code id_token"` — the callback page already handles both response styles.
+
 ## Environment Variables
  
 Two `.env.example` files list the variables the project needs. Copy each one to a real `.env` file and fill in the values. Never commit real `.env` files or the service account key.
@@ -121,7 +151,7 @@ Backend variables have no prefix and stay private on the server.
  
 ## Important Notes
  
-- The `.gitignore` is already set up to ignore `node_modules/`, all `.env` files, and `serviceAccountKey.json`. Keep it that way.
+- The `.gitignore` is already set up to ignore `node_modules/`, all `.env` files, `serviceAccountKey.json`, and any `*.pem` private key. Keep it that way.
 - The public Firebase client config (frontend) and the Admin service account key (backend) are not the same thing. The client config is safe to expose. The service account key is a real secret and stays on the backend only.
 - All Firestore access goes through the backend repository layer, not directly from React.
 - Do not run `npm audit fix` on a fresh install. The deprecation warnings come from dependencies and are safe to leave.
@@ -135,3 +165,5 @@ Frontend (run from `frontend/`):
 Backend (run from `backend/`):
  
 - `npm start` starts the API server
+- `npm run anz:jwks` prints the public JWKS for your ANZ signing key
+- `npm run anz:test` checks your ANZ credentials and endpoints without a browser

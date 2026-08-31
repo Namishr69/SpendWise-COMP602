@@ -1,6 +1,7 @@
 import { useContext, useState } from 'react'
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
+import ConnectBankSection from '../components/ConnectBankSection.jsx'
 import { AuthContext } from '../context/AuthProvider.jsx'
 import { CurrencyContext } from '../context/CurrencyProvider.jsx'
 import { updatePreferredCurrency } from '../api/currencyApi.js'
@@ -16,6 +17,7 @@ function SettingsPage() {
   } = useContext(CurrencyContext)
 
   const [isPersonaliseOpen, setIsPersonaliseOpen] = useState(false)
+  const [isBanksOpen, setIsBanksOpen] = useState(false)
   const [message, setMessage] = useState('')
 
   return (
@@ -85,6 +87,26 @@ function SettingsPage() {
                 )}
               </div>
             </div>
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <button
+          type="button"
+          className="settings-section-toggle"
+          onClick={() => setIsBanksOpen(!isBanksOpen)}
+        >
+          <span>Connected accounts</span>
+
+          <span className="settings-section-arrow">
+            {isBanksOpen ? '▲' : '▼'}
+          </span>
+        </button>
+
+        {isBanksOpen && (
+          <div className="settings-section-content">
+            <ConnectBankSection />
           </div>
         )}
       </Card>
