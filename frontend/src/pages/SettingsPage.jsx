@@ -17,14 +17,21 @@ function SettingsPage() {
     setPreferredCurrency,
   } = useContext(CurrencyContext)
 
-  const [isPersonaliseOpen, setIsPersonaliseOpen] = useState(false)
-  const [message, setMessage] = useState('')
+const [isPersonaliseOpen, setIsPersonaliseOpen] = useState(false)
+const [message, setMessage] = useState('')
+const [loggingOut, setLoggingOut] = useState(false)
 
   const navigate = useNavigate()
 
   async function handleLogout() {
-  await signOut()
-  navigate('/login', { replace: true })
+  if (loggingOut) return
+  setLoggingOut(true)
+  try {
+    await signOut()
+    navigate('/login', { replace: true })
+  } finally {
+    setLoggingOut(false)
+  }
 }
 
   return (
@@ -100,9 +107,9 @@ function SettingsPage() {
       <Card style={{ marginTop: 16 }}>
     <h3>Account</h3>
     <p style={{ marginTop: 8, marginBottom: 20 }}>{currentUser?.email}</p>
-    <Button variant="secondary" onClick={handleLogout}>
-      Logout
-    </Button>
+   <Button variant="secondary" onClick={handleLogout} disabled={loggingOut}>
+  {loggingOut ? 'Logging out...' : 'Logout'}
+</Button>
       </Card>
  </AppShell>
   )
