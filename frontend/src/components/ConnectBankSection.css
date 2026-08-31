@@ -1,0 +1,73 @@
+.bank-badge {
+  margin-left: 8px;
+  padding: 2px 8px;
+
+  border-radius: 999px;
+  background: #e3f1e8;
+  color: #1f4a33;
+
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+
+.bank-accounts {
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+
+  border-top: 1px solid #e4e4e4;
+}
+
+.bank-accounts__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  padding: 12px 0;
+  border-bottom: 1px solid #e4e4e4;
+}
+
+.bank-accounts__name {
+  margin: 0 0 3px;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.bank-accounts__meta {
+  margin: 0;
+  opacity: 0.65;
+  font-size: 0.82rem;
+}
+
+.bank-accounts__currency {
+  opacity: 0.7;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.bank-meta {
+  margin: 14px 0 0;
+  opacity: 0.6;
+  font-size: 0.8rem;
+}
+
+.bank-mock-notice {
+  margin: 14px 0 0;
+  padding: 8px 12px;
+
+  border-radius: 8px;
+  background: #fdf4e3;
+  color: #8a6100;
+
+  font-size: 0.82rem;
+}
+
+.bank-error {
+  margin: 14px 0 0;
+  color: #b3261e;
+  font-size: 0.88rem;
+}

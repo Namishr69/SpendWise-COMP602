@@ -10,6 +10,7 @@ import SubscriptionsPage from './pages/SubscriptionsPage.jsx'
 import SubscriptionDetailPage from './pages/SubscriptionDetailPage.jsx'
 import EditSubscriptionPage from './pages/EditSubscriptionPage.jsx'
 import AddSubscriptionPage from './pages/AddSubscriptionPage.jsx'
+import AnzCallbackPage from './pages/AnzCallbackPage.jsx'
 
 function App() {
   return (
@@ -80,6 +81,17 @@ function App() {
           element={
             <PrivateRoute>
               <EditSubscriptionPage />
+            </PrivateRoute>
+          }
+        />
+
+        {/* ANZ redirects here after the user consents. Private because the
+            backend needs the Firebase ID token to attribute the connection. */}
+        <Route
+          path="/anz/callback"
+          element={
+            <PrivateRoute>
+              <AnzCallbackPage />
             </PrivateRoute>
           }
         />
