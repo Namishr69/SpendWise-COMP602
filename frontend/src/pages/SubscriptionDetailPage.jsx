@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import AppShell from '../layouts/AppShell'
 import Card from '../components/ui/Card'
+import SubscriptionNotes from '../components/SubscriptionNotes'
 import { useSubscriptions } from '../context/subscriptionsContext'
 import { getPayments } from '../api/subscriptionApi'
 import './SubscriptionDetailPage.css'
 
 function SubscriptionDetailPage() {
   const { subscriptionId } = useParams()
-  const { loading, getSubscription } = useSubscriptions()
+  const { loading, getSubscription, updateSubscription } = useSubscriptions()
   const subscription = getSubscription(subscriptionId)
 
   const [payments, setPayments] = useState([])
@@ -96,6 +97,16 @@ function SubscriptionDetailPage() {
           <p>{subscription.status}</p>
         </Card>
       </section>
+
+      <SubscriptionNotes
+        notes={subscription.notes}
+        onSave={async (text) => {
+          await updateSubscription(subscription.id, { notes: text })
+        }}
+        onDelete={async () => {
+          await updateSubscription(subscription.id, { notes: '' })
+        }}
+      />
 
       <Card className="payment-history">
         <h2>Payment history</h2>
