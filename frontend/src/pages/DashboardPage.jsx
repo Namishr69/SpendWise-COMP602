@@ -2,8 +2,11 @@ import { useContext, useEffect, useState } from 'react'
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
 import { CurrencyContext } from '../context/CurrencyProvider.jsx'
+import { BudgetContext } from '../context/BudgetProvider.jsx'
+import { useSubscriptions } from '../context/subscriptionsContext.js'
 import { convertCurrency } from '../api/exchangeRateApi.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
+import { calculateTotalMonthlySpend, isNearBudgetLimit } from '../utils/budgetCalculations.js'
 import './DashboardPage.css'
 
 // Mock data — replace with real Firestore data once the backend endpoints exist
@@ -27,9 +30,19 @@ const CATEGORIES = ['Entertainment', 'Fitness', 'Cloud Storage']
 
 function DashboardPage() {
   const { preferredCurrency } = useContext(CurrencyContext)
+  const { budget } = useContext(BudgetContext)
+  const { subscriptions } = useSubscriptions()
 
   const [convertedStats, setConvertedStats] = useState(STATS)
   const [convertedBills, setConvertedBills] = useState(UPCOMING_BILLS)
+
+  const totalMonthlySpend = calculateTotalMonthlySpend(subscriptions)
+  const nearBudgetLimit = isNearBudgetLimit(totalMonthlySpend, budget)
+
+  const alerts = [...ALERTS]
+  if (nearBudgetLimit) {
+    alerts.unshift("You're close to exceeding your monthly budget")
+  }
 
   useEffect(() => {
     async function updateCurrencies() {
@@ -121,7 +134,7 @@ function DashboardPage() {
             <h3>Alerts</h3>
 
             <div className="dashboard-chips">
-              {ALERTS.map((alert) => (
+              {alerts.map((alert) => (
                 <span key={alert} className="dashboard-chip">
                   {alert}
                 </span>
