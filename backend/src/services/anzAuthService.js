@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import anzConfig, { IS_MOCK, assertAnzConfigured } from '../config/anz.js';
+import anzConfig, { assertAnzConfigured } from '../config/anz.js';
 import anzJwtService from './anzJwtService.js';
 import anzConnectionRepo from '../repositories/anzConnectionRepo.js';
 
@@ -88,10 +88,6 @@ const anzAuthService = {
      * client registration are correct.
      */
     async getClientCredentialsToken() {
-        if (IS_MOCK) {
-            return { access_token: 'mock-client-credentials-token', expires_in: 300, scope: 'accounts' };
-        }
-
         return await requestToken(
             { grant_type: 'client_credentials', scope: 'accounts' },
             'Client credentials'
@@ -103,17 +99,13 @@ const anzAuthService = {
      * that the authorisation request must reference.
      */
     async createAccountConsent() {
-        if (IS_MOCK) {
-            return `mock-consent-${randomUUID()}`;
-        }
-
         const { access_token: accessToken } = await this.getClientCredentialsToken();
 
         // 90 days is the standard maximum consent lifetime, and we ask for a
         // year of history so subscription detection has something to work with.
         const now = new Date();
         const expiration = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
-        const historyFrom = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        const historyFrom = new Date('2018-01-01T00:00:00.000Z');
 
         const response = await fetch(`${anzConfig.resourceBaseUrl}/account-access-consents`, {
             method: 'POST',
@@ -125,24 +117,34 @@ const anzAuthService = {
                 'x-fapi-auth-date': now.toUTCString(),
             },
             body: JSON.stringify({
+                // NZ Banking Data API v2.3 nests the consent under Data.Consent.
+                // A flat Data.Permissions (UK OBIE style) is rejected with
+                // HTTP 400 "Invalid parameters".
                 Data: {
-                    Permissions: [
-                        'ReadAccountsDetail',
-                        'ReadBalances',
-                        'ReadTransactionsDetail',
-                        'ReadTransactionsCredits',
-                        'ReadTransactionsDebits',
-                    ],
-                    ExpirationDateTime: expiration.toISOString(),
-                    TransactionFromDateTime: historyFrom.toISOString(),
-                    TransactionToDateTime: now.toISOString(),
+                    Consent: {
+                        Permissions: [
+                            'ReadAccountsDetail',
+                            'ReadBalances',
+                            'ReadTransactionsDetail',
+                            'ReadTransactionsCredits',
+                            'ReadTransactionsDebits',
+                        ],
+                        ExpirationDateTime: expiration.toISOString(),
+                        TransactionFromDateTime: historyFrom.toISOString(),
+                    },
                 },
                 Risk: {},
             }),
         });
 
         if (!response.ok) {
-            throw await readOAuthError(response, 'Account access consent');
+            // Surface the whole body: ANZ's 400s name the offending field only
+            // in the response payload, not in the summary message.
+            const body = await response.text().catch(() => '');
+            console.error('ANZ account-access-consent rejected:', response.status, body);
+            throw new Error(
+                `Account access consent failed (HTTP ${response.status})${body ? `: ${body}` : ''}`
+            );
         }
 
         const payload = await response.json();
@@ -177,15 +179,6 @@ const anzAuthService = {
             expiresAt: new Date(Date.now() + AUTH_SESSION_TTL_MS).toISOString(),
         });
 
-        // Mock mode returns a URL pointing straight back at our own callback so
-        // the entire app-side round trip still runs, minus ANZ.
-        if (IS_MOCK) {
-            const mockUrl = new URL(`${anzConfig.frontendBaseUrl}/anz/callback`);
-            mockUrl.searchParams.set('code', 'mock-authorization-code');
-            mockUrl.searchParams.set('state', state);
-            return { authorizationUrl: mockUrl.toString(), consentId, mock: true };
-        }
-
         const requestObject = await anzJwtService.createRequestObject({
             state,
             nonce,
@@ -199,6 +192,7 @@ const anzAuthService = {
             client_id: anzConfig.clientId,
             response_type: anzConfig.responseType,
             scope: anzConfig.scopes,
+            redirect_uri: anzConfig.redirectUri,
         });
 
         if (anzConfig.usePar) {
@@ -210,7 +204,6 @@ const anzAuthService = {
         return {
             authorizationUrl: `${anzConfig.authorizationEndpoint}?${params.toString()}`,
             consentId,
-            mock: false,
         };
     },
 
@@ -219,8 +212,10 @@ const anzAuthService = {
      * browser's URL, which matters because a signed request object is long.
      */
     async pushAuthorizationRequest(requestObject) {
+        assertAnzConfigured();
+    
         const clientAssertion = await anzJwtService.createClientAssertion();
-
+    
         const response = await fetch(anzConfig.parEndpoint, {
             method: 'POST',
             headers: {
@@ -230,22 +225,52 @@ const anzAuthService = {
             body: new URLSearchParams({
                 request: requestObject,
                 client_id: anzConfig.clientId,
-                client_assertion_type: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+                client_assertion_type:
+                    'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
                 client_assertion: clientAssertion,
             }),
         });
-
+    
+        console.log('ANZ PAR status:', response.status);
+    
         if (!response.ok) {
-            throw await readOAuthError(response, 'Pushed authorization request');
+            const body = await response.text().catch(() => '');
+    
+            console.error('ANZ PAR error response:', body);
+    
+            let detail = body;
+    
+            try {
+                const parsed = JSON.parse(body);
+                detail =
+                    parsed.error_description ||
+                    parsed.error ||
+                    parsed.Message ||
+                    body;
+            } catch {
+                // Keep the raw response if it isn't JSON.
+            }
+    
+            throw new Error(
+                `Pushed authorization request failed (HTTP ${response.status})${
+                    detail ? `: ${detail}` : ''
+                }`
+            );
         }
-
+    
         const payload = await response.json();
+    
+        console.log('ANZ PAR response:', payload);
+    
         if (!payload.request_uri) {
-            throw new Error('PAR response did not include a request_uri');
+            throw new Error(
+                'ANZ PAR response did not include a request_uri'
+            );
         }
-
+    
         return payload.request_uri;
     },
+    
 
     /**
      * Step 4 — validate the callback against the stored session, then swap the
@@ -269,31 +294,20 @@ const anzAuthService = {
             throw new Error('Authorization session expired — please try connecting again');
         }
 
-        let tokens;
-        if (IS_MOCK) {
-            tokens = {
-                access_token: `mock-access-${randomUUID()}`,
-                refresh_token: `mock-refresh-${randomUUID()}`,
-                expires_in: 3600,
-                scope: anzConfig.scopes,
-                token_type: 'Bearer',
-            };
-        } else {
-            if (idToken) {
-                // Hybrid flow: prove the response came from ANZ and matches our nonce.
-                await anzJwtService.verifyIdToken(idToken, session.nonce);
-            }
-
-            tokens = await requestToken(
-                {
-                    grant_type: 'authorization_code',
-                    code,
-                    redirect_uri: anzConfig.redirectUri,
-                    code_verifier: session.codeVerifier,
-                },
-                'Authorization code'
-            );
+        if (idToken) {
+            // Hybrid flow: prove the response came from ANZ and matches our nonce.
+            await anzJwtService.verifyIdToken(idToken, session.nonce);
         }
+
+        const tokens = await requestToken(
+            {
+                grant_type: 'authorization_code',
+                code,
+                redirect_uri: anzConfig.redirectUri,
+                code_verifier: session.codeVerifier,
+            },
+            'Authorization code'
+        );
 
         const stored = toStoredTokens(tokens);
 
@@ -303,7 +317,6 @@ const anzAuthService = {
             consentId: session.consentId,
             status: 'connected',
             connectedAt: new Date().toISOString(),
-            mock: IS_MOCK,
             ...stored,
         });
     },
@@ -331,19 +344,10 @@ const anzAuthService = {
             throw new Error('ANZ access token expired and no refresh token is available — please reconnect');
         }
 
-        let tokens;
-        if (IS_MOCK) {
-            tokens = {
-                access_token: `mock-access-${randomUUID()}`,
-                refresh_token: connection.refreshToken,
-                expires_in: 3600,
-            };
-        } else {
-            tokens = await requestToken(
-                { grant_type: 'refresh_token', refresh_token: connection.refreshToken },
-                'Token refresh'
-            );
-        }
+        const tokens = await requestToken(
+            { grant_type: 'refresh_token', refresh_token: connection.refreshToken },
+            'Token refresh'
+        );
 
         const stored = toStoredTokens(tokens);
         const updated = await anzConnectionRepo.updateConnection(userId, {
@@ -372,7 +376,6 @@ const anzAuthService = {
             connectedAt: connection.connectedAt,
             scope: connection.scope,
             expiresAt: connection.expiresAt,
-            mock: connection.mock === true,
         };
     },
 
@@ -387,7 +390,7 @@ const anzAuthService = {
             return { disconnected: false, reason: 'No ANZ connection found' };
         }
 
-        if (!IS_MOCK && connection.refreshToken) {
+        if (connection.refreshToken) {
             try {
                 const clientAssertion = await anzJwtService.createClientAssertion();
 

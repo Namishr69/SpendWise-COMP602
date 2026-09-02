@@ -64,6 +64,7 @@ const anzJwtService = {
 
     return await new SignJWT({
       response_type: anzConfig.responseType,
+      response_mode: 'jwt', // <--- Added here to satisfy FAPI security profile
       client_id: anzConfig.clientId,
       redirect_uri: anzConfig.redirectUri,
       scope: anzConfig.scopes,

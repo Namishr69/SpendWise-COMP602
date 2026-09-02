@@ -1,5 +1,8 @@
 import anzAuthService from '../services/anzAuthService.js';
 import anzAccountService from '../services/anzAccountService.js';
+import anzSyncService from '../services/anzSyncService.js';
+import dashboardService from '../services/dashboardService.js';
+import bankDataRepo from '../repositories/bankDataRepo.js';
 
 /**
  * Nothing here returns an ANZ access or refresh token. The browser only ever
@@ -45,6 +48,14 @@ const anzController = {
                 accountsError = error.message;
             }
 
+            // Kick off the first data sync so the dashboard has something to
+            // show immediately. Best-effort for the same reason as above.
+            try {
+                await anzSyncService.sync(req.userId);
+            } catch (error) {
+                console.error('ANZ connected but initial sync failed:', error.message);
+            }
+
             const status = await anzAuthService.getStatus(req.userId);
 
             res.json({ ...status, accounts, accountsError });
@@ -75,10 +86,65 @@ const anzController = {
         }
     },
 
+    // POST /api/anz/sync — pull balances + transactions into Firestore and
+    // re-run subscription detection
+    async sync(req, res) {
+        try {
+            const summary = await anzSyncService.sync(req.userId);
+            res.json(summary);
+        } catch (error) {
+            console.error('ANZ sync failed:', error.message);
+            res.status(statusForError(error.message)).json({ error: error.message });
+        }
+    },
+
+    // GET /api/anz/bank-accounts — synced accounts + balances, read locally
+    async bankAccounts(req, res) {
+        try {
+            const accounts = await bankDataRepo.listAccounts(req.userId);
+            res.json(accounts);
+        } catch (error) {
+            console.error('Bank accounts read failed:', error.message);
+            res.status(500).json({ error: error.message });
+        }
+    },
+
+    // GET /api/anz/transactions — recent transactions, read locally
+    async transactions(req, res) {
+        try {
+            const { accountId, limit } = req.query;
+            const transactions = await bankDataRepo.listTransactions(req.userId, {
+                accountId: accountId || undefined,
+                limit: limit ? Number(limit) : undefined,
+            });
+            res.json(transactions);
+        } catch (error) {
+            console.error('Transactions read failed:', error.message);
+            res.status(500).json({ error: error.message });
+        }
+    },
+
+    // GET /api/anz/dashboard — computed dashboard figures, read locally
+    async dashboard(req, res) {
+        try {
+            const data = await dashboardService.getDashboard(req.userId);
+            res.json(data);
+        } catch (error) {
+            console.error('Dashboard read failed:', error.message);
+            res.status(500).json({ error: error.message });
+        }
+    },
+
     // DELETE /api/anz/connection — revoke and forget
     async disconnect(req, res) {
         try {
             const result = await anzAuthService.disconnect(req.userId);
+            // Remove synced bank data too, so unlinking leaves nothing behind.
+            try {
+                await bankDataRepo.deleteAllBankData(req.userId);
+            } catch (error) {
+                console.error('Bank data cleanup failed on disconnect:', error.message);
+            }
             res.json(result);
         } catch (error) {
             console.error('ANZ disconnect failed:', error.message);

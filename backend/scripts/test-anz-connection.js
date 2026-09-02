@@ -11,7 +11,6 @@
  *   2. account-access-consent    — proves the resource base URL is right
  *
  * Neither step needs a user, which is what makes this a useful first test.
- * Forces live mode: testing against mock data would prove nothing.
  */
 
 import { config as loadEnv } from 'dotenv';
@@ -23,10 +22,6 @@ import { fileURLToPath } from 'url';
 // script reports real results no matter which directory it is run from.
 const BACKEND_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 loadEnv({ path: resolve(BACKEND_ROOT, '.env'), quiet: true });
-
-// Must be set before any ANZ module is imported, since IS_MOCK is read at
-// module load time.
-process.env.ANZ_MOCK = 'false';
 
 const { default: anzConfig, resolvePrivateKeyPath } = await import('../src/config/anz.js');
 const { default: anzAuthService } = await import('../src/services/anzAuthService.js');
@@ -116,7 +111,7 @@ console.log('  OK — consent created');
 console.log('     ConsentId :', consentId);
 
 console.log('\nBoth client-level steps passed. Your credentials and endpoints are correct.');
-console.log('Next: set ANZ_MOCK=false in backend/.env, restart the API, and connect from');
+console.log('Next: restart the API and connect from');
 console.log('Settings → Connected accounts. That exercises the browser redirect, which');
 console.log('needs ANZ_REDIRECT_URI registered in the portal as:');
 console.log(`  ${anzConfig.redirectUri}`);

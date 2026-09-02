@@ -23,8 +23,6 @@ import { randomUUID } from 'crypto';
 const BACKEND_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 loadEnv({ path: resolve(BACKEND_ROOT, '.env'), quiet: true });
 
-process.env.ANZ_MOCK = 'false';
-
 const { default: anzConfig } = await import('../src/config/anz.js');
 const { default: anzAuthService } = await import('../src/services/anzAuthService.js');
 

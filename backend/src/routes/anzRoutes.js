@@ -13,4 +13,11 @@ router.get('/anz/status', verifyToken, anzController.status);
 router.get('/anz/accounts', verifyToken, anzController.accounts);
 router.delete('/anz/connection', verifyToken, anzController.disconnect);
 
+// Bank data: sync pulls from ANZ into Firestore; the reads below serve the
+// stored copy so pages never wait on ANZ.
+router.post('/anz/sync', verifyToken, anzController.sync);
+router.get('/anz/bank-accounts', verifyToken, anzController.bankAccounts);
+router.get('/anz/transactions', verifyToken, anzController.transactions);
+router.get('/anz/dashboard', verifyToken, anzController.dashboard);
+
 export default router;
