@@ -9,6 +9,7 @@ import { SUPPORTED_CURRENCIES } from '../constants/currencies.js'
 import './SettingsPage.css'
 import Button from '../components/ui/Button.jsx'
 import { useNavigate } from 'react-router-dom'
+import Input from '../components/ui/Input.jsx'
 
 const BUDGET_PERIODS = ['Weekly', 'Monthly', 'Yearly']
 
@@ -22,34 +23,36 @@ function SettingsPage() {
 
   const { budget, setBudget } = useContext(BudgetContext)
 
-const [isPersonaliseOpen, setIsPersonaliseOpen] = useState(false)
-const [message, setMessage] = useState('')
-const [loggingOut, setLoggingOut] = useState(false)
+  const [isPersonaliseOpen, setIsPersonaliseOpen] = useState(false)
+  const [message, setMessage] = useState('')
+  const [loggingOut, setLoggingOut] = useState(false)
 
-const [budgetAmount, setBudgetAmount] = useState(budget?.amount ?? '')
-const [budgetPeriod, setBudgetPeriod] = useState(budget?.period ?? 'Monthly')
-const [budgetMessage, setBudgetMessage] = useState('')
+  const [budgetAmount, setBudgetAmount] = useState(budget?.amount ?? '')
+  const [budgetPeriod, setBudgetPeriod] = useState(budget?.period ?? 'Monthly')
+  const [budgetMessage, setBudgetMessage] = useState('')
+  const [budgetError, setBudgetError] = useState('')
 
   const navigate = useNavigate()
 
   async function handleLogout() {
-  if (loggingOut) return
-  setLoggingOut(true)
-  try {
-    await signOut()
-    navigate('/login', { replace: true })
-  } finally {
-    setLoggingOut(false)
+    if (loggingOut) return
+    setLoggingOut(true)
+    try {
+      await signOut()
+      navigate('/login', { replace: true })
+    } finally {
+      setLoggingOut(false)
+    }
   }
-}
 
   function handleSaveBudget(event) {
     event.preventDefault()
     setBudgetMessage('')
+    setBudgetError('')
 
     const amount = Number(budgetAmount)
     if (!budgetAmount || Number.isNaN(amount) || amount <= 0) {
-      setBudgetMessage('Enter an amount greater than zero.')
+      setBudgetError('Enter an amount greater than zero.')
       return
     }
 
@@ -135,17 +138,24 @@ const [budgetMessage, setBudgetMessage] = useState('')
                   Set a recurring spend budget and get alerted when you're
                   close to exceeding it.
                 </p>
+
+                {budget && (
+                  <p className="settings-budget-current">
+                    Current budget: {budget.amount} / {budget.period}
+                  </p>
+                )}
               </div>
 
               <form onSubmit={handleSaveBudget} className="settings-budget-form">
-                <input
+                <Input
+                  id="budget-amount"
                   type="number"
                   min="0.01"
                   step="0.01"
                   placeholder="Amount"
-                  className="settings-budget-input"
                   value={budgetAmount}
                   onChange={(event) => setBudgetAmount(event.target.value)}
+                  error={budgetError}
                 />
                 <select
                   className="settings-currency-select"
@@ -168,13 +178,13 @@ const [budgetMessage, setBudgetMessage] = useState('')
         )}
       </Card>
       <Card style={{ marginTop: 16 }}>
-    <h3>Account</h3>
-    <p style={{ marginTop: 8, marginBottom: 20 }}>{currentUser?.email}</p>
-   <Button variant="secondary" onClick={handleLogout} disabled={loggingOut}>
-  {loggingOut ? 'Logging out...' : 'Logout'}
-</Button>
+        <h3>Account</h3>
+        <p style={{ marginTop: 8, marginBottom: 20 }}>{currentUser?.email}</p>
+        <Button variant="secondary" onClick={handleLogout} disabled={loggingOut}>
+          {loggingOut ? 'Logging out...' : 'Logout'}
+        </Button>
       </Card>
- </AppShell>
+    </AppShell>
   )
 }
 

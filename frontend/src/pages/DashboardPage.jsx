@@ -6,7 +6,7 @@ import { BudgetContext } from '../context/BudgetProvider.jsx'
 import { useSubscriptions } from '../context/subscriptionsContext.js'
 import { convertCurrency } from '../api/exchangeRateApi.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
-import { calculateTotalMonthlySpend, isNearBudgetLimit } from '../utils/budgetCalculations.js'
+import { calculateTotalMonthlySpend, isNearBudgetLimit, normalizeBudgetToMonthly } from '../utils/budgetCalculations.js'
 import './DashboardPage.css'
 
 // Mock data — replace with real Firestore data once the backend endpoints exist
@@ -41,7 +41,10 @@ function DashboardPage() {
 
   const alerts = [...ALERTS]
   if (nearBudgetLimit) {
-    alerts.unshift("You're close to exceeding your monthly budget")
+    const monthlyBudget = normalizeBudgetToMonthly(budget.amount, budget.period)
+    alerts.unshift(
+      `You've spent ${formatCurrency(totalMonthlySpend, preferredCurrency)} of your ${formatCurrency(monthlyBudget, preferredCurrency)} monthly budget`
+    )
   }
 
   useEffect(() => {
