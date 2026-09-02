@@ -62,6 +62,11 @@ function SettingsPage() {
     setBudgetMessage('Budget saved')
   }
 
+  const isUnchanged =
+    budget &&
+    Number(budgetAmount) === budget.amount &&
+    budgetPeriod === budget.period
+
   return (
     <AppShell activeNav="Settings">
       <Card>
@@ -168,7 +173,7 @@ function SettingsPage() {
                     </option>
                   ))}
                 </select>
-                <Button type="submit">Save</Button>
+                <Button type="submit" disabled={isUnchanged}>Save</Button>
               </form>
             </div>
             {budgetMessage && (

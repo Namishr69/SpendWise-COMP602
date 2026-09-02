@@ -89,3 +89,14 @@
     grid-template-columns: 1fr;
   }
 }
+.dashboard-budget-amount {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-ink);
+  margin-top: 8px;
+}
+
+.dashboard-budget-equivalent {
+  font-size: 13px;
+  margin-top: 4px;
+}

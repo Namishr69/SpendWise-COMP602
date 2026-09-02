@@ -31,13 +31,13 @@ const CATEGORIES = ['Entertainment', 'Fitness', 'Cloud Storage']
 function DashboardPage() {
   const { preferredCurrency } = useContext(CurrencyContext)
   const { budget } = useContext(BudgetContext)
-  const { subscriptions } = useSubscriptions()
+  const { subscriptions, loading: subscriptionsLoading } = useSubscriptions()
 
   const [convertedStats, setConvertedStats] = useState(STATS)
   const [convertedBills, setConvertedBills] = useState(UPCOMING_BILLS)
 
   const totalMonthlySpend = calculateTotalMonthlySpend(subscriptions)
-  const nearBudgetLimit = isNearBudgetLimit(totalMonthlySpend, budget)
+  const nearBudgetLimit = !subscriptionsLoading && isNearBudgetLimit(totalMonthlySpend, budget)
 
   const alerts = [...ALERTS]
   if (nearBudgetLimit) {
@@ -133,6 +133,22 @@ function DashboardPage() {
         </Card>
 
         <div className="dashboard-side">
+          <Card>
+            <h3>Current Budget</h3>
+            {budget ? (
+              <>
+                <p className="dashboard-budget-amount">
+                  {formatCurrency(budget.amount, preferredCurrency)} / {budget.period}
+                </p>
+                <p className="dashboard-budget-equivalent">
+                  ≈ {formatCurrency(normalizeBudgetToMonthly(budget.amount, budget.period), preferredCurrency)} per month
+                </p>
+              </>
+            ) : (
+              <p>No budget set. Add one in Settings.</p>
+            )}
+          </Card>
+
           <Card>
             <h3>Alerts</h3>
 
