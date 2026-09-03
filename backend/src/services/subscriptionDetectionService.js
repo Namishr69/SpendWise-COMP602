@@ -9,13 +9,8 @@ import subscriptionRepo from '../repositories/subscriptionRepo.js';
  * it with the Firestore reads and writes, and is careful to be idempotent: a
  * second sync of the same data must not create a second copy of a subscription.
  */
-
-// A group must repeat at least this many times to count as recurring — two
-// charges could be coincidence, three is a pattern.
 const MIN_OCCURRENCES = 3;
 
-// Day-gap windows that identify a billing cadence. Real charges drift by a few
-// days (weekends, month lengths), so each is a range, not an exact number.
 const CADENCES = [
     { cycle: 'Weekly', minDays: 5, maxDays: 9, periodDays: 7 },
     { cycle: 'Fortnightly', minDays: 12, maxDays: 16, periodDays: 14 },
@@ -24,12 +19,6 @@ const CADENCES = [
     { cycle: 'Annually', minDays: 350, maxDays: 380, periodDays: 365 },
 ];
 
-/**
- * Normalises a merchant/description into a stable grouping key: lowercased,
- * with card-processing noise (reference numbers, dates, "xx1234", locations
- * after a hyphen) stripped so "NETFLIX.COM 123456" and "Netflix.com" group
- * together.
- */
 function normaliseMerchant(value) {
     return String(value || '')
         .toLowerCase()

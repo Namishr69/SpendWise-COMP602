@@ -44,3 +44,7 @@ coverage/
 .DS_Store
 Thumbs.db
 *.swp
+
+# AI assistant workspaces
+.claude/
+.gemini/
