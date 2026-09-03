@@ -6,7 +6,7 @@ import currencyRoutes from './routes/currencyRoutes.js';
 import exchangeRateRoutes from './routes/exchangeRateRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
-
+import budgetRoutes from './routes/budgetRoutes.js';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -22,7 +22,7 @@ app.use('/api', currencyRoutes);
 app.use('/api', exchangeRateRoutes);
 app.use('/api', userRoutes);
 app.use('/api', subscriptionRoutes);
-
+app.use('/api', budgetRoutes);
 // 404 for any unmatched route
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
