@@ -11,7 +11,11 @@ const NAV_ITEMS = [
   { label: 'Settings', icon: '⚙️', path: '/settings' },
 ]
 
-function AppShell({ activeNav = '', children }) {
+function AppShell({
+  activeNav = '',
+  children,
+  hideTopbarTitle = false,
+}) {
   const { signOut } = useContext(AuthContext)
   const navigate = useNavigate()
 
@@ -45,14 +49,27 @@ function AppShell({ activeNav = '', children }) {
 
       <div className="app-shell__main">
         <header className="app-shell__topbar">
-          <div>
-            <p>Good morning</p>
-            <h2>{activeNav}</h2>
-          </div>
+          {!hideTopbarTitle && (
+            <div>
+              <p>Good morning</p>
+              <h2>{activeNav}</h2>
+            </div>
+          )}
 
-          <div className="app-shell__topbar-actions">
-            <input className="app-shell__search" placeholder="Search" />
-            <button className="app-shell__avatar" onClick={handleLogout} aria-label="Logout" />
+          <div
+            className="app-shell__topbar-actions"
+            style={{ marginLeft: 'auto' }}
+          >
+            <input
+              className="app-shell__search"
+              placeholder="Search"
+            />
+
+            <button
+              className="app-shell__avatar"
+              onClick={handleLogout}
+              aria-label="Logout"
+            />
           </div>
         </header>
 
