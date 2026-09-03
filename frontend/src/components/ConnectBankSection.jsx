@@ -103,7 +103,17 @@ function ConnectBankSection() {
     <>
       <div className="settings-option">
         <div className="settings-option-text">
-          <h3>ANZ {isConnected && <span className="bank-badge">Connected</span>}</h3>
+          <h3>
+            ANZ {isConnected && <span className="bank-badge">Connected</span>}
+            <span className="bank-info-icon" aria-label="Sandbox mode information">
+              ℹ
+              <span className="bank-info-tooltip">
+                SpendWise connects to the ANZ Sandbox environment. Transaction
+                names shown are representative — a live ANZ account would
+                display real merchant names.
+              </span>
+            </span>
+          </h3>
 
           <p>
             {isConnected
