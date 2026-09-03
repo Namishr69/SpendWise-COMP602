@@ -4,6 +4,7 @@ import './AppShell.css'
 const NAV_ITEMS = [
   { label: 'Dashboard', icon: '📊', path: '/dashboard' },
   { label: 'Subscriptions', icon: '🗂️', path: '/subscriptions' },
+  { label: 'Transactions', icon: '💳', path: '/transactions' },
   { label: 'Insights', icon: '📈', path: '/insights' },
   { label: 'Alerts', icon: '🔔', path: '/alerts' },
   { label: 'Settings', icon: '⚙️', path: '/settings' },

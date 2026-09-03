@@ -23,6 +23,7 @@ serviceAccountKey.json
 *.key
 *.p12
 *.pfx
+*.pem
 
 # React build output
 build/

@@ -115,13 +115,7 @@ The app runs on http://localhost:5173
 
 SpendWise connects to ANZ through the Payments NZ API Centre sandbox using OAuth. The user logs in at ANZ, so their bank password is never entered into SpendWise and never reaches our servers. Only ANZ-issued tokens are stored, and they stay on the backend.
 
-### Running without ANZ credentials
-
-`ANZ_MOCK=true` (the default in `backend/.env.example`) runs the whole flow on sample data. The consent, state, PKCE and callback handling are all real — only the three network calls to ANZ are skipped. Use this to develop and demo without credentials.
-
-Open Settings, expand **Connected accounts**, and click **Connect ANZ**.
-
-### Running against the live sandbox
+### Setup
 
 You need three things from the API Centre portal:
 
@@ -129,7 +123,7 @@ You need three things from the API Centre portal:
 2. **The PS512 signing key** — save it as `backend/anz-private-key.pem`. This is a real secret; `*.pem` is gitignored and it must never be committed. If ANZ needs your public key, run `npm run anz:jwks` from `backend/` and register the output.
 3. **A registered redirect URI** — must match `ANZ_REDIRECT_URI` byte-for-byte. The default is `http://localhost:5173/anz/callback`.
 
-Then set `ANZ_MOCK=false` and confirm `ANZ_RESOURCE_BASE_URL` matches the Account Information version in your onboarding pack.
+Confirm `ANZ_RESOURCE_BASE_URL` matches the Account Information version in your onboarding pack.
 
 Test your credentials on their own before trying the browser flow — it isolates credential problems from redirect problems:
 
@@ -137,7 +131,7 @@ Test your credentials on their own before trying the browser flow — it isolate
 cd backend && npm run anz:test
 ```
 
-That requests a client-credentials token and creates a consent, which is everything the flow does before a browser is involved. It forces live mode, so it still tests ANZ even while `ANZ_MOCK=true`. Failures come back with the likely cause: `invalid_client` means `ANZ_CLIENT_ID`/`ANZ_KEY_ID` do not match the registered key, and a 404 on the consent step means `ANZ_RESOURCE_BASE_URL` is wrong.
+That requests a client-credentials token and creates a consent, which is everything the flow does before a browser is involved. Failures come back with the likely cause: `invalid_client` means `ANZ_CLIENT_ID`/`ANZ_KEY_ID` do not match the registered key, and a 404 on the consent step means `ANZ_RESOURCE_BASE_URL` is wrong.
 
 If the consent step 404s, find the right path:
 
@@ -152,6 +146,20 @@ cd backend && npm run anz:probe -- account-information/v3.0 https://some-host/pa
 ```
 
 If ANZ rejects the authorization request itself, set `ANZ_RESPONSE_TYPE="code id_token"` — the callback page already handles both response styles.
+
+### Connecting your bank
+
+With your credentials in place, open Settings, expand **Connected accounts**, and click **Connect ANZ**. You log in at ANZ and are redirected back once consent is granted.
+
+### After connecting: syncing your data
+
+Once connected, SpendWise pulls your accounts, balances and transactions from ANZ and stores them in Firestore. Pages then read that stored copy, so they stay fast and keep working after the 90-day consent expires (until the next sync). A sync runs automatically on connect and whenever you press **Refresh** on the Transactions page.
+
+- **Transactions** (new nav item) lists each account with its balance and your recent transactions, and hosts the **Refresh** button.
+- The **Dashboard** shows spending this month, active and auto-detected subscription counts, upcoming bills, and recent activity — all from synced data, converted to your preferred currency.
+- **Auto-detected subscriptions** appear alongside the ones you add by hand. Each sync scans your transactions for recurring debits (same merchant, near-equal amount, a regular weekly/monthly/annual cadence) and creates a subscription marked `source: anz-detected`. Re-syncing never duplicates them, and your manually-added subscriptions are never touched.
+
+Disconnecting from Settings revokes the tokens and deletes the synced accounts and transactions, so unlinking leaves nothing behind.
 
 ## Environment Variables
  
