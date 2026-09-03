@@ -8,22 +8,48 @@ import './AnzCallbackPage.css'
 /**
  * Landing page for ANZ's OAuth redirect.
  *
- * ANZ may return the result in the query string (response_type=code) or in the
- * URL fragment (response_type=code id_token). Reading both means switching
- * response types is a backend config change with no frontend impact.
- *
- * This page exists on the frontend rather than the backend because the
- * authorisation code has to be handed to the API together with the user's
- * Firebase ID token — that is what tells the backend which SpendWise account
- * the new bank connection belongs to.
+ * ANZ may return the result in the query string (response_type=code) or packaged
+ * inside a signed JWT response (response_mode=jwt). This parser handles both
+ * seamlessly.
  */
+
+function decodeJwtPayload(token) {
+  try {
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    )
+    return JSON.parse(jsonPayload)
+  } catch {
+    return null
+  }
+}
 
 function readAuthResponse() {
   const query = new URLSearchParams(window.location.search)
-  // Fragments are never sent to the server, so they must be parsed here.
   const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ''))
 
   const pick = (key) => query.get(key) || fragment.get(key) || null
+
+  // Check if ANZ returned the response bundled as a signed JWT (response_mode=jwt)
+  const responseJwt = query.get('response') || fragment.get('response')
+  if (responseJwt) {
+    const decoded = decodeJwtPayload(responseJwt)
+    if (decoded) {
+      return {
+        code: decoded.code || pick('code'),
+        state: decoded.state || pick('state'),
+        idToken: decoded.id_token || pick('id_token'),
+        error: decoded.error || pick('error'),
+        errorDescription: decoded.error_description || pick('error_description'),
+        response: responseJwt,
+      }
+    }
+  }
 
   return {
     code: pick('code'),
@@ -34,11 +60,6 @@ function readAuthResponse() {
   }
 }
 
-/**
- * The URL is fully readable during the first render, so the outcome of the
- * redirect is derived synchronously here rather than in an effect. Only the
- * token exchange — which is genuinely asynchronous — happens in the effect.
- */
 function initialState() {
   const response = readAuthResponse()
 
@@ -87,9 +108,9 @@ function AnzCallbackPage() {
 
     if (initial.status !== 'connecting') return
 
-    const { code, state, idToken } = initial.response
+    const { code, state, idToken, response } = initial.response
 
-    completeAnzConnection({ code, state, idToken })
+    completeAnzConnection({ code, state, idToken, response })
       .then((result) => {
         setStatus('connected')
         setAccounts(result.accounts || [])

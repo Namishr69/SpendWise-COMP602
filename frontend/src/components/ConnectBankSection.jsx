@@ -123,12 +123,6 @@ function ConnectBankSection() {
         </Button>
       </div>
 
-      {isConnected && status.mock && (
-        <p className="bank-mock-notice">
-          Running in mock mode — this is sample data, not a live ANZ connection.
-        </p>
-      )}
-
       {isConnected && accounts.length > 0 && (
         <ul className="bank-accounts">
           {accounts.map((account) => (

@@ -55,17 +55,6 @@
   font-size: 0.8rem;
 }
 
-.bank-mock-notice {
-  margin: 14px 0 0;
-  padding: 8px 12px;
-
-  border-radius: 8px;
-  background: #fdf4e3;
-  color: #8a6100;
-
-  font-size: 0.82rem;
-}
-
 .bank-error {
   margin: 14px 0 0;
   color: #b3261e;

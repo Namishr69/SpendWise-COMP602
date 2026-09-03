@@ -1,7 +1,6 @@
-import { createContext, useState } from 'react'
+import { useState } from 'react'
 import { DEFAULT_CURRENCY } from '../constants/currencies.js'
-
-export const CurrencyContext = createContext()
+import { CurrencyContext } from './currencyContext'
 
 function CurrencyProvider({ children }) {
   const [preferredCurrency, setPreferredCurrency] =

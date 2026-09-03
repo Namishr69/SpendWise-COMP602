@@ -7,6 +7,7 @@ import DashboardPage from './pages/DashboardPage.jsx'
 import SettingsPage from './pages/SettingsPage.jsx'
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx'
 import SubscriptionsPage from './pages/SubscriptionsPage.jsx'
+import TransactionsPage from './pages/TransactionsPage.jsx'
 import SubscriptionDetailPage from './pages/SubscriptionDetailPage.jsx'
 import EditSubscriptionPage from './pages/EditSubscriptionPage.jsx'
 import AddSubscriptionPage from './pages/AddSubscriptionPage.jsx'
@@ -54,6 +55,15 @@ function App() {
           element={
             <PrivateRoute>
               <SubscriptionsPage />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/transactions"
+          element={
+            <PrivateRoute>
+              <TransactionsPage />
             </PrivateRoute>
           }
         />

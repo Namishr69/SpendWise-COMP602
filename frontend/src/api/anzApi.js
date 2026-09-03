@@ -4,7 +4,7 @@ const RAW_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').
 const API_ORIGIN = RAW_BASE.replace(/\/api$/, '')
 const API_BASE = `${API_ORIGIN}/api`
 
-async function apiRequest(path, options = {}) {
+export async function apiRequest(path, options = {}) {
   const user = auth.currentUser
   const token = user ? await user.getIdToken() : null
 
