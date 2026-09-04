@@ -77,6 +77,53 @@
   background: var(--color-danger-bg);
 }
 
+.dashboard-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-2xl) var(--space-lg);
+  text-align: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.dashboard-empty__icon {
+  color: var(--color-sage);
+  margin-bottom: var(--space-md);
+}
+
+.dashboard-empty__title {
+  color: var(--color-ink);
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: var(--space-xs);
+}
+
+.dashboard-empty__hint {
+  font-size: 14px;
+  color: var(--color-ink-soft);
+  margin-bottom: var(--space-lg);
+}
+
+.dashboard-empty__cta {
+  display: inline-block;
+  padding: 10px 20px;
+  background: var(--color-forest);
+  color: var(--color-white);
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease;
+}
+
+.dashboard-empty__cta:hover {
+  background: var(--color-forest-dark);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @media (max-width: 900px) {
   .dashboard-stats {
     grid-template-columns: repeat(2, 1fr);
