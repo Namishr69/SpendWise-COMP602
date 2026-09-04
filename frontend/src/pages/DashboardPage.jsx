@@ -45,6 +45,20 @@ function DashboardPage() {
     }
   }, 0)
 
+  const now = new Date()
+  const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+  const dueThisWeek = activeSubscriptions.filter((s) => {
+    if (!s.nextPaymentDate) return false
+    const due = new Date(s.nextPaymentDate)
+    return due >= now && due <= weekFromNow
+  })
+  const dueThisWeekTotal = dueThisWeek.reduce(
+    (sum, s) => sum + (Number(s.amount) || 0),
+    0,
+  )
+
+  const cancelledCount = subscriptions.length - activeSubscriptions.length
+
   const sorted = [...subscriptions].sort((a, b) =>
     a.name.localeCompare(b.name),
   )
@@ -53,7 +67,7 @@ function DashboardPage() {
     <AppShell activeNav="Dashboard">
       <div className="dashboard-stats">
         <Card tone="forest" className="dashboard-stat">
-          <p>Monthly spend</p>
+          <p>Spent this month</p>
           <h2 className="money">
             {formatCurrency(totalMonthly, preferredCurrency)}
           </h2>
@@ -65,13 +79,15 @@ function DashboardPage() {
         </Card>
 
         <Card tone="forest" className="dashboard-stat">
-          <p>Cancelled</p>
-          <h2>{subscriptions.length - activeSubscriptions.length}</h2>
+          <p>Due this week</p>
+          <h2 className="money">
+            {formatCurrency(dueThisWeekTotal, preferredCurrency)}
+          </h2>
         </Card>
 
         <Card tone="forest" className="dashboard-stat">
-          <p>Total subs</p>
-          <h2>{subscriptions.length}</h2>
+          <p>Alerts</p>
+          <h2>{cancelledCount}</h2>
         </Card>
       </div>
 
