@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3000/api'
+const API_URL = 'https://spendwise-comp602.onrender.com/api'
 
 async function getToken(currentUser) {
   if (!currentUser) {
