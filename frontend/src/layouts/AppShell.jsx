@@ -1,4 +1,4 @@
-import { useContext } from 'react'
+import { useContext, useState, useRef, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { AuthContext } from '../context/AuthProvider.jsx'
 import './AppShell.css'
@@ -16,18 +16,57 @@ function AppShell({
   children,
   hideTopbarTitle = false,
 }) {
-  const { signOut } = useContext(AuthContext)
+  const { currentUser, signOut } = useContext(AuthContext)
   const navigate = useNavigate()
 
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
+  const menuRef = useRef(null)
+
   async function handleLogout() {
-    await signOut()
-    navigate('/login', { replace: true })
+    if (loggingOut) return
+
+    setLoggingOut(true)
+
+    try {
+      await signOut()
+      navigate('/login', { replace: true })
+    } finally {
+      setLoggingOut(false)
+    }
   }
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target)
+      ) {
+        setMenuOpen(false)
+      }
+    }
+
+    function handleEscape(event) {
+      if (event.key === 'Escape') {
+        setMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [])
 
   return (
     <div className="app-shell">
       <aside className="app-shell__sidebar">
-        <div className="app-shell__logo">🌱 SpendWise</div>
+        <div className="app-shell__logo">
+          🌱 SpendWise
+        </div>
 
         <nav className="app-shell__nav">
           {NAV_ITEMS.map((item) => (
@@ -35,7 +74,9 @@ function AppShell({
               key={item.label}
               className={({ isActive }) =>
                 `app-shell__nav-item ${
-                  isActive ? 'app-shell__nav-item--active' : ''
+                  isActive
+                    ? 'app-shell__nav-item--active'
+                    : ''
                 }`
               }
               to={item.path}
@@ -65,11 +106,37 @@ function AppShell({
               placeholder="Search"
             />
 
-            <button
-              className="app-shell__avatar"
-              onClick={handleLogout}
-              aria-label="Logout"
-            />
+            <div
+              className="app-shell__avatar-wrap"
+              ref={menuRef}
+            >
+              <button
+                className="app-shell__avatar"
+                onClick={() =>
+                  setMenuOpen((value) => !value)
+                }
+                aria-label="Account menu"
+              />
+
+              {menuOpen && (
+                <div className="app-shell__avatar-menu">
+                  {currentUser?.email && (
+                    <div className="app-shell__avatar-menu-email">
+                      {currentUser.email}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                  >
+                    {loggingOut
+                      ? 'Logging out...'
+                      : 'Logout'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 

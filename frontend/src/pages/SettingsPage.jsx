@@ -6,6 +6,7 @@ import { CurrencyContext } from '../context/CurrencyProvider.jsx'
 import { updatePreferredCurrency } from '../api/currencyApi.js'
 import { SUPPORTED_CURRENCIES } from '../constants/currencies.js'
 import './SettingsPage.css'
+import Button from '../components/ui/Button.jsx'
 import { useNavigate } from 'react-router-dom'
 
 function SettingsPage() {
@@ -16,14 +17,21 @@ function SettingsPage() {
     setPreferredCurrency,
   } = useContext(CurrencyContext)
 
-  const [isPersonaliseOpen, setIsPersonaliseOpen] = useState(false)
-  const [message, setMessage] = useState('')
+const [isPersonaliseOpen, setIsPersonaliseOpen] = useState(false)
+const [message, setMessage] = useState('')
+const [loggingOut, setLoggingOut] = useState(false)
 
   const navigate = useNavigate()
 
   async function handleLogout() {
-  await signOut()
-  navigate('/login', { replace: true })
+  if (loggingOut) return
+  setLoggingOut(true)
+  try {
+    await signOut()
+    navigate('/login', { replace: true })
+  } finally {
+    setLoggingOut(false)
+  }
 }
 
   return (
@@ -96,10 +104,14 @@ function SettingsPage() {
           </div>
         )}
       </Card>
-      <button type="button" onClick={handleLogout} style={{ marginTop: 16 }}>
-        Logout
-      </button>
-    </AppShell>
+      <Card style={{ marginTop: 16 }}>
+    <h3>Account</h3>
+    <p style={{ marginTop: 8, marginBottom: 20 }}>{currentUser?.email}</p>
+   <Button variant="secondary" onClick={handleLogout} disabled={loggingOut}>
+  {loggingOut ? 'Logging out...' : 'Logout'}
+</Button>
+      </Card>
+ </AppShell>
   )
 }
 
