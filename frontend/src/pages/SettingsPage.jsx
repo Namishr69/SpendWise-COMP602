@@ -10,6 +10,7 @@ import './SettingsPage.css'
 import Button from '../components/ui/Button.jsx'
 import { useNavigate } from 'react-router-dom'
 import Input from '../components/ui/Input.jsx'
+import { updateBudget } from '../api/budgetApi.js'
 
 const BUDGET_PERIODS = ['Weekly', 'Monthly', 'Yearly']
 
@@ -31,6 +32,7 @@ function SettingsPage() {
   const [budgetPeriod, setBudgetPeriod] = useState(budget?.period ?? 'Monthly')
   const [budgetMessage, setBudgetMessage] = useState('')
   const [budgetError, setBudgetError] = useState('')
+  const [savingBudget, setSavingBudget] = useState(false)
 
   const navigate = useNavigate()
 
@@ -45,7 +47,7 @@ function SettingsPage() {
     }
   }
 
-  function handleSaveBudget(event) {
+   async function handleSaveBudget(event) {
     event.preventDefault()
     setBudgetMessage('')
     setBudgetError('')
@@ -56,10 +58,16 @@ function SettingsPage() {
       return
     }
 
-    // Frontend-only for now: stored in BudgetContext, not saved to the
-    // backend yet. That comes in a later stage once this UI is confirmed.
-    setBudget({ amount, period: budgetPeriod })
-    setBudgetMessage('Budget saved')
+    setSavingBudget(true)
+    try {
+      const result = await updateBudget(currentUser, amount, budgetPeriod)
+      setBudget(result.budget)
+      setBudgetMessage('Budget saved')
+    } catch (error) {
+      setBudgetError(error.message)
+    } finally {
+      setSavingBudget(false)
+    }
   }
 
   const isUnchanged =
@@ -173,7 +181,9 @@ function SettingsPage() {
                     </option>
                   ))}
                 </select>
-                <Button type="submit" disabled={isUnchanged}>Save</Button>
+                <Button type="submit" disabled={isUnchanged || savingBudget}>
+                    {savingBudget ? 'Saving...' : 'Save'}
+                  </Button>
               </form>
             </div>
             {budgetMessage && (

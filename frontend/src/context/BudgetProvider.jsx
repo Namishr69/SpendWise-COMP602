@@ -1,36 +1,48 @@
-import { createContext, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
+import { onAuthStateChanged } from 'firebase/auth'
+import { auth } from '../firebase.js'
+import { getMyProfile } from '../api/userApi.js'
 
 export const BudgetContext = createContext()
 
-const STORAGE_KEY = 'spendwise:budget'
-
-function loadStoredBudget() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : null
-  } catch {
-    return null
-  }
-}
-
 function BudgetProvider({ children }) {
-  const [budget, setBudgetState] = useState(loadStoredBudget)
+  const [budget, setBudget] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  function setBudget(newBudget) {
-    setBudgetState(newBudget)
-    try {
-      if (newBudget) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newBudget))
-      } else {
-        localStorage.removeItem(STORAGE_KEY)
+  useEffect(() => {
+    let cancelled = false
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        if (!cancelled) {
+          setBudget(null)
+          setLoading(false)
+        }
+        return
       }
-    } catch {
-      // ignore storage errors (e.g. private browsing blocking access)
+
+      try {
+        const profile = await getMyProfile()
+        if (!cancelled) {
+          setBudget(profile?.budget || null)
+        }
+      } catch (error) {
+        console.error('Failed to load budget:', error)
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    })
+
+    return () => {
+      cancelled = true
+      unsubscribe()
     }
-  }
+  }, [])
 
   return (
-    <BudgetContext.Provider value={{ budget, setBudget }}>
+    <BudgetContext.Provider value={{ budget, setBudget, loading }}>
       {children}
     </BudgetContext.Provider>
   )
