@@ -7,9 +7,11 @@ import DashboardPage from './pages/DashboardPage.jsx'
 import SettingsPage from './pages/SettingsPage.jsx'
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx'
 import SubscriptionsPage from './pages/SubscriptionsPage.jsx'
+import TransactionsPage from './pages/TransactionsPage.jsx'
 import SubscriptionDetailPage from './pages/SubscriptionDetailPage.jsx'
 import EditSubscriptionPage from './pages/EditSubscriptionPage.jsx'
 import AddSubscriptionPage from './pages/AddSubscriptionPage.jsx'
+import AnzCallbackPage from './pages/AnzCallbackPage.jsx'
 
 function App() {
   return (
@@ -58,6 +60,15 @@ function App() {
         />
 
         <Route
+          path="/transactions"
+          element={
+            <PrivateRoute>
+              <TransactionsPage />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
           path="/subscriptions/new"
           element={
             <PrivateRoute>
@@ -80,6 +91,17 @@ function App() {
           element={
             <PrivateRoute>
               <EditSubscriptionPage />
+            </PrivateRoute>
+          }
+        />
+
+        {/* ANZ redirects here after the user consents. Private because the
+            backend needs the Firebase ID token to attribute the connection. */}
+        <Route
+          path="/anz/callback"
+          element={
+            <PrivateRoute>
+              <AnzCallbackPage />
             </PrivateRoute>
           }
         />

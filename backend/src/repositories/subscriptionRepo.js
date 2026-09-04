@@ -40,6 +40,16 @@ const subscriptionRepo = {
             .add(data);
         return { id: docRef.id, ...data };
     },
+
+    // Upserts a payment under a caller-supplied id (the bank transaction id),
+    // so re-syncing the same transaction updates rather than duplicates it.
+    async upsertPayment(userId, subscriptionId, paymentId, data) {
+        const docRef = db.collection('users').doc(userId)
+            .collection('subscriptions').doc(subscriptionId)
+            .collection('payments').doc(paymentId);
+        await docRef.set(data, { merge: true });
+        return { id: paymentId, ...data };
+    },
 };
 
 export default subscriptionRepo;

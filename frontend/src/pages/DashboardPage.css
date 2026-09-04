@@ -81,6 +81,20 @@
   font-size: 14px;
 }
 
+.dashboard-notice {
+  margin-bottom: var(--space-lg);
+}
+
+.dashboard-notice h3 {
+  margin-bottom: var(--space-sm);
+}
+
+.dashboard-empty {
+  margin-top: var(--space-md);
+  color: var(--color-ink-soft);
+  font-size: 14px;
+}
+
 @media (max-width: 900px) {
   .dashboard-stats {
     grid-template-columns: repeat(2, 1fr);

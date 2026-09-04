@@ -1,0 +1,125 @@
+.bank-badge {
+  margin-left: 8px;
+  padding: 2px 8px;
+
+  border-radius: 999px;
+  background: #e3f1e8;
+  color: #1f4a33;
+
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+
+.bank-accounts {
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+
+  border-top: 1px solid #e4e4e4;
+}
+
+.bank-accounts__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  padding: 12px 0;
+  border-bottom: 1px solid #e4e4e4;
+}
+
+.bank-accounts__name {
+  margin: 0 0 3px;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.bank-accounts__meta {
+  margin: 0;
+  opacity: 0.65;
+  font-size: 0.82rem;
+}
+
+.bank-accounts__currency {
+  opacity: 0.7;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.bank-meta {
+  margin: 14px 0 0;
+  opacity: 0.6;
+  font-size: 0.8rem;
+}
+
+.bank-error {
+  margin: 14px 0 0;
+  color: #b3261e;
+  font-size: 0.88rem;
+}
+
+.bank-info-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-left: 8px;
+  width: 16px;
+  height: 16px;
+
+  border-radius: 50%;
+  background: #d1e8ff;
+  color: #0057b8;
+
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-style: normal;
+  line-height: 1;
+  cursor: default;
+  vertical-align: middle;
+
+  user-select: none;
+}
+
+.bank-info-tooltip {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  z-index: 10;
+
+  width: 230px;
+  padding: 10px 12px;
+
+  background: #1a1a1a;
+  color: #f5f5f5;
+  border-radius: 8px;
+
+  font-size: 0.78rem;
+  font-weight: 400;
+  line-height: 1.45;
+  text-align: left;
+  white-space: normal;
+
+  pointer-events: none;
+}
+
+.bank-info-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #1a1a1a;
+}
+
+.bank-info-icon:hover .bank-info-tooltip,
+.bank-info-icon:focus .bank-info-tooltip {
+  display: block;
+}

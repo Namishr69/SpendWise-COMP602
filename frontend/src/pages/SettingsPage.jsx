@@ -1,8 +1,9 @@
 import { useContext, useState } from 'react'
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
-import { AuthContext } from '../context/AuthProvider.jsx'
-import { CurrencyContext } from '../context/CurrencyProvider.jsx'
+import ConnectBankSection from '../components/ConnectBankSection.jsx'
+import { AuthContext } from '../context/authContext.js'
+import { CurrencyContext } from '../context/currencyContext.js'
 import { updatePreferredCurrency } from '../api/currencyApi.js'
 import { SUPPORTED_CURRENCIES } from '../constants/currencies.js'
 import './SettingsPage.css'
@@ -17,22 +18,24 @@ function SettingsPage() {
     setPreferredCurrency,
   } = useContext(CurrencyContext)
 
-const [isPersonaliseOpen, setIsPersonaliseOpen] = useState(false)
-const [message, setMessage] = useState('')
-const [loggingOut, setLoggingOut] = useState(false)
+  // Combined state variables from both branches
+  const [isPersonaliseOpen, setIsPersonaliseOpen] = useState(false)
+  const [isBanksOpen, setIsBanksOpen] = useState(false) 
+  const [message, setMessage] = useState('')
+  const [loggingOut, setLoggingOut] = useState(false)
 
   const navigate = useNavigate()
 
   async function handleLogout() {
-  if (loggingOut) return
-  setLoggingOut(true)
-  try {
-    await signOut()
-    navigate('/login', { replace: true })
-  } finally {
-    setLoggingOut(false)
+    if (loggingOut) return
+    setLoggingOut(true)
+    try {
+      await signOut()
+      navigate('/login', { replace: true })
+    } finally {
+      setLoggingOut(false)
+    }
   }
-}
 
   return (
     <AppShell activeNav="Settings">
@@ -104,14 +107,37 @@ const [loggingOut, setLoggingOut] = useState(false)
           </div>
         )}
       </Card>
-      <Card style={{ marginTop: 16 }}>
-    <h3>Account</h3>
-    <p style={{ marginTop: 8, marginBottom: 20 }}>{currentUser?.email}</p>
-   <Button variant="secondary" onClick={handleLogout} disabled={loggingOut}>
-  {loggingOut ? 'Logging out...' : 'Logout'}
-</Button>
+
+      {/* From feature/anz-open-banking-3: Connected Accounts section */}
+      <Card>
+        <button
+          type="button"
+          className="settings-section-toggle"
+          onClick={() => setIsBanksOpen(!isBanksOpen)}
+        >
+          <span>Connected accounts</span>
+
+          <span className="settings-section-arrow">
+            {isBanksOpen ? '▲' : '▼'}
+          </span>
+        </button>
+
+        {isBanksOpen && (
+          <div className="settings-section-content">
+            <ConnectBankSection />
+          </div>
+        )}
       </Card>
- </AppShell>
+
+      {/* From main: Logout and Account section */}
+      <Card style={{ marginTop: 16 }}>
+        <h3>Account</h3>
+        <p style={{ marginTop: 8, marginBottom: 20 }}>{currentUser?.email}</p>
+        <Button variant="secondary" onClick={handleLogout} disabled={loggingOut}>
+          {loggingOut ? 'Logging out...' : 'Logout'}
+        </Button>
+      </Card>
+    </AppShell>
   )
 }
 
