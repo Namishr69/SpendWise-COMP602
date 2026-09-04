@@ -48,10 +48,21 @@ export function updateSubscription(id, changes) {
   })
 }
 
-export function deleteSubscription(id) {
-  return apiRequest(`/subscriptions/${id}`, {
+export async function deleteSubscription(id) {
+  const user = auth.currentUser
+  const token = user ? await user.getIdToken() : null
+
+  const res = await fetch(`${API_BASE}/subscriptions/${id}`, {
     method: 'DELETE',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   })
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => null)
+    throw new Error(data?.error || 'Failed to delete subscription')
+  }
 }
 
 export function getPayments(subscriptionId) {
