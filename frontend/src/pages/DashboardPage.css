@@ -100,3 +100,25 @@
   font-size: 13px;
   margin-top: 4px;
 }
+.dashboard-budget-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-border);
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.dashboard-budget-bar__fill {
+  height: 100%;
+  background: var(--color-success);
+  transition: width 0.3s ease;
+}
+
+.dashboard-budget-bar__fill--warning {
+  background: var(--color-danger);
+}
+
+.dashboard-budget-spent {
+  font-size: 13px;
+  margin-top: 6px;
+}

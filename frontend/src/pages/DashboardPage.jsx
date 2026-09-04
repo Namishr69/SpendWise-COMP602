@@ -143,6 +143,22 @@ function DashboardPage() {
                 <p className="dashboard-budget-equivalent">
                   ≈ {formatCurrency(normalizeBudgetToMonthly(budget.amount, budget.period), preferredCurrency)} per month
                 </p>
+
+                <div className="dashboard-budget-bar">
+                  <div
+                    className={`dashboard-budget-bar__fill ${nearBudgetLimit ? 'dashboard-budget-bar__fill--warning' : ''}`}
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        (totalMonthlySpend / normalizeBudgetToMonthly(budget.amount, budget.period)) * 100
+                      )}%`,
+                    }}
+                  />
+                </div>
+
+                <p className="dashboard-budget-spent">
+                  {formatCurrency(totalMonthlySpend, preferredCurrency)} spent so far
+                </p>
               </>
             ) : (
               <p>No budget set. Add one in Settings.</p>
