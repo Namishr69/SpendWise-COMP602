@@ -30,6 +30,7 @@ const subscriptionService = {
             billingCycle: (data.billingCycle || 'Monthly').trim(),
             nextPaymentDate: (data.nextPaymentDate || '').trim(),
             status: (data.status || 'Active').trim(),
+            notes: (data.notes || '').trim().slice(0, 500),
             createdAt: new Date().toISOString(),
         };
 
@@ -68,6 +69,9 @@ const subscriptionService = {
         }
         if (changes.status !== undefined) {
             update.status = String(changes.status).trim();
+        }
+        if (changes.notes !== undefined) {
+            update.notes = String(changes.notes).trim().slice(0, 500);
         }
 
         if (Object.keys(update).length === 0) {

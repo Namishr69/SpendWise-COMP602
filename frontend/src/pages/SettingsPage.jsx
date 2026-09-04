@@ -7,18 +7,35 @@ import { CurrencyContext } from '../context/currencyContext.js'
 import { updatePreferredCurrency } from '../api/currencyApi.js'
 import { SUPPORTED_CURRENCIES } from '../constants/currencies.js'
 import './SettingsPage.css'
+import Button from '../components/ui/Button.jsx'
+import { useNavigate } from 'react-router-dom'
 
 function SettingsPage() {
-  const { currentUser } = useContext(AuthContext)
+  const { currentUser, signOut } = useContext(AuthContext)
 
   const {
     preferredCurrency,
     setPreferredCurrency,
   } = useContext(CurrencyContext)
 
+  // Combined state variables from both branches
   const [isPersonaliseOpen, setIsPersonaliseOpen] = useState(false)
-  const [isBanksOpen, setIsBanksOpen] = useState(false)
+  const [isBanksOpen, setIsBanksOpen] = useState(false) 
   const [message, setMessage] = useState('')
+  const [loggingOut, setLoggingOut] = useState(false)
+
+  const navigate = useNavigate()
+
+  async function handleLogout() {
+    if (loggingOut) return
+    setLoggingOut(true)
+    try {
+      await signOut()
+      navigate('/login', { replace: true })
+    } finally {
+      setLoggingOut(false)
+    }
+  }
 
   return (
     <AppShell activeNav="Settings">
@@ -91,6 +108,7 @@ function SettingsPage() {
         )}
       </Card>
 
+      {/* From feature/anz-open-banking-3: Connected Accounts section */}
       <Card>
         <button
           type="button"
@@ -109,6 +127,15 @@ function SettingsPage() {
             <ConnectBankSection />
           </div>
         )}
+      </Card>
+
+      {/* From main: Logout and Account section */}
+      <Card style={{ marginTop: 16 }}>
+        <h3>Account</h3>
+        <p style={{ marginTop: 8, marginBottom: 20 }}>{currentUser?.email}</p>
+        <Button variant="secondary" onClick={handleLogout} disabled={loggingOut}>
+          {loggingOut ? 'Logging out...' : 'Logout'}
+        </Button>
       </Card>
     </AppShell>
   )

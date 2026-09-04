@@ -1,4 +1,6 @@
-import { NavLink } from 'react-router-dom'
+import { useContext, useState, useRef, useEffect } from 'react'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { AuthContext } from '../context/AuthProvider.jsx'
 import './AppShell.css'
 
 const NAV_ITEMS = [
@@ -11,6 +13,40 @@ const NAV_ITEMS = [
 ]
 
 function AppShell({ activeNav = '', children }) {
+  const { currentUser, signOut } = useContext(AuthContext)
+  const navigate = useNavigate()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
+  const menuRef = useRef(null)
+
+  async function handleLogout() {
+    if (loggingOut) return
+    setLoggingOut(true)
+    try {
+      await signOut()
+      navigate('/login', { replace: true })
+    } finally {
+      setLoggingOut(false)
+    }
+  }
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false)
+      }
+    }
+    function handleEscape(e) {
+      if (e.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [])
+
   return (
     <div className="app-shell">
       <aside className="app-shell__sidebar">
@@ -43,7 +79,19 @@ function AppShell({ activeNav = '', children }) {
 
           <div className="app-shell__topbar-actions">
             <input className="app-shell__search" placeholder="Search" />
-            <div className="app-shell__avatar" />
+            <div className="app-shell__avatar-wrap" ref={menuRef}>
+              <button className="app-shell__avatar" onClick={() => setMenuOpen((v) => !v)} aria-label="Account menu" />
+              {menuOpen && (
+                <div className="app-shell__avatar-menu">
+                  {currentUser?.email && (
+                    <div className="app-shell__avatar-menu-email">{currentUser.email}</div>
+                  )}
+                  <button onClick={handleLogout} disabled={loggingOut}>
+                    {loggingOut ? 'Logging out...' : 'Logout'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
