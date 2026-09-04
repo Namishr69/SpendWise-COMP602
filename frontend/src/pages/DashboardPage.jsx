@@ -1,4 +1,5 @@
 import { useContext } from 'react'
+import { Link } from 'react-router-dom'
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
 import { CurrencyContext } from '../context/CurrencyProvider.jsx'
@@ -80,13 +81,24 @@ function DashboardPage() {
         <ul className="dashboard-subs">
           {sorted.map((subscription) => (
             <li key={subscription.id} className="dashboard-subs__item">
-              <div>
-                <p className="dashboard-subs__name">{subscription.name}</p>
-                <p className="dashboard-subs__meta">
-                  {formatCurrency(subscription.amount, preferredCurrency)} /{' '}
-                  {subscription.billingCycle?.toLowerCase()}
-                </p>
-              </div>
+              <Link
+                to={`/subscriptions/${subscription.id}`}
+                className="dashboard-subs__link"
+              >
+                <div>
+                  <p className="dashboard-subs__name">{subscription.name}</p>
+                  <p className="dashboard-subs__meta">
+                    {formatCurrency(subscription.amount, preferredCurrency)} /{' '}
+                    {subscription.billingCycle?.toLowerCase()}
+                  </p>
+                </div>
+
+                <span
+                  className={`dashboard-subs__status dashboard-subs__status--${subscription.status?.toLowerCase() === 'cancelled' ? 'cancelled' : 'active'}`}
+                >
+                  {subscription.status || 'Active'}
+                </span>
+              </Link>
             </li>
           ))}
         </ul>
