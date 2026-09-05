@@ -13,6 +13,7 @@ import AddSubscriptionPage from './pages/AddSubscriptionPage.jsx'
 import AddTransactionPage from './pages/AddTransactionPage.jsx'
 import TransactionsPage from './pages/TransactionsPage.jsx'
 import EditTransactionPage from './pages/EditTransactionPage.jsx'
+import AlertsPage from './pages/AlertsPage.jsx'
 
 function App() {
   return (
@@ -106,6 +107,16 @@ function App() {
         />
 
         <Route
+  path="/alerts"
+  element={
+    <PrivateRoute>
+      <AlertsPage />
+    </PrivateRoute>
+  }
+/>
+
+
+        <Route
           path="/transactions/:transactionId/edit"
           element={
             <PrivateRoute>
@@ -114,6 +125,7 @@ function App() {
           }
         />
       </Routes>
+
     </BrowserRouter>
   )
 }
