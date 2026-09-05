@@ -64,3 +64,27 @@
   outline: 2px solid #315c46;
   outline-offset: 2px;
 }
+
+.settings-budget-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.settings-budget-form {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.settings-budget-current {
+  margin-top: 8px !important;
+  font-weight: 600;
+  opacity: 1 !important;
+  color: #315c46;
+}
+
+.settings-budget-input:focus {
+  outline: 2px solid #315c46;
+  outline-offset: 2px;
+}

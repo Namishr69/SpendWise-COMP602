@@ -6,6 +6,7 @@ import currencyRoutes from './routes/currencyRoutes.js';
 import exchangeRateRoutes from './routes/exchangeRateRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
+import budgetRoutes from './routes/budgetRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
 
 const app = express();
@@ -23,6 +24,7 @@ app.use('/api', currencyRoutes);
 app.use('/api', exchangeRateRoutes);
 app.use('/api', userRoutes);
 app.use('/api', subscriptionRoutes);
+app.use('/api', budgetRoutes);
 app.use('/api', transactionRoutes);
 
 // 404 for any unmatched route
