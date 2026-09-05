@@ -11,16 +11,23 @@ const NAV_ITEMS = [
   { label: 'Settings', icon: '⚙️', path: '/settings' },
 ]
 
-function AppShell({ activeNav = '', children }) {
+function AppShell({
+  activeNav = '',
+  children,
+  hideTopbarTitle = false,
+}) {
   const { currentUser, signOut } = useContext(AuthContext)
   const navigate = useNavigate()
+
   const [menuOpen, setMenuOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const menuRef = useRef(null)
 
   async function handleLogout() {
     if (loggingOut) return
+
     setLoggingOut(true)
+
     try {
       await signOut()
       navigate('/login', { replace: true })
@@ -30,16 +37,24 @@ function AppShell({ activeNav = '', children }) {
   }
 
   useEffect(() => {
-    function handleClickOutside(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
+    function handleClickOutside(event) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target)
+      ) {
         setMenuOpen(false)
       }
     }
-    function handleEscape(e) {
-      if (e.key === 'Escape') setMenuOpen(false)
+
+    function handleEscape(event) {
+      if (event.key === 'Escape') {
+        setMenuOpen(false)
+      }
     }
+
     document.addEventListener('mousedown', handleClickOutside)
     document.addEventListener('keydown', handleEscape)
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
       document.removeEventListener('keydown', handleEscape)
@@ -49,7 +64,9 @@ function AppShell({ activeNav = '', children }) {
   return (
     <div className="app-shell">
       <aside className="app-shell__sidebar">
-        <div className="app-shell__logo">🌱 SpendWise</div>
+        <div className="app-shell__logo">
+          🌱 SpendWise
+        </div>
 
         <nav className="app-shell__nav">
           {NAV_ITEMS.map((item) => (
@@ -57,7 +74,9 @@ function AppShell({ activeNav = '', children }) {
               key={item.label}
               className={({ isActive }) =>
                 `app-shell__nav-item ${
-                  isActive ? 'app-shell__nav-item--active' : ''
+                  isActive
+                    ? 'app-shell__nav-item--active'
+                    : ''
                 }`
               }
               to={item.path}
@@ -71,22 +90,49 @@ function AppShell({ activeNav = '', children }) {
 
       <div className="app-shell__main">
         <header className="app-shell__topbar">
-          <div>
-            <p>Good morning</p>
-            <h2>{activeNav}</h2>
-          </div>
+          {!hideTopbarTitle && (
+            <div>
+              <p>Good morning</p>
+              <h2>{activeNav}</h2>
+            </div>
+          )}
 
-          <div className="app-shell__topbar-actions">
-            <input className="app-shell__search" placeholder="Search" />
-            <div className="app-shell__avatar-wrap" ref={menuRef}>
-              <button className="app-shell__avatar" onClick={() => setMenuOpen((v) => !v)} aria-label="Account menu" />
+          <div
+            className="app-shell__topbar-actions"
+            style={{ marginLeft: 'auto' }}
+          >
+            <input
+              className="app-shell__search"
+              placeholder="Search"
+            />
+
+            <div
+              className="app-shell__avatar-wrap"
+              ref={menuRef}
+            >
+              <button
+                className="app-shell__avatar"
+                onClick={() =>
+                  setMenuOpen((value) => !value)
+                }
+                aria-label="Account menu"
+              />
+
               {menuOpen && (
                 <div className="app-shell__avatar-menu">
                   {currentUser?.email && (
-                    <div className="app-shell__avatar-menu-email">{currentUser.email}</div>
+                    <div className="app-shell__avatar-menu-email">
+                      {currentUser.email}
+                    </div>
                   )}
-                  <button onClick={handleLogout} disabled={loggingOut}>
-                    {loggingOut ? 'Logging out...' : 'Logout'}
+
+                  <button
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                  >
+                    {loggingOut
+                      ? 'Logging out...'
+                      : 'Logout'}
                   </button>
                 </div>
               )}
