@@ -24,6 +24,10 @@ const subscriptionRepo = {
         return { id: updated.id, ...updated.data() };
     },
 
+    async remove(userId, subscriptionId) {
+        await db.collection('users').doc(userId).collection('subscriptions').doc(subscriptionId).delete();
+    },
+
     async listPayments(userId, subscriptionId) {
         const snapshot = await db.collection('users').doc(userId)
             .collection('subscriptions').doc(subscriptionId)

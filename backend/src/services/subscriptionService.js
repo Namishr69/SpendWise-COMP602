@@ -81,6 +81,14 @@ const subscriptionService = {
         return await subscriptionRepo.update(userId, subscriptionId, update);
     },
 
+    async deleteSubscription(userId, subscriptionId) {
+        const existing = await subscriptionRepo.getById(userId, subscriptionId);
+        if (!existing) {
+            throw new Error('Subscription not found');
+        }
+        await subscriptionRepo.remove(userId, subscriptionId);
+    },
+
     async listPayments(userId, subscriptionId) {
         const subscription = await subscriptionRepo.getById(userId, subscriptionId);
         if (!subscription) {
