@@ -1,30 +1,4 @@
-import { auth } from '../firebase.js'
-
-const RAW_BASE = 'https://spendwise-comp602.onrender.com'
-const API_ORIGIN = RAW_BASE.replace(/\/api$/, '')
-const API_BASE = `${API_ORIGIN}/api`
-
-async function apiRequest(path, options = {}) {
-  const user = auth.currentUser
-  const token = user ? await user.getIdToken() : null
-
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  })
-
-  const data = await res.json().catch(() => null)
-
-  if (!res.ok) {
-    throw new Error(data?.error || 'Request failed')
-  }
-
-  return data
-}
+import { apiRequest } from './client.js'
 
 export function getSubscriptions() {
   return apiRequest('/subscriptions')

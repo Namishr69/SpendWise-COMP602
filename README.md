@@ -71,6 +71,11 @@ On macOS or Linux, use `cp .env.example .env` instead.
  
 Then fill in the Firebase values in `.env`. You get these from the Firebase console under Project Settings.
  
+The example `.env` also sets `VITE_API_BASE_URL`, which controls **which backend the app talks to**:
+ 
+- **Just reviewing the app?** Leave it pointed at the shared deployment (the default in `.env.example`). You can skip the backend setup in steps 3 and 4 and go straight to `npm run dev` — no ANZ or service-account secrets needed.
+- **Developing the backend too?** Change it to `http://localhost:3000` and follow steps 3 and 4 to run your own backend.
+ 
 ### 3. Set up the backend
  
 Open a second terminal so the frontend can keep running.

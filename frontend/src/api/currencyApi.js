@@ -1,3 +1,5 @@
+import { API_BASE } from './client.js'
+
 export async function updatePreferredCurrency(currentUser, currency) {
   if (!currentUser) {
     throw new Error('User is not logged in')
@@ -5,7 +7,7 @@ export async function updatePreferredCurrency(currentUser, currency) {
 
   const token = await currentUser.getIdToken()
 
-  const response = await fetch('http://localhost:3000/api/preferred-currency', {
+  const response = await fetch(`${API_BASE}/preferred-currency`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',

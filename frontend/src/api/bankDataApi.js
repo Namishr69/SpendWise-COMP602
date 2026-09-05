@@ -1,4 +1,4 @@
-import { apiRequest } from './anzApi.js'
+import { apiRequest } from './client.js'
 
 /**
  * Bank data lives in Firestore after a sync; these reads never wait on ANZ.

@@ -1,30 +1,4 @@
-import { auth } from '../firebase.js'
-
-const RAW_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').replace(/\/+$/, '')
-const API_ORIGIN = RAW_BASE.replace(/\/api$/, '')
-const API_BASE = `${API_ORIGIN}/api`
-
-export async function apiRequest(path, options = {}) {
-  const user = auth.currentUser
-  const token = user ? await user.getIdToken() : null
-
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  })
-
-  const data = await res.json().catch(() => null)
-
-  if (!res.ok) {
-    throw new Error(data?.error || 'Request failed')
-  }
-
-  return data
-}
+import { apiRequest } from './client.js'
 
 /**
  * Starts the ANZ OAuth flow. Returns { authorizationUrl } — the caller
