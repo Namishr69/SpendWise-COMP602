@@ -1,6 +1,6 @@
 import { useContext, useState, useRef, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { AuthContext } from '../context/AuthProvider.jsx'
+import { AuthContext } from '../context/authContext.js'
 import './AppShell.css'
 
 const NAV_ITEMS = [
