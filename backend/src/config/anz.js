@@ -69,20 +69,34 @@ export function resolvePrivateKeyPath() {
   return resolve(BACKEND_ROOT, anzConfig.privateKeyPath);
 }
 
+/**
+ * Returns the signing key PEM. Prefers ANZ_PRIVATE_KEY (the whole PEM inline)
+ * so hosted deploys like Render can supply it as an env var; otherwise reads
+ * the file at ANZ_PRIVATE_KEY_PATH, which is the default for local dev.
+ */
+function readPrivateKeyPem() {
+  const inline = process.env.ANZ_PRIVATE_KEY;
+  if (inline && inline.trim()) {
+    // Some hosts and .env files store the PEM with literal "\n" instead of real
+    // newlines; turn those back into a valid multi-line PEM before parsing.
+    return inline.includes('\\n') ? inline.replace(/\\n/g, '\n') : inline;
+  }
+
+  const keyPath = resolvePrivateKeyPath();
+  try {
+    return readFileSync(keyPath, 'utf8');
+  } catch {
+    throw new Error(
+      'ANZ private key not found. Set ANZ_PRIVATE_KEY (inline PEM) for hosted ' +
+      `deploys, or ANZ_PRIVATE_KEY_PATH (file path) for local dev — looked for a file at "${keyPath}".`
+    );
+  }
+}
+
 export async function getPrivateKey() {
   if (cachedKey) return cachedKey;
 
-  const keyPath = resolvePrivateKeyPath();
-
-  let pem;
-  try {
-    pem = readFileSync(keyPath, 'utf8');
-  } catch {
-    throw new Error(
-      `ANZ private key not found at "${keyPath}". ` +
-      'Set ANZ_PRIVATE_KEY_PATH in backend/.env.'
-    );
-  }
+  const pem = readPrivateKeyPem();
 
   try {
     cachedKey = await importPKCS8(pem, anzConfig.signingAlg);
