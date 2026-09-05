@@ -1,11 +1,14 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import AppShell from '../layouts/AppShell'
 import Card from '../components/ui/Card'
+import Button from '../components/ui/Button'
 import { useSubscriptions } from '../context/subscriptionsContext'
 import './SubscriptionsPage.css'
 
 function SubscriptionsPage() {
-  const { subscriptions, loading, error } = useSubscriptions()
+  const { subscriptions, loading, error, deleteSubscription } = useSubscriptions()
+  const [deleting, setDeleting] = useState(null)
 
   if (loading) {
     return (
@@ -53,12 +56,32 @@ function SubscriptionsPage() {
                 <p>Status: {subscription.status}</p>
               </div>
 
-              <Link
-                className="subscription-link"
-                to={`/subscriptions/${subscription.id}`}
-              >
-                View details
-              </Link>
+              <div className="subscription-card__actions">
+                <Link
+                  className="subscription-link"
+                  to={`/subscriptions/${subscription.id}`}
+                >
+                  View details
+                </Link>
+
+                <button
+                  className="subscription-delete"
+                  disabled={deleting === subscription.id}
+                  onClick={async () => {
+                    if (!window.confirm(`Delete "${subscription.name}"? This cannot be undone.`)) return
+                    setDeleting(subscription.id)
+                    try {
+                      await deleteSubscription(subscription.id)
+                    } catch {
+                      alert('Failed to delete subscription.')
+                    } finally {
+                      setDeleting(null)
+                    }
+                  }}
+                >
+                  {deleting === subscription.id ? 'Deleting…' : 'Delete'}
+                </button>
+              </div>
             </Card>
           ))}
         </section>
