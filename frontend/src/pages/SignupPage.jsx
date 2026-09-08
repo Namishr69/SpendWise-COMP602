@@ -9,6 +9,7 @@ import Card from '../components/ui/Card.jsx'
 import Input from '../components/ui/Input.jsx'
 import Button from '../components/ui/Button.jsx'
 import './AuthForm.css'
+import { signInWithGoogle } from '../utils/googleAuth.js'
 
 function SignupPage() {
   const navigate = useNavigate()
@@ -59,7 +60,18 @@ function SignupPage() {
       setSubmitting(false)
     }
   }
-
+  async function handleGoogleSignIn() {
+    setError('')
+    setSubmitting(true)
+    try {
+      await signInWithGoogle()
+      navigate('/dashboard')
+    } catch (err) {
+      setError(getAuthErrorMessage(err))
+    } finally {
+      setSubmitting(false)
+    }
+  }
   return (
     <AuthLayout>
       <Card>
@@ -101,6 +113,9 @@ function SignupPage() {
             {submitting ? 'Creating account...' : 'Create account'}
           </Button>
         </form>
+                <Button variant="secondary" fullWidth onClick={handleGoogleSignIn} disabled={submitting}>
+          Continue with Google
+        </Button>
         <p className="auth-form__switch">
           Already have an account? <Link to="/login">Login</Link>
         </p>
