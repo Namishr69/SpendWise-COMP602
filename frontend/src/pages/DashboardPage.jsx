@@ -16,6 +16,7 @@ import {
 } from '../utils/budgetCalculations.js'
 import { getDashboard } from '../api/bankDataApi.js'
 import './DashboardPage.css'
+import { useAlerts } from '../hooks/useAlerts.js'
 
 // Shown before bank data loads and whenever the user is signed out or not yet
 // connected, so the page always renders sane zeros instead of crashing.
@@ -164,9 +165,6 @@ function DashboardPage() {
   const activeSubscriptions = subscriptions.filter(
     (s) => s.status?.toLowerCase() !== 'cancelled'
   )
-
-  const totalMonthlySpend = calculateTotalMonthlySpend(subscriptions)
-  const nearBudgetLimit = isNearBudgetLimit(totalMonthlySpend, budget)
 
   const now = new Date()
   const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
