@@ -42,6 +42,17 @@ const subscriptionController = {
         }
     },
 
+    // DELETE /api/subscriptions/:id — delete a subscription
+    async remove(req, res) {
+        try {
+            await subscriptionService.deleteSubscription(req.userId, req.params.id);
+            res.status(204).end();
+        } catch (error) {
+            const status = error.message === 'Subscription not found' ? 404 : 500;
+            res.status(status).json({ error: error.message });
+        }
+    },
+
     // GET /api/subscriptions/:id/payments — list a subscription's payments
     async listPayments(req, res) {
         try {

@@ -59,6 +59,13 @@ export function SubscriptionsProvider({ children }) {
     return updated
   }
 
+  async function deleteSubscription(id) {
+    await subscriptionApi.deleteSubscription(id)
+    setSubscriptions((currentSubscriptions) =>
+      currentSubscriptions.filter((subscription) => subscription.id !== id),
+    )
+  }
+
   async function createSubscription(data) {
     const created = await subscriptionApi.createSubscription(data)
     setSubscriptions((currentSubscriptions) => [created, ...currentSubscriptions])
@@ -73,6 +80,7 @@ export function SubscriptionsProvider({ children }) {
         error,
         getSubscription,
         updateSubscription,
+        deleteSubscription,
         createSubscription,
       }}
     >

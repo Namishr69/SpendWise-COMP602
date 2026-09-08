@@ -1,0 +1,31 @@
+.add-transaction-page {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.add-transaction-form-card {
+  margin-top: 1.5rem;
+}
+
+.add-transaction-form-card h1 {
+  margin: 0 0 0.5rem;
+  line-height: 1.2;
+}
+
+.add-transaction-form-card form {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.add-transaction-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 1rem;
+}
+
+.add-transaction-form-error {
+  color: #b91c1c;
+  margin: 0 0 1rem;
+}

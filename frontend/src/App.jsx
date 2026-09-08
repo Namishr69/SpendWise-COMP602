@@ -12,6 +12,8 @@ import SubscriptionDetailPage from './pages/SubscriptionDetailPage.jsx'
 import EditSubscriptionPage from './pages/EditSubscriptionPage.jsx'
 import AddSubscriptionPage from './pages/AddSubscriptionPage.jsx'
 import AnzCallbackPage from './pages/AnzCallbackPage.jsx'
+import AddTransactionPage from './pages/AddTransactionPage.jsx'
+import EditTransactionPage from './pages/EditTransactionPage.jsx'
 
 function App() {
   return (
@@ -91,6 +93,24 @@ function App() {
           element={
             <PrivateRoute>
               <EditSubscriptionPage />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/transactions/new"
+          element={
+            <PrivateRoute>
+              <AddTransactionPage />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/transactions/:transactionId/edit"
+          element={
+            <PrivateRoute>
+              <EditTransactionPage />
             </PrivateRoute>
           }
         />

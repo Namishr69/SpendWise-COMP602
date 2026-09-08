@@ -26,6 +26,16 @@ const userRepository = {
 
         return preferredCurrency;
     },
-};
 
+    async updateBudget(userId, budget) {
+        await usersCollection.doc(userId).set(
+            {
+                budget,
+            },
+            { merge: true }
+        );
+
+        return budget;
+    },
+};
 export default userRepository;

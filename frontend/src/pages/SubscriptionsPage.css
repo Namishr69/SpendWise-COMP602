@@ -43,9 +43,36 @@
   margin-top: 0;
 }
 
-.subscription-link {
-  align-self: flex-start;
+.subscription-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-top: 1rem;
+}
+
+.subscription-link {
   font-weight: 700;
   color: #283618;
+}
+
+.subscription-delete {
+  background: none;
+  border: 1px solid var(--color-danger);
+  color: var(--color-danger);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.subscription-delete:hover {
+  background: var(--color-danger);
+  color: var(--color-white);
+}
+
+.subscription-delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

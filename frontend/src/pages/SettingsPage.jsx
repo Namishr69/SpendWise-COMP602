@@ -4,11 +4,16 @@ import Card from '../components/ui/Card.jsx'
 import ConnectBankSection from '../components/ConnectBankSection.jsx'
 import { AuthContext } from '../context/authContext.js'
 import { CurrencyContext } from '../context/currencyContext.js'
+import { BudgetContext } from '../context/BudgetProvider.jsx'
 import { updatePreferredCurrency } from '../api/currencyApi.js'
 import { SUPPORTED_CURRENCIES } from '../constants/currencies.js'
 import './SettingsPage.css'
 import Button from '../components/ui/Button.jsx'
 import { useNavigate } from 'react-router-dom'
+import Input from '../components/ui/Input.jsx'
+import { updateBudget } from '../api/budgetApi.js'
+
+const BUDGET_PERIODS = ['Weekly', 'Monthly', 'Yearly']
 
 function SettingsPage() {
   const { currentUser, signOut } = useContext(AuthContext)
@@ -18,11 +23,18 @@ function SettingsPage() {
     setPreferredCurrency,
   } = useContext(CurrencyContext)
 
-  // Combined state variables from both branches
+  const { budget, setBudget } = useContext(BudgetContext)
+
   const [isPersonaliseOpen, setIsPersonaliseOpen] = useState(false)
-  const [isBanksOpen, setIsBanksOpen] = useState(false) 
+  const [isBanksOpen, setIsBanksOpen] = useState(false)
   const [message, setMessage] = useState('')
   const [loggingOut, setLoggingOut] = useState(false)
+
+  const [budgetAmount, setBudgetAmount] = useState(budget?.amount ?? '')
+  const [budgetPeriod, setBudgetPeriod] = useState(budget?.period ?? 'Monthly')
+  const [budgetMessage, setBudgetMessage] = useState('')
+  const [budgetError, setBudgetError] = useState('')
+  const [savingBudget, setSavingBudget] = useState(false)
 
   const navigate = useNavigate()
 
@@ -36,6 +48,34 @@ function SettingsPage() {
       setLoggingOut(false)
     }
   }
+
+  async function handleSaveBudget(event) {
+    event.preventDefault()
+    setBudgetMessage('')
+    setBudgetError('')
+
+    const amount = Number(budgetAmount)
+    if (!budgetAmount || Number.isNaN(amount) || amount <= 0) {
+      setBudgetError('Enter an amount greater than zero.')
+      return
+    }
+
+    setSavingBudget(true)
+    try {
+      const result = await updateBudget(currentUser, amount, budgetPeriod)
+      setBudget(result.budget)
+      setBudgetMessage('Budget saved')
+    } catch (error) {
+      setBudgetError(error.message)
+    } finally {
+      setSavingBudget(false)
+    }
+  }
+
+  const isUnchanged =
+    budget &&
+    Number(budgetAmount) === budget.amount &&
+    budgetPeriod === budget.period
 
   return (
     <AppShell activeNav="Settings">
@@ -104,11 +144,57 @@ function SettingsPage() {
                 )}
               </div>
             </div>
+
+            <div className="settings-option" style={{ marginTop: 20 }}>
+              <div className="settings-option-text">
+                <h3>Monthly budget</h3>
+
+                <p>
+                  Set a recurring spend budget and get alerted when you're
+                  close to exceeding it.
+                </p>
+
+                {budget && (
+                  <p className="settings-budget-current">
+                    Current budget: {budget.amount} / {budget.period}
+                  </p>
+                )}
+              </div>
+
+              <form onSubmit={handleSaveBudget} className="settings-budget-form">
+                <Input
+                  id="budget-amount"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  placeholder="Amount"
+                  value={budgetAmount}
+                  onChange={(event) => setBudgetAmount(event.target.value)}
+                  error={budgetError}
+                />
+                <select
+                  className="settings-currency-select"
+                  value={budgetPeriod}
+                  onChange={(event) => setBudgetPeriod(event.target.value)}
+                >
+                  {BUDGET_PERIODS.map((period) => (
+                    <option key={period} value={period}>
+                      {period}
+                    </option>
+                  ))}
+                </select>
+                <Button type="submit" disabled={isUnchanged || savingBudget}>
+                    {savingBudget ? 'Saving...' : 'Save'}
+                  </Button>
+              </form>
+            </div>
+            {budgetMessage && (
+              <p className="settings-message">{budgetMessage}</p>
+            )}
           </div>
         )}
       </Card>
 
-      {/* From feature/anz-open-banking-3: Connected Accounts section */}
       <Card>
         <button
           type="button"
@@ -129,7 +215,6 @@ function SettingsPage() {
         )}
       </Card>
 
-      {/* From main: Logout and Account section */}
       <Card style={{ marginTop: 16 }}>
         <h3>Account</h3>
         <p style={{ marginTop: 8, marginBottom: 20 }}>{currentUser?.email}</p>

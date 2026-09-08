@@ -1,4 +1,5 @@
 import { useCallback, useContext, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '../firebase'
 import AppShell from '../layouts/AppShell.jsx'
@@ -7,6 +8,7 @@ import { CurrencyContext } from '../context/currencyContext.js'
 import { convertCurrency } from '../api/exchangeRateApi.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
 import { getAnzStatus } from '../api/anzApi.js'
+import { getTransactions } from '../api/transactionApi.js'
 import {
   getBankAccounts,
   getBankTransactions,
@@ -31,6 +33,9 @@ function TransactionsPage() {
   const [status, setStatus] = useState(null)
   const [accounts, setAccounts] = useState([])
   const [transactions, setTransactions] = useState([])
+  // Manually added transactions live alongside the bank-synced ones so both
+  // ways of tracking spending show up on this page.
+  const [manual, setManual] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -41,15 +46,19 @@ function TransactionsPage() {
   const [syncing, setSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState(null)
 
-  const load = useCallback(async () => {
-    const [statusData, accountsData, txnsData] = await Promise.all([
+  const load = useCallback(async (user) => {
+    const [statusData, accountsData, txnsData, manualData] = await Promise.all([
       getAnzStatus(),
       getBankAccounts(),
       getBankTransactions({ limit: 100 }),
+      // Manual transactions are a separate feature — a failure there must not
+      // blank out the bank-synced list.
+      getTransactions(user).catch(() => []),
     ])
     setStatus(statusData)
     setAccounts(accountsData)
     setTransactions(txnsData)
+    setManual(manualData)
   }, [])
 
   useEffect(() => {
@@ -61,6 +70,7 @@ function TransactionsPage() {
           setStatus(null)
           setAccounts([])
           setTransactions([])
+          setManual([])
           setError(null)
           setLoading(false)
         }
@@ -68,7 +78,7 @@ function TransactionsPage() {
       }
 
       try {
-        await load()
+        await load(user)
         if (!cancelled) setError(null)
       } catch (err) {
         if (!cancelled) setError(err)
@@ -103,7 +113,7 @@ function TransactionsPage() {
     setError(null)
     try {
       const summary = await syncBankData()
-      await load()
+      await load(auth.currentUser)
       setSyncMessage(
         `Synced ${summary.transactionsSynced} transactions across ` +
           `${summary.accounts} account(s). ${summary.subscriptionsCreated} new ` +
@@ -138,16 +148,22 @@ function TransactionsPage() {
           <p>Balances and activity synced from your bank.</p>
         </div>
 
-        {connected && (
-          <button
-            type="button"
-            className="transactions-refresh"
-            onClick={handleRefresh}
-            disabled={syncing}
-          >
-            {syncing ? 'Syncing…' : '↻ Refresh'}
-          </button>
-        )}
+        <div className="transactions-actions">
+          {connected && (
+            <button
+              type="button"
+              className="transactions-refresh"
+              onClick={handleRefresh}
+              disabled={syncing}
+            >
+              {syncing ? 'Syncing…' : '↻ Refresh'}
+            </button>
+          )}
+
+          <Link className="transactions-add" to="/transactions/new">
+            + Add transaction
+          </Link>
+        </div>
       </header>
 
       {syncMessage && (
@@ -167,7 +183,7 @@ function TransactionsPage() {
           <h3>No bank connected</h3>
           <p>
             Connect your bank in <strong>Settings</strong> to sync your accounts
-            and transactions.
+            and transactions, or add transactions manually.
           </p>
         </Card>
       ) : (
@@ -227,6 +243,36 @@ function TransactionsPage() {
             )}
           </Card>
         </>
+      )}
+
+      {manual.length > 0 && (
+        <Card>
+          <h3>Added manually</h3>
+
+          <ul className="transactions-list">
+            {manual.map((transaction) => (
+              <li key={transaction.id} className="transactions-list__item">
+                <div>
+                  <p className="transactions-list__name">{transaction.name}</p>
+                  <p className="transactions-list__date">
+                    {transaction.date}
+                    {transaction.category ? ` · ${transaction.category}` : ''}
+                  </p>
+                </div>
+
+                <span className="transactions-list__manual">
+                  <span className="money">{show(transaction.amount)}</span>
+                  <Link
+                    className="transactions-list__edit"
+                    to={`/transactions/${transaction.id}/edit`}
+                  >
+                    Edit
+                  </Link>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
       )}
     </AppShell>
   )
