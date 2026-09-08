@@ -1,3 +1,5 @@
+import { API_BASE } from './client.js'
+
 export async function updateBudget(currentUser, amount, period) {
   if (!currentUser) {
     throw new Error('User is not logged in')
@@ -5,7 +7,7 @@ export async function updateBudget(currentUser, amount, period) {
 
   const token = await currentUser.getIdToken()
 
-  const response = await fetch('http://localhost:3000/api/budget', {
+  const response = await fetch(`${API_BASE}/budget`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
