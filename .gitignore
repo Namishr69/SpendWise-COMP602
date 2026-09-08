@@ -18,6 +18,13 @@ ui-debug.log
 .runtimeconfig.json
 serviceAccountKey.json
 
+# Private keys / certificates (ANZ Open Banking signing key lives here)
+*.pem
+*.key
+*.p12
+*.pfx
+*.pem
+
 # React build output
 build/
 dist/
@@ -37,3 +44,7 @@ coverage/
 .DS_Store
 Thumbs.db
 *.swp
+
+# AI assistant workspaces
+.claude/
+.gemini/

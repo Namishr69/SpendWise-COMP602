@@ -1,4 +1,4 @@
-const API_URL = 'https://spendwise-comp602.onrender.com/api'
+import { API_BASE as API_URL } from './client.js'
 
 async function getToken(currentUser) {
   if (!currentUser) {
