@@ -162,8 +162,10 @@ function DashboardPage() {
     )
   }
 
-  const activeSubscriptions = subscriptions.filter(
-    (s) => s.status?.toLowerCase() !== 'cancelled'
+  const { alerts, activeSubscriptions, totalMonthlySpend, nearBudgetLimit } = useAlerts(
+    subscriptions,
+    budget,
+    preferredCurrency,
   )
 
   const now = new Date()
@@ -175,20 +177,6 @@ function DashboardPage() {
       return due >= now && due <= weekFromNow
     })
     .reduce((sum, s) => sum + (Number(s.amount) || 0), 0)
-
-  const alerts = []
-  if (nearBudgetLimit) {
-    const monthlyBudget = normalizeBudgetToMonthly(budget.amount, budget.period)
-    alerts.push(
-      `You've spent ${formatCurrency(totalMonthlySpend, preferredCurrency)} of your ${formatCurrency(monthlyBudget, preferredCurrency)} monthly budget`
-    )
-  }
-  const cancelledCount = subscriptions.length - activeSubscriptions.length
-  if (cancelledCount > 0) {
-    alerts.push(
-      `${cancelledCount} cancelled subscription${cancelledCount > 1 ? 's' : ''}`
-    )
-  }
 
   const sorted = [...subscriptions].sort((a, b) => a.name.localeCompare(b.name))
 

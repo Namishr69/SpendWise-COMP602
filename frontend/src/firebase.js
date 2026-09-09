@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -15,3 +15,13 @@ const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Use localStorage instead of the default IndexedDB persistence.
+// Firebase's IndexedDB-based session storage has a known issue where
+// redirect-based sign-in (e.g. Google) can fail with "Database is
+// closing/hidden" if a write is interrupted by the page navigating
+// away/back too quickly. localStorage-based persistence avoids this
+// entirely and is more than sufficient for our needs.
+setPersistence(auth, browserLocalPersistence).catch((error) => {
+  console.error('Failed to set auth persistence:', error);
+});
