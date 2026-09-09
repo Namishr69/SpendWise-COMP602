@@ -1,7 +1,7 @@
 import { useContext } from 'react'
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
-import { CurrencyContext } from '../context/CurrencyProvider.jsx'
+import { CurrencyContext } from '../context/currencyContext.js'
 import { BudgetContext } from '../context/BudgetProvider.jsx'
 import { useSubscriptions } from '../context/subscriptionsContext.js'
 import { useAlerts } from '../hooks/useAlerts.js'
