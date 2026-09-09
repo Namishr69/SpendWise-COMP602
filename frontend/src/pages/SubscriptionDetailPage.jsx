@@ -105,7 +105,7 @@ function SubscriptionDetailPage() {
         amount,
       })
       setPayments((current) => [created, ...current])
-      setPaymentDate('')
+      setPaymentDate(localToday())
       setPaymentAmount('')
     } catch (err) {
       setPaymentError(err.message)
