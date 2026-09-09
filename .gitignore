@@ -37,3 +37,4 @@ coverage/
 .DS_Store
 Thumbs.db
 *.swp
+anz-private-key.pem
