@@ -9,6 +9,22 @@ import { useSubscriptions } from '../context/subscriptionsContext'
 import { getPayments, createPayment } from '../api/subscriptionApi'
 import './SubscriptionDetailPage.css'
 
+function localToday() {
+  const now = new Date()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${now.getFullYear()}-${month}-${day}`
+}
+
+function localDateFromISO(iso) {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
+}
+
 function SubscriptionDetailPage() {
   const { subscriptionId } = useParams()
   const { loading, getSubscription, updateSubscription } = useSubscriptions()
@@ -16,7 +32,7 @@ function SubscriptionDetailPage() {
 
   const [payments, setPayments] = useState([])
   const [paymentsLoading, setPaymentsLoading] = useState(true)
-  const [paymentDate, setPaymentDate] = useState('')
+  const [paymentDate, setPaymentDate] = useState(localToday())
   const [paymentAmount, setPaymentAmount] = useState('')
   const [paymentError, setPaymentError] = useState('')
   const [adding, setAdding] = useState(false)
@@ -128,6 +144,15 @@ function SubscriptionDetailPage() {
         <Card>
           <h2>Next payment</h2>
           <p>{subscription.nextPaymentDate || 'Not set'}</p>
+        </Card>
+
+        <Card>
+          <h2>Subscription date</h2>
+          <p>
+            {subscription.subscriptionDate ||
+              localDateFromISO(subscription.createdAt) ||
+              'Not set'}
+          </p>
         </Card>
 
         <Card>

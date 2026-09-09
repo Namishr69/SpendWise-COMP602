@@ -7,6 +7,13 @@ import Input from '../components/ui/Input'
 import { useSubscriptions } from '../context/subscriptionsContext'
 import './AddSubscriptionPage.css'
 
+function localToday() {
+  const now = new Date()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${now.getFullYear()}-${month}-${day}`
+}
+
 function AddSubscriptionPage() {
   const navigate = useNavigate()
   const { createSubscription } = useSubscriptions()
@@ -14,6 +21,7 @@ function AddSubscriptionPage() {
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
   const [billingCycle, setBillingCycle] = useState('Monthly')
+  const [subscriptionDate, setSubscriptionDate] = useState(localToday())
   const [nextPaymentDate, setNextPaymentDate] = useState('')
   const [errors, setErrors] = useState({})
 
@@ -46,6 +54,7 @@ function AddSubscriptionPage() {
         name: name.trim(),
         amount: Number(amount),
         billingCycle,
+        subscriptionDate: subscriptionDate.trim(),
         nextPaymentDate: nextPaymentDate.trim(),
       })
       navigate(`/subscriptions/${created.id}`)
@@ -101,6 +110,14 @@ function AddSubscriptionPage() {
                 <option value="Quarterly">Quarterly</option>
               </select>
             </div>
+
+            <Input
+              id="subscription-date"
+              label="Subscription date"
+              type="date"
+              value={subscriptionDate}
+              onChange={(event) => setSubscriptionDate(event.target.value)}
+            />
 
             <Input
               id="subscription-next-date"

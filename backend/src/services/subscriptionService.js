@@ -24,17 +24,29 @@ const subscriptionService = {
             throw new Error('Amount must be greater than zero');
         }
 
+        const subscriptionDate = (data.subscriptionDate || '').trim();
+
         const subscription = {
             name,
             amount,
             billingCycle: (data.billingCycle || 'Monthly').trim(),
             nextPaymentDate: (data.nextPaymentDate || '').trim(),
+            subscriptionDate,
             status: (data.status || 'Active').trim(),
             notes: (data.notes || '').trim().slice(0, 500),
             createdAt: new Date().toISOString(),
         };
 
-        return await subscriptionRepo.create(userId, subscription);
+        const created = await subscriptionRepo.create(userId, subscription);
+
+        // Subscribing is itself the first payment, so seed the payment history
+        // with one entry instead of leaving it empty.
+        await subscriptionRepo.createPayment(userId, created.id, {
+            date: subscriptionDate || created.createdAt.slice(0, 10),
+            amount,
+        });
+
+        return created;
     },
 
     async updateSubscription(userId, subscriptionId, changes) {
