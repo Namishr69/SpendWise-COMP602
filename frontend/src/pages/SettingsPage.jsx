@@ -1,8 +1,9 @@
 import { useContext, useState } from 'react'
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
-import { AuthContext } from '../context/AuthProvider.jsx'
-import { CurrencyContext } from '../context/CurrencyProvider.jsx'
+import ConnectBankSection from '../components/ConnectBankSection.jsx'
+import { AuthContext } from '../context/authContext.js'
+import { CurrencyContext } from '../context/currencyContext.js'
 import { BudgetContext } from '../context/BudgetProvider.jsx'
 import { updatePreferredCurrency } from '../api/currencyApi.js'
 import { SUPPORTED_CURRENCIES } from '../constants/currencies.js'
@@ -25,6 +26,7 @@ function SettingsPage() {
   const { budget, setBudget } = useContext(BudgetContext)
 
   const [isPersonaliseOpen, setIsPersonaliseOpen] = useState(false)
+  const [isBanksOpen, setIsBanksOpen] = useState(false)
   const [message, setMessage] = useState('')
   const [loggingOut, setLoggingOut] = useState(false)
 
@@ -47,7 +49,7 @@ function SettingsPage() {
     }
   }
 
-   async function handleSaveBudget(event) {
+  async function handleSaveBudget(event) {
     event.preventDefault()
     setBudgetMessage('')
     setBudgetError('')
@@ -192,6 +194,27 @@ function SettingsPage() {
           </div>
         )}
       </Card>
+
+      <Card>
+        <button
+          type="button"
+          className="settings-section-toggle"
+          onClick={() => setIsBanksOpen(!isBanksOpen)}
+        >
+          <span>Connected accounts</span>
+
+          <span className="settings-section-arrow">
+            {isBanksOpen ? '▲' : '▼'}
+          </span>
+        </button>
+
+        {isBanksOpen && (
+          <div className="settings-section-content">
+            <ConnectBankSection />
+          </div>
+        )}
+      </Card>
+
       <Card style={{ marginTop: 16 }}>
         <h3>Account</h3>
         <p style={{ marginTop: 8, marginBottom: 20 }}>{currentUser?.email}</p>

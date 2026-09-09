@@ -4,7 +4,7 @@ import AppShell from '../layouts/AppShell'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import Input from '../components/ui/Input'
-import { AuthContext } from '../context/AuthProvider'
+import { AuthContext } from '../context/authContext.js'
 import {
   deleteTransaction,
   getTransaction,

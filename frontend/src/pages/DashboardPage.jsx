@@ -1,23 +1,160 @@
-import { useContext } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { onAuthStateChanged } from 'firebase/auth'
+import { auth } from '../firebase'
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
-import { CurrencyContext } from '../context/CurrencyProvider.jsx'
+import { CurrencyContext } from '../context/currencyContext.js'
 import { BudgetContext } from '../context/BudgetProvider.jsx'
 import { useSubscriptions } from '../context/subscriptionsContext.js'
+import { convertCurrency } from '../api/exchangeRateApi.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
-import { calculateTotalMonthlySpend, isNearBudgetLimit, normalizeBudgetToMonthly } from '../utils/budgetCalculations.js'
+import {
+  calculateTotalMonthlySpend,
+  isNearBudgetLimit,
+  normalizeBudgetToMonthly,
+} from '../utils/budgetCalculations.js'
+import { getDashboard } from '../api/bankDataApi.js'
 import './DashboardPage.css'
 import { useAlerts } from '../hooks/useAlerts.js'
 
-const CATEGORIES = ['Entertainment', 'Fitness', 'Cloud Storage']
+// Shown before bank data loads and whenever the user is signed out or not yet
+// connected, so the page always renders sane zeros instead of crashing.
+const EMPTY_DASHBOARD = {
+  currency: 'NZD',
+  hasData: false,
+  stats: { spentThisMonth: 0, activeSubs: 0, dueThisWeek: 0, detectedSubs: 0 },
+  upcomingBills: [],
+  recentTransactions: [],
+}
+
+function formatDate(iso) {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleDateString('en-NZ', { day: 'numeric', month: 'short' })
+}
 
 function DashboardPage() {
   const { preferredCurrency } = useContext(CurrencyContext)
   const { budget } = useContext(BudgetContext)
-  const { subscriptions, loading, error } = useSubscriptions()
+  const {
+    subscriptions,
+    loading: subsLoading,
+    error: subsError,
+  } = useSubscriptions()
 
-  if (loading) {
+  // Bank-synced figures from ANZ, kept separate from the manually tracked
+  // subscriptions above so one failing never blanks the other.
+  const [dashboard, setDashboard] = useState(EMPTY_DASHBOARD)
+  const [bankLoading, setBankLoading] = useState(true)
+  const [bankError, setBankError] = useState(null)
+
+  // Bank figures converted into the user's preferred currency.
+  const [bankStats, setBankStats] = useState(null)
+  const [bills, setBills] = useState([])
+  const [transactions, setTransactions] = useState([])
+
+  // Fetch once we know who is signed in — mirrors SubscriptionsProvider so the
+  // Firebase ID token is available when the request goes out.
+  useEffect(() => {
+    let cancelled = false
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        if (!cancelled) {
+          setDashboard(EMPTY_DASHBOARD)
+          setBankError(null)
+          setBankLoading(false)
+        }
+        return
+      }
+
+      try {
+        const data = await getDashboard()
+        if (!cancelled) {
+          setDashboard(data)
+          setBankError(null)
+        }
+      } catch (err) {
+        if (!cancelled) setBankError(err)
+      } finally {
+        if (!cancelled) setBankLoading(false)
+      }
+    })
+
+    return () => {
+      cancelled = true
+      unsubscribe()
+    }
+  }, [])
+
+  // Convert money to the preferred currency. convertCurrency short-circuits
+  // when currencies match, so the default NZD case makes no network calls.
+  useEffect(() => {
+    let cancelled = false
+
+    async function convert() {
+      const source = dashboard.currency || 'NZD'
+      const { stats: s, upcomingBills, recentTransactions } = dashboard
+      const toPreferred = (amount, from) =>
+        convertCurrency(amount, from || source, preferredCurrency)
+
+      try {
+        const [spent, due] = await Promise.all([
+          toPreferred(s.spentThisMonth),
+          toPreferred(s.dueThisWeek),
+        ])
+
+        const convertedBills = await Promise.all(
+          upcomingBills.map(async (b) => ({
+            ...b,
+            amount: await toPreferred(b.amount, b.currency),
+            currency: preferredCurrency,
+          }))
+        )
+
+        const convertedTxns = await Promise.all(
+          recentTransactions.map(async (t) => ({
+            ...t,
+            amount: await toPreferred(t.amount, t.currency),
+            currency: preferredCurrency,
+          }))
+        )
+
+        if (cancelled) return
+
+        setBankStats({
+          spentThisMonth: spent,
+          dueThisWeek: due,
+          detectedSubs: s.detectedSubs,
+          currency: preferredCurrency,
+        })
+        setBills(convertedBills)
+        setTransactions(convertedTxns)
+      } catch (err) {
+        console.error('Currency conversion failed:', err)
+        // Fall back to the source-currency figures so the page still renders.
+        if (cancelled) return
+        setBankStats({
+          spentThisMonth: s.spentThisMonth,
+          dueThisWeek: s.dueThisWeek,
+          detectedSubs: s.detectedSubs,
+          currency: source,
+        })
+        setBills(upcomingBills)
+        setTransactions(recentTransactions)
+      }
+    }
+
+    convert()
+
+    return () => {
+      cancelled = true
+    }
+  }, [dashboard, preferredCurrency])
+
+  if (subsLoading) {
     return (
       <AppShell activeNav="Dashboard">
         <p>Loading dashboard…</p>
@@ -25,18 +162,8 @@ function DashboardPage() {
     )
   }
 
-  if (error) {
-    return (
-      <AppShell activeNav="Dashboard">
-        <p>Could not load dashboard: {error.message}</p>
-      </AppShell>
-    )
-  }
-
-    const { alerts, activeSubscriptions, totalMonthlySpend, nearBudgetLimit } = useAlerts(
-    subscriptions,
-    budget,
-    preferredCurrency,
+  const activeSubscriptions = subscriptions.filter(
+    (s) => s.status?.toLowerCase() !== 'cancelled'
   )
 
   const now = new Date()
@@ -49,18 +176,57 @@ function DashboardPage() {
     })
     .reduce((sum, s) => sum + (Number(s.amount) || 0), 0)
 
-  const sorted = [...subscriptions].sort((a, b) =>
-    a.name.localeCompare(b.name),
-  )
+  const alerts = []
+  if (nearBudgetLimit) {
+    const monthlyBudget = normalizeBudgetToMonthly(budget.amount, budget.period)
+    alerts.push(
+      `You've spent ${formatCurrency(totalMonthlySpend, preferredCurrency)} of your ${formatCurrency(monthlyBudget, preferredCurrency)} monthly budget`
+    )
+  }
+  const cancelledCount = subscriptions.length - activeSubscriptions.length
+  if (cancelledCount > 0) {
+    alerts.push(
+      `${cancelledCount} cancelled subscription${cancelledCount > 1 ? 's' : ''}`
+    )
+  }
+
+  const sorted = [...subscriptions].sort((a, b) => a.name.localeCompare(b.name))
+
+  // Prefer the bank's spend figure once a connection has synced; fall back to
+  // the subscription total so the tile is never empty.
+  const spentDisplay =
+    dashboard.hasData && bankStats
+      ? formatCurrency(bankStats.spentThisMonth, bankStats.currency)
+      : formatCurrency(totalMonthlySpend, preferredCurrency)
 
   return (
     <AppShell activeNav="Dashboard">
+      {subsError && (
+        <Card className="dashboard-notice">
+          <p>Could not load subscriptions: {subsError.message}</p>
+        </Card>
+      )}
+
+      {bankError && (
+        <Card className="dashboard-notice">
+          <p>Could not load your bank data: {bankError.message}</p>
+        </Card>
+      )}
+
+      {!bankLoading && !bankError && !dashboard.hasData && (
+        <Card className="dashboard-notice">
+          <h3>No bank data yet</h3>
+          <p>
+            Connect your bank in <strong>Settings</strong> to see spending,
+            upcoming bills and automatically detected subscriptions.
+          </p>
+        </Card>
+      )}
+
       <div className="dashboard-stats">
         <Card tone="forest" className="dashboard-stat">
           <p>Spent this month</p>
-          <h2 className="money">
-            {formatCurrency(totalMonthlySpend, preferredCurrency)}
-          </h2>
+          <h2 className="money">{spentDisplay}</h2>
         </Card>
 
         <Card tone="forest" className="dashboard-stat">
@@ -76,8 +242,12 @@ function DashboardPage() {
         </Card>
 
         <Card tone="forest" className="dashboard-stat">
-          <p>Alerts</p>
-          <h2>{alerts.length}</h2>
+          <p>{dashboard.hasData ? 'Detected subs' : 'Alerts'}</p>
+          <h2>
+            {dashboard.hasData && bankStats
+              ? bankStats.detectedSubs
+              : alerts.length}
+          </h2>
         </Card>
       </div>
 
@@ -157,7 +327,7 @@ function DashboardPage() {
                     style={{
                       width: `${Math.min(
                         100,
-                        (totalMonthlySpend / normalizeBudgetToMonthly(budget.amount, budget.period)) * 100,
+                        (totalMonthlySpend / normalizeBudgetToMonthly(budget.amount, budget.period)) * 100
                       )}%`,
                     }}
                   />
@@ -188,15 +358,53 @@ function DashboardPage() {
             </div>
           </Card>
 
-          <Card>
-            <h3>By category</h3>
+          {bills.length > 0 && (
+            <Card>
+              <h3>Upcoming bills</h3>
 
-            <ul className="dashboard-categories">
-              {CATEGORIES.map((category) => (
-                <li key={category}>{category}</li>
-              ))}
-            </ul>
-          </Card>
+              <ul className="dashboard-list">
+                {bills.map((bill) => (
+                  <li key={`${bill.name}-${bill.due}`} className="dashboard-list__item">
+                    <div>
+                      <p className="dashboard-list__name">{bill.name}</p>
+                      <p className="dashboard-list__due">Due {formatDate(bill.due)}</p>
+                    </div>
+
+                    <span className="money">
+                      {formatCurrency(bill.amount, bill.currency)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          {transactions.length > 0 && (
+            <Card>
+              <h3>Recent activity</h3>
+
+              <ul className="dashboard-list">
+                {transactions.map((txn) => (
+                  <li
+                    key={txn.transactionId || `${txn.merchant}-${txn.bookedAt}`}
+                    className="dashboard-list__item"
+                  >
+                    <div>
+                      <p className="dashboard-list__name">
+                        {txn.merchant || txn.description}
+                      </p>
+                      <p className="dashboard-list__due">{formatDate(txn.bookedAt)}</p>
+                    </div>
+
+                    <span className="money">
+                      {txn.direction === 'debit' ? '−' : '+'}
+                      {formatCurrency(txn.amount, txn.currency)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
         </div>
       </div>
     </AppShell>

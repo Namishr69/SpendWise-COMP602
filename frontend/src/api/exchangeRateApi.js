@@ -1,10 +1,12 @@
+import { API_BASE } from './client.js'
+
 export async function convertCurrency(amount, fromCurrency, toCurrency) {
   if (fromCurrency === toCurrency) {
     return amount
   }
 
   const response = await fetch(
-    'http://localhost:3000/api/convert-currency',
+    `${API_BASE}/convert-currency`,
     {
       method: 'POST',
       headers: {
