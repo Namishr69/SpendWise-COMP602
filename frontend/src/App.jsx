@@ -15,6 +15,7 @@ import AnzCallbackPage from './pages/AnzCallbackPage.jsx'
 import AddTransactionPage from './pages/AddTransactionPage.jsx'
 import EditTransactionPage from './pages/EditTransactionPage.jsx'
 import AlertsPage from './pages/AlertsPage.jsx'
+import InsightsPage from './pages/InsightsPage.jsx'
 
 function App() {
   return (
@@ -136,6 +137,17 @@ function App() {
             </PrivateRoute>
           }
         />
+
+
+        <Route
+  path="/insights"
+  element={
+    <PrivateRoute>
+      <InsightsPage />
+    </PrivateRoute>
+  }
+/>
+
       </Routes>
 
     </BrowserRouter>
