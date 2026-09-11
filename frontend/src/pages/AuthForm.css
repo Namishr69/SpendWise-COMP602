@@ -1,12 +1,5 @@
-/* Floating form panel that sits on the plant background. */
+/* Form floats directly on the plant background — no card. */
 .auth-panel {
-  background: var(--auth-panel-bg);
-  border: 1px solid var(--auth-panel-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-xl);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 18px 40px rgba(15, 30, 22, 0.28);
   color: var(--auth-fg);
 }
 
@@ -15,10 +8,26 @@
   margin-bottom: 6px;
 }
 
+/* Login page: title and links in black rather than the accent gold. */
+.auth-shell--light .auth-form__title,
+.auth-shell--light .auth-form__checkbox-row a,
+.auth-shell--light .auth-form__switch a {
+  color: #000000;
+}
+
 .auth-form__subtitle {
   color: var(--auth-fg-soft);
   margin-bottom: var(--space-lg);
   font-size: 14px;
+  font-weight: 500;
+}
+
+/* Login page: heavier secondary text so it stays legible over the plant. */
+.auth-shell--light .auth-form__subtitle,
+.auth-shell--light .auth-form__checkbox-row,
+.auth-shell--light .auth-form__divider,
+.auth-shell--light .auth-form__switch {
+  font-weight: 600;
 }
 
 .auth-form__row {
@@ -126,7 +135,7 @@
 
 .auth-form__terms-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
   font-size: 13px;
   color: var(--auth-fg-soft);
@@ -135,11 +144,12 @@
 }
 
 .auth-form__terms-row input {
-  margin-top: 2px;
+  flex-shrink: 0;
+  margin: 0;
 }
 
 .auth-form__inline-link {
-  color: var(--color-gold);
+  color: #ff8682;
   font-weight: 600;
 }
 
@@ -202,7 +212,7 @@
   justify-content: center;
   padding: 12px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--auth-panel-border);
+  border: 1px solid var(--auth-social-border);
   background: rgba(255, 255, 255, 0.9);
   cursor: pointer;
   transition: background-color 0.15s ease;

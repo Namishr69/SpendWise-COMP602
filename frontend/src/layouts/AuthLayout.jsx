@@ -12,7 +12,9 @@ function AuthLayout({ children, variant = 'dark' }) {
         </svg>
         SpendWise
       </div>
-      <main className="auth-shell__content">{children}</main>
+      <div className="auth-shell__panel">
+        <main className="auth-shell__content">{children}</main>
+      </div>
     </div>
   )
 }
