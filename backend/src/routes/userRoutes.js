@@ -6,5 +6,6 @@ const router = Router();
 
 router.post('/users', verifyToken, userController.register);
 router.get('/users/me', verifyToken, userController.getMe);
+router.put('/users/me', verifyToken, userController.updateMe);
 
 export default router;

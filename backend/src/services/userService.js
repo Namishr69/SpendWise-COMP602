@@ -45,6 +45,33 @@ const userService = {
         }
         return profile;
     },
+
+    /**
+     * Updates the signed-in user's editable profile details. Only firstName
+     * and lastName can change here — email stays tied to Firebase Auth and is
+     * never overwritten from the request body.
+     */
+    async updateProfile(uid, { firstName, lastName }) {
+        const existing = await userRepo.findById(uid);
+        if (!existing) {
+            throw new Error('User profile not found');
+        }
+
+        const cleanFirstName = (firstName || '').trim();
+        const cleanLastName = (lastName || '').trim();
+
+        if (!cleanFirstName) {
+            throw new Error('First name is required');
+        }
+        if (!cleanLastName) {
+            throw new Error('Last name is required');
+        }
+
+        return await userRepo.update(uid, {
+            firstName: cleanFirstName,
+            lastName: cleanLastName,
+        });
+    },
 };
 
 export default userService;

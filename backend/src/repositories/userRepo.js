@@ -11,6 +11,12 @@ const userRepo = {
         await db.collection('users').doc(uid).set(data);
         return { id: uid, ...data };
     },
+
+    async update(uid, data) {
+        await db.collection('users').doc(uid).update(data);
+        const doc = await db.collection('users').doc(uid).get();
+        return { id: doc.id, ...doc.data() };
+    },
 };
 
 export default userRepo;
