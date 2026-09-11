@@ -1,46 +1,73 @@
-.auth-layout {
-  display: flex;
+.auth-shell {
+  position: relative;
   min-height: 100svh;
-}
-
-.auth-layout__brand {
-  flex: 1;
-  background: var(--color-forest);
-  color: var(--color-white);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: var(--space-md);
-  padding: var(--space-2xl);
-}
-
-.auth-layout__brand h1 {
-  color: var(--color-white);
-  font-size: 36px;
-}
-
-.auth-layout__brand p {
-  color: rgba(255, 255, 255, 0.75);
-}
-
-.auth-layout__logo {
-  font-family: var(--font-heading);
-  font-weight: 700;
-  font-size: 18px;
-  margin-bottom: var(--space-lg);
-}
-
-.auth-layout__form {
-  flex: 1;
-  background: var(--color-sage);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--space-xl);
+
+  /* Plant backdrop. Drop the monstera photo at frontend/public/auth-plant.jpg
+     and it shows through the tint; without it the green gradient still looks good. */
+  background-color: #6f8a67;
+  background-image:
+    linear-gradient(125deg, rgba(31, 59, 44, 0.55), rgba(124, 148, 115, 0.3)),
+    url('/auth-plant.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  /* Text colours the panel + floating elements inherit; overridden per variant. */
+  --auth-fg: #12261b;
+  --auth-fg-soft: rgba(18, 38, 27, 0.72);
+  --auth-panel-bg: rgba(255, 255, 255, 0.68);
+  --auth-panel-border: rgba(255, 255, 255, 0.6);
+  --auth-field-bg: #f7f4ec;
+  --auth-field-border: rgba(31, 59, 44, 0.18);
 }
 
-@media (max-width: 768px) {
-  .auth-layout {
-    flex-direction: column;
+.auth-shell--dark {
+  background-image:
+    linear-gradient(125deg, rgba(15, 30, 22, 0.82), rgba(22, 41, 31, 0.7)),
+    url('/auth-plant.jpg');
+  --auth-fg: #ffffff;
+  --auth-fg-soft: rgba(255, 255, 255, 0.78);
+  --auth-panel-bg: rgba(18, 34, 25, 0.5);
+  --auth-panel-border: rgba(255, 255, 255, 0.16);
+  --auth-field-bg: #f7f4ec;
+  --auth-field-border: rgba(0, 0, 0, 0.08);
+}
+
+.auth-shell__logo {
+  position: absolute;
+  top: var(--space-lg);
+  left: var(--space-xl);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--auth-fg);
+}
+
+.auth-shell__logo-mark {
+  color: var(--auth-fg);
+}
+
+.auth-shell__content {
+  width: 100%;
+  max-width: 420px;
+}
+
+@media (max-width: 600px) {
+  .auth-shell {
+    padding: var(--space-md);
+    align-items: flex-start;
+    padding-top: 88px;
+  }
+
+  .auth-shell__logo {
+    left: var(--space-md);
+    top: var(--space-md);
   }
 }
