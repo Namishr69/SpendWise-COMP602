@@ -51,26 +51,52 @@ const userService = {
      * and lastName can change here — email stays tied to Firebase Auth and is
      * never overwritten from the request body.
      */
-    async updateProfile(uid, { firstName, lastName }) {
+    async updateProfile(uid, { firstName, lastName, photoURL }) {
         const existing = await userRepo.findById(uid);
         if (!existing) {
             throw new Error('User profile not found');
         }
 
-        const cleanFirstName = (firstName || '').trim();
-        const cleanLastName = (lastName || '').trim();
+        const updates = {};
 
-        if (!cleanFirstName) {
-            throw new Error('First name is required');
-        }
-        if (!cleanLastName) {
-            throw new Error('Last name is required');
+        // Name fields are edited together via the profile form.
+        if (firstName !== undefined || lastName !== undefined) {
+            const cleanFirstName = (firstName ?? existing.firstName ?? '').trim();
+            const cleanLastName = (lastName ?? existing.lastName ?? '').trim();
+
+            if (!cleanFirstName) {
+                throw new Error('First name is required');
+            }
+            if (!cleanLastName) {
+                throw new Error('Last name is required');
+            }
+
+            updates.firstName = cleanFirstName;
+            updates.lastName = cleanLastName;
         }
 
-        return await userRepo.update(uid, {
-            firstName: cleanFirstName,
-            lastName: cleanLastName,
-        });
+        // Profile picture is a small base64 image data URL, or an empty
+        // string to clear it. Stored on the user doc, so keep it small.
+        if (photoURL !== undefined) {
+            if (photoURL === '' || photoURL === null) {
+                updates.photoURL = '';
+            } else if (
+                typeof photoURL !== 'string' ||
+                !photoURL.startsWith('data:image/')
+            ) {
+                throw new Error('Profile picture must be an image');
+            } else if (photoURL.length > 700000) {
+                throw new Error('Profile picture is too large');
+            } else {
+                updates.photoURL = photoURL;
+            }
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return existing;
+        }
+
+        return await userRepo.update(uid, updates);
     },
 };
 

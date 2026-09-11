@@ -1,57 +1,41 @@
-import { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
 import Input from '../components/ui/Input.jsx'
 import Button from '../components/ui/Button.jsx'
-import { AuthContext } from '../context/authContext.js'
-import { getMyProfile, updateMyProfile } from '../api/userApi.js'
+import { updateMyProfile } from '../api/userApi.js'
+import { ProfileContext } from '../context/ProfileProvider.jsx'
+import { resizeImageToDataUrl } from '../utils/image.js'
 import './ProfilePage.css'
 
 function ProfilePage() {
-  const { currentUser } = useContext(AuthContext)
-
-  const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
+  const { profile, setProfile, loading, error: loadError } =
+    useContext(ProfileContext)
 
   const [isEditing, setIsEditing] = useState(false)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
+  const [photoURL, setPhotoURL] = useState('')
   const [fieldError, setFieldError] = useState('')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
 
+  const fileInputRef = useRef(null)
+
+  // Keep the edit fields in sync with the loaded profile while not editing,
+  // so the avatar and inputs reflect the latest saved values.
   useEffect(() => {
-    let active = true
-
-    async function loadProfile() {
-      setLoading(true)
-      setLoadError('')
-
-      try {
-        const data = await getMyProfile()
-        if (!active) return
-
-        setProfile(data)
-        setFirstName(data.firstName ?? '')
-        setLastName(data.lastName ?? '')
-      } catch (error) {
-        if (active) setLoadError(error.message)
-      } finally {
-        if (active) setLoading(false)
-      }
+    if (profile && !isEditing) {
+      setFirstName(profile.firstName ?? '')
+      setLastName(profile.lastName ?? '')
+      setPhotoURL(profile.photoURL ?? '')
     }
-
-    loadProfile()
-
-    return () => {
-      active = false
-    }
-  }, [])
+  }, [profile, isEditing])
 
   function startEditing() {
     setFirstName(profile?.firstName ?? '')
     setLastName(profile?.lastName ?? '')
+    setPhotoURL(profile?.photoURL ?? '')
     setFieldError('')
     setMessage('')
     setIsEditing(true)
@@ -60,8 +44,30 @@ function ProfilePage() {
   function cancelEditing() {
     setFirstName(profile?.firstName ?? '')
     setLastName(profile?.lastName ?? '')
+    setPhotoURL(profile?.photoURL ?? '')
     setFieldError('')
     setIsEditing(false)
+  }
+
+  async function handlePhotoChange(event) {
+    const file = event.target.files?.[0]
+    // Reset so picking the same file again still fires onChange.
+    event.target.value = ''
+    if (!file) return
+
+    setFieldError('')
+
+    if (!file.type.startsWith('image/')) {
+      setFieldError('Please choose an image file.')
+      return
+    }
+
+    try {
+      const dataUrl = await resizeImageToDataUrl(file)
+      setPhotoURL(dataUrl)
+    } catch (error) {
+      setFieldError(error.message)
+    }
   }
 
   async function handleSave(event) {
@@ -79,11 +85,13 @@ function ProfilePage() {
       const updated = await updateMyProfile({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
+        photoURL,
       })
 
       setProfile(updated)
       setFirstName(updated.firstName ?? '')
       setLastName(updated.lastName ?? '')
+      setPhotoURL(updated.photoURL ?? '')
       setIsEditing(false)
       setMessage('Profile updated')
     } catch (error) {
@@ -123,7 +131,15 @@ function ProfilePage() {
           <>
             <div className="profile-header">
               <div className="profile-avatar" aria-hidden="true">
-                {initials || '👤'}
+                {photoURL ? (
+                  <img
+                    className="profile-avatar-img"
+                    src={photoURL}
+                    alt=""
+                  />
+                ) : (
+                  initials || '👤'
+                )}
               </div>
 
               <div>
@@ -168,6 +184,34 @@ function ProfilePage() {
               </div>
             ) : (
               <form className="profile-form" onSubmit={handleSave}>
+                <div className="profile-photo-controls">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={handlePhotoChange}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={saving}
+                  >
+                    {photoURL ? 'Change photo' : 'Upload photo'}
+                  </Button>
+                  {photoURL && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setPhotoURL('')}
+                      disabled={saving}
+                    >
+                      Remove photo
+                    </Button>
+                  )}
+                </div>
+
                 <Input
                   id="profile-first-name"
                   label="First name"
