@@ -1,46 +1,102 @@
-.auth-layout {
-  display: flex;
+.auth-shell {
+  position: relative;
   min-height: 100svh;
-}
-
-.auth-layout__brand {
-  flex: 1;
-  background: var(--color-forest);
-  color: var(--color-white);
   display: flex;
-  flex-direction: column;
+  align-items: stretch;
   justify-content: center;
-  gap: var(--space-md);
-  padding: var(--space-2xl);
+
+  /* Flat green page; the plant lives only inside the centered panel below. */
+  background: #7c9473;
+
+  /* Text colours inherited by the form; overridden per variant. */
+  --auth-fg: #12261b;
+  --auth-fg-soft: #262626;
+  --auth-field-bg: #f7f4ec;
+  --auth-field-border: rgba(31, 59, 44, 0.18);
+  --auth-social-border: rgba(31, 59, 44, 0.2);
+  --auth-panel-tint: rgba(124, 148, 115, 0.86);
 }
 
-.auth-layout__brand h1 {
-  color: var(--color-white);
-  font-size: 36px;
+.auth-shell--dark {
+  background: #16291f;
+  --auth-fg: #ffffff;
+  --auth-fg-soft: rgba(255, 255, 255, 0.78);
+  --auth-field-bg: #f7f4ec;
+  --auth-field-border: rgba(0, 0, 0, 0.08);
+  --auth-social-border: rgba(255, 255, 255, 0.18);
+  --auth-panel-tint: rgba(20, 38, 28, 0.86);
 }
 
-.auth-layout__brand p {
-  color: rgba(255, 255, 255, 0.75);
-}
-
-.auth-layout__logo {
-  font-family: var(--font-heading);
-  font-weight: 700;
-  font-size: 18px;
-  margin-bottom: var(--space-lg);
-}
-
-.auth-layout__form {
-  flex: 1;
-  background: var(--color-sage);
+/* The plant panel: full-height centered column with the monstera behind the form.
+   Swap in a photo by dropping it at public/auth-plant.jpg and changing the url(). */
+.auth-shell__panel {
+  position: relative;
+  width: min(640px, 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-xl);
+  padding: var(--space-2xl);
 }
 
-@media (max-width: 768px) {
-  .auth-layout {
-    flex-direction: column;
+/* Plant sits on a feathered layer so it fades into the page on every side —
+   no visible panel seam. Swap the photo by dropping it in public/ and editing
+   the url() below. */
+.auth-shell__panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image:
+    linear-gradient(var(--auth-panel-tint), var(--auth-panel-tint)),
+    url('/spendwise_plant.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, #000 22%, #000 78%, transparent),
+    linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to right, transparent, #000 22%, #000 78%, transparent),
+    linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent);
+  mask-composite: intersect;
+}
+
+.auth-shell__content {
+  position: relative;
+  z-index: 1;
+}
+
+.auth-shell__logo {
+  position: absolute;
+  top: var(--space-lg);
+  left: var(--space-xl);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--auth-fg);
+}
+
+.auth-shell__logo-mark {
+  color: var(--auth-fg);
+}
+
+.auth-shell__content {
+  width: 100%;
+  max-width: 460px;
+}
+
+@media (max-width: 600px) {
+  .auth-shell__panel {
+    padding: 88px var(--space-lg) var(--space-xl);
+  }
+
+  .auth-shell__logo {
+    left: var(--space-md);
+    top: var(--space-md);
   }
 }

@@ -1,10 +1,33 @@
+/* Form floats directly on the plant background — no card. */
+.auth-panel {
+  color: var(--auth-fg);
+}
+
 .auth-form__title {
-  margin-bottom: 4px;
+  color: var(--auth-fg);
+  margin-bottom: 6px;
+}
+
+/* Login page: title and links in black rather than the accent gold. */
+.auth-shell--light .auth-form__title,
+.auth-shell--light .auth-form__checkbox-row a,
+.auth-shell--light .auth-form__switch a {
+  color: #000000;
 }
 
 .auth-form__subtitle {
+  color: var(--auth-fg-soft);
   margin-bottom: var(--space-lg);
   font-size: 14px;
+  font-weight: 500;
+}
+
+/* Login page: heavier secondary text so it stays legible over the plant. */
+.auth-shell--light .auth-form__subtitle,
+.auth-shell--light .auth-form__checkbox-row,
+.auth-shell--light .auth-form__divider,
+.auth-shell--light .auth-form__switch {
+  font-weight: 600;
 }
 
 .auth-form__row {
@@ -16,20 +39,71 @@
   flex: 1;
 }
 
+/* Notched (outlined) fields — label overlaps the top border. */
+.auth-panel .sw-field {
+  position: relative;
+  margin-bottom: 18px;
+}
+
+.auth-panel .sw-field__label {
+  position: absolute;
+  top: -8px;
+  left: 12px;
+  z-index: 1;
+  padding: 0 6px;
+  background: var(--auth-field-bg);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-ink-soft);
+}
+
+.auth-panel .sw-field__input {
+  width: 100%;
+  padding: 15px 14px;
+  font-size: 15px;
+  background: var(--auth-field-bg);
+  border: 1px solid var(--auth-field-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+}
+
+.auth-panel .sw-field__input:focus-visible {
+  outline: none;
+  border-color: var(--color-forest);
+  box-shadow: 0 0 0 3px rgba(31, 59, 44, 0.18);
+}
+
+.auth-panel .sw-field__input:disabled {
+  background: var(--auth-field-bg);
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Password field with eye toggle */
 .auth-form__password-wrap {
   position: relative;
 }
 
 .auth-form__password-toggle {
   position: absolute;
-  right: 14px;
-  top: 43px;
+  right: 8px;
+  top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   background: none;
   border: none;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 13px;
   color: var(--color-ink-soft);
-  font-family: var(--font-body);
+}
+
+.auth-form__password-toggle:hover {
+  color: var(--color-ink);
 }
 
 .auth-form__checkbox-row {
@@ -38,8 +112,25 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: var(--color-ink-soft);
+  color: var(--auth-fg-soft);
   margin-bottom: var(--space-md);
+}
+
+.auth-form__checkbox-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.auth-form__checkbox-row a {
+  color: var(--color-gold);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-form__checkbox-row a:hover {
+  text-decoration: underline;
 }
 
 .auth-form__terms-row {
@@ -47,25 +138,40 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: var(--color-ink-soft);
+  color: var(--auth-fg-soft);
   margin-bottom: var(--space-md);
+  cursor: pointer;
+}
+
+.auth-form__terms-row input {
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.auth-form__inline-link {
+  color: #ff8682;
+  font-weight: 600;
 }
 
 .auth-form__error {
-  color: var(--color-danger);
-  font-size: 14px;
+  color: #ffd7d1;
+  background: rgba(193, 75, 75, 0.28);
+  border: 1px solid rgba(255, 215, 209, 0.4);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 13px;
   margin-bottom: var(--space-md);
 }
 
 .auth-form__switch {
   text-align: center;
   font-size: 14px;
-  color: var(--color-ink-soft);
+  color: var(--auth-fg-soft);
   margin-top: var(--space-md);
 }
 
 .auth-form__switch a {
-  color: var(--color-forest);
+  color: var(--color-gold);
   font-weight: 600;
   text-decoration: none;
 }
@@ -73,12 +179,14 @@
 .auth-form__switch a:hover {
   text-decoration: underline;
 }
+
+/* "Or login with" divider */
 .auth-form__divider {
   display: flex;
   align-items: center;
   gap: 12px;
   margin: 20px 0;
-  color: var(--color-ink-soft);
+  color: var(--auth-fg-soft);
   font-size: 13px;
 }
 
@@ -87,31 +195,34 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--color-border);
+  background: currentColor;
+  opacity: 0.35;
 }
 
-.auth-form__google-button {
-  width: 100%;
+/* Social sign-in buttons, side by side */
+.auth-form__social {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.auth-form__social-button {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 12px 20px;
+  padding: 12px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-  background: var(--color-white);
-  color: var(--color-ink);
-  font-family: var(--font-heading);
-  font-size: 15px;
-  font-weight: 600;
+  border: 1px solid var(--auth-social-border);
+  background: rgba(255, 255, 255, 0.9);
   cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
-.auth-form__google-button:hover:not(:disabled) {
-  background: var(--color-cream);
+.auth-form__social-button:hover:not(:disabled) {
+  background: #ffffff;
 }
 
-.auth-form__google-button:disabled {
+.auth-form__social-button:disabled {
   cursor: not-allowed;
   opacity: 0.6;
 }
