@@ -17,6 +17,12 @@ const SUPPORTED_CURRENCIES = [
 ];
 
 const currencyService = {
+    async getPreferredCurrency(userId) {
+        const user = await userRepository.getUserById(userId);
+
+        return user?.preferredCurrency || 'NZD';
+    },
+
     async updatePreferredCurrency(userId, currency) {
         if (!currency) {
             throw new Error('Currency is required');
@@ -26,7 +32,10 @@ const currencyService = {
             throw new Error('Unsupported currency');
         }
 
-        return await userRepository.updatePreferredCurrency(userId, currency);
+        return await userRepository.updatePreferredCurrency(
+            userId,
+            currency
+        );
     },
 };
 
