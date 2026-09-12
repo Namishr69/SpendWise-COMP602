@@ -20,6 +20,16 @@ const userController = {
             res.status(404).json({ error: error.message });
         }
     },
+
+    // PUT /api/users/me — update the signed-in user's profile details
+    async updateMe(req, res) {
+        try {
+            const profile = await userService.updateProfile(req.userId, req.body);
+            res.json(profile);
+        } catch (error) {
+            res.status(400).json({ error: error.message });
+        }
+    },
 };
 
 export default userController;

@@ -1,6 +1,7 @@
 import { useContext, useState, useRef, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { AuthContext } from '../context/authContext.js'
+import { ProfileContext } from '../context/ProfileProvider.jsx'
 import './AppShell.css'
 
 const NAV_ITEMS = [
@@ -102,6 +103,7 @@ function AppShell({
   hideTopbarTitle = false,
 }) {
   const { currentUser, signOut } = useContext(AuthContext)
+  const { profile } = useContext(ProfileContext)
   const navigate = useNavigate()
 
   const [menuOpen, setMenuOpen] = useState(false)
@@ -204,7 +206,15 @@ function AppShell({
                   setMenuOpen((value) => !value)
                 }
                 aria-label="Account menu"
-              />
+              >
+                {profile?.photoURL && (
+                  <img
+                    className="app-shell__avatar-img"
+                    src={profile.photoURL}
+                    alt=""
+                  />
+                )}
+              </button>
 
               {menuOpen && (
                 <div className="app-shell__avatar-menu">
@@ -213,6 +223,15 @@ function AppShell({
                       {currentUser.email}
                     </div>
                   )}
+
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false)
+                      navigate('/profile')
+                    }}
+                  >
+                    View profile
+                  </button>
 
                   <button
                     onClick={handleLogout}
