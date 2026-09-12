@@ -10,3 +10,10 @@ export function registerProfile(profile) {
 export function getMyProfile() {
   return apiRequest('/users/me')
 }
+
+export function updateMyProfile(profile) {
+  return apiRequest('/users/me', {
+    method: 'PUT',
+    body: JSON.stringify(profile),
+  })
+}
