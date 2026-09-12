@@ -97,6 +97,21 @@ const NAV_ITEMS = [
   },
 ]
 
+function getGreeting() {
+  const hour = new Date().getHours()
+
+  if (hour < 12) {
+    return 'Good morning'
+  }
+
+  if (hour < 18) {
+    return 'Good afternoon'
+  }
+
+  return 'Good evening'
+}
+
+
 function AppShell({
   activeNav = '',
   children,
@@ -182,7 +197,7 @@ function AppShell({
         <header className="app-shell__topbar">
           {!hideTopbarTitle && (
             <div>
-              <p>Good morning</p>
+              <p>{getGreeting()}</p>
               <h2>{activeNav}</h2>
             </div>
           )}
