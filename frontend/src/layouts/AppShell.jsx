@@ -13,6 +13,12 @@ const NAV_ITEMS = [
   { label: 'Profile', icon: '👤', path: '/profile' },
   { label: 'Settings', icon: '⚙️', path: '/settings' },
 ]
+function getGreeting() {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
+  return 'Good evening'
+}
 
 function AppShell({
   activeNav = '',
@@ -96,7 +102,7 @@ function AppShell({
         <header className="app-shell__topbar">
           {!hideTopbarTitle && (
             <div>
-              <p>Good morning</p>
+              <p>{getGreeting()}</p>
               <h2>{activeNav}</h2>
             </div>
           )}
