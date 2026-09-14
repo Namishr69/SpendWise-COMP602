@@ -27,11 +27,18 @@ function SettingsPage() {
 
   const [isPersonaliseOpen, setIsPersonaliseOpen] = useState(false)
   const [isBanksOpen, setIsBanksOpen] = useState(false)
+
   const [message, setMessage] = useState('')
   const [loggingOut, setLoggingOut] = useState(false)
 
-  const [budgetAmount, setBudgetAmount] = useState(budget?.amount ?? '')
-  const [budgetPeriod, setBudgetPeriod] = useState(budget?.period ?? 'Monthly')
+  const [budgetAmount, setBudgetAmount] = useState(
+    budget?.amount ?? ''
+  )
+
+  const [budgetPeriod, setBudgetPeriod] = useState(
+    budget?.period ?? 'Monthly'
+  )
+
   const [budgetMessage, setBudgetMessage] = useState('')
   const [budgetError, setBudgetError] = useState('')
   const [savingBudget, setSavingBudget] = useState(false)
@@ -40,7 +47,9 @@ function SettingsPage() {
 
   async function handleLogout() {
     if (loggingOut) return
+
     setLoggingOut(true)
+
     try {
       await signOut()
       navigate('/login', { replace: true })
@@ -51,18 +60,30 @@ function SettingsPage() {
 
   async function handleSaveBudget(event) {
     event.preventDefault()
+
     setBudgetMessage('')
     setBudgetError('')
 
     const amount = Number(budgetAmount)
-    if (!budgetAmount || Number.isNaN(amount) || amount <= 0) {
+
+    if (
+      !budgetAmount ||
+      Number.isNaN(amount) ||
+      amount <= 0
+    ) {
       setBudgetError('Enter an amount greater than zero.')
       return
     }
 
     setSavingBudget(true)
+
     try {
-      const result = await updateBudget(currentUser, amount, budgetPeriod)
+      const result = await updateBudget(
+        currentUser,
+        amount,
+        budgetPeriod
+      )
+
       setBudget(result.budget)
       setBudgetMessage('Budget saved')
     } catch (error) {
@@ -79,11 +100,15 @@ function SettingsPage() {
 
   return (
     <AppShell activeNav="Settings">
+      {/* PERSONALISE */}
       <Card>
         <button
           type="button"
           className="settings-section-toggle"
-          onClick={() => setIsPersonaliseOpen(!isPersonaliseOpen)}
+          onClick={() =>
+            setIsPersonaliseOpen(!isPersonaliseOpen)
+          }
+          aria-expanded={isPersonaliseOpen}
         >
           <span>Personalise</span>
 
@@ -99,8 +124,8 @@ function SettingsPage() {
                 <h3>Preferred currency</h3>
 
                 <p>
-                  Choose the currency used to display your subscriptions and
-                  spending.
+                  Choose the currency used to display your
+                  subscriptions and spending.
                 </p>
               </div>
 
@@ -121,7 +146,9 @@ function SettingsPage() {
                         newCurrency
                       )
 
-                      setMessage('Currency preference saved')
+                      setMessage(
+                        'Currency preference saved'
+                      )
                     } catch (error) {
                       setMessage(error.message)
                     }
@@ -145,23 +172,30 @@ function SettingsPage() {
               </div>
             </div>
 
-            <div className="settings-option" style={{ marginTop: 20 }}>
+            <div
+              className="settings-option"
+              style={{ marginTop: 20 }}
+            >
               <div className="settings-option-text">
                 <h3>Monthly budget</h3>
 
                 <p>
-                  Set a recurring spend budget and get alerted when you're
-                  close to exceeding it.
+                  Set a recurring spend budget and get alerted
+                  when you're close to exceeding it.
                 </p>
 
                 {budget && (
                   <p className="settings-budget-current">
-                    Current budget: {budget.amount} / {budget.period}
+                    Current budget: {budget.amount} /{' '}
+                    {budget.period}
                   </p>
                 )}
               </div>
 
-              <form onSubmit={handleSaveBudget} className="settings-budget-form">
+              <form
+                onSubmit={handleSaveBudget}
+                className="settings-budget-form"
+              >
                 <Input
                   id="budget-amount"
                   type="number"
@@ -169,37 +203,60 @@ function SettingsPage() {
                   step="0.01"
                   placeholder="Amount"
                   value={budgetAmount}
-                  onChange={(event) => setBudgetAmount(event.target.value)}
+                  onChange={(event) =>
+                    setBudgetAmount(event.target.value)
+                  }
                   error={budgetError}
                 />
+
                 <select
                   className="settings-currency-select"
                   value={budgetPeriod}
-                  onChange={(event) => setBudgetPeriod(event.target.value)}
+                  onChange={(event) =>
+                    setBudgetPeriod(event.target.value)
+                  }
                 >
                   {BUDGET_PERIODS.map((period) => (
-                    <option key={period} value={period}>
+                    <option
+                      key={period}
+                      value={period}
+                    >
                       {period}
                     </option>
                   ))}
                 </select>
-                <Button type="submit" disabled={isUnchanged || savingBudget}>
-                    {savingBudget ? 'Saving...' : 'Save'}
-                  </Button>
+
+                <Button
+                  type="submit"
+                  disabled={
+                    isUnchanged || savingBudget
+                  }
+                >
+                  {savingBudget
+                    ? 'Saving...'
+                    : 'Save'}
+                </Button>
               </form>
             </div>
+
             {budgetMessage && (
-              <p className="settings-message">{budgetMessage}</p>
+              <p className="settings-message">
+                {budgetMessage}
+              </p>
             )}
           </div>
         )}
       </Card>
 
-      <Card>
+      {/* CONNECTED ACCOUNTS */}
+      <Card style={{ marginTop: 16 }}>
         <button
           type="button"
           className="settings-section-toggle"
-          onClick={() => setIsBanksOpen(!isBanksOpen)}
+          onClick={() =>
+            setIsBanksOpen(!isBanksOpen)
+          }
+          aria-expanded={isBanksOpen}
         >
           <span>Connected accounts</span>
 
@@ -215,11 +272,27 @@ function SettingsPage() {
         )}
       </Card>
 
+      {/* ACCOUNT */}
       <Card style={{ marginTop: 16 }}>
         <h3>Account</h3>
-        <p style={{ marginTop: 8, marginBottom: 20 }}>{currentUser?.email}</p>
-        <Button variant="secondary" onClick={handleLogout} disabled={loggingOut}>
-          {loggingOut ? 'Logging out...' : 'Logout'}
+
+        <p
+          style={{
+            marginTop: 8,
+            marginBottom: 20,
+          }}
+        >
+          {currentUser?.email}
+        </p>
+
+        <Button
+          variant="secondary"
+          onClick={handleLogout}
+          disabled={loggingOut}
+        >
+          {loggingOut
+            ? 'Logging out...'
+            : 'Logout'}
         </Button>
       </Card>
     </AppShell>

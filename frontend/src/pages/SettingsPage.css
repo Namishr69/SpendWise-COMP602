@@ -4,7 +4,7 @@
   align-items: center;
   justify-content: space-between;
 
-  padding: 4px 0 12px;
+  padding: 4px 0;
 
   background: none;
   border: none;
@@ -63,12 +63,6 @@
 .settings-currency-select:focus {
   outline: 2px solid #315c46;
   outline-offset: 2px;
-}
-
-.settings-budget-form {
-  display: flex;
-  gap: 8px;
-  align-items: center;
 }
 
 .settings-budget-form {
