@@ -1,31 +1,66 @@
-import { useState, useEffect } from 'react';
-import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
-import { auth } from '../firebase';
-import { AuthContext } from './authContext';
+import { useState, useEffect } from 'react'
+import {
+  onAuthStateChanged,
+  signOut as firebaseSignOut,
+} from 'firebase/auth'
+import {
+  doc,
+  getDoc,
+} from 'firebase/firestore'
+
+import { auth, db } from '../firebase'
+import { AuthContext } from './authContext'
 
 const AuthProvider = ({ children }) => {
-    const [currentUser, setCurrentUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState(null)
+  const [userProfile, setUserProfile] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setCurrentUser(user)
-            setLoading(false)
-        })
-        return () => unsubscribe()
-    }, [])
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user)
 
-    const signOut = async () => {
-        await firebaseSignOut(auth);
-    };
+      if (user) {
+        try {
+          const userRef = doc(db, 'users', user.uid)
+          const userSnap = await getDoc(userRef)
 
-    if (loading) return null;
+          if (userSnap.exists()) {
+            setUserProfile(userSnap.data())
+          } else {
+            setUserProfile(null)
+          }
+        } catch (error) {
+          console.error('Error loading user profile:', error)
+          setUserProfile(null)
+        }
+      } else {
+        setUserProfile(null)
+      }
 
-    return (
-        <AuthContext.Provider value={{ currentUser, signOut }}>
-            {children}
-        </AuthContext.Provider>
-    );
-};
+      setLoading(false)
+    })
 
-export default AuthProvider;
+    return () => unsubscribe()
+  }, [])
+
+  const signOut = async () => {
+    await firebaseSignOut(auth)
+  }
+
+  if (loading) return null
+
+  return (
+    <AuthContext.Provider
+      value={{
+        currentUser,
+        userProfile,
+        signOut,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  )
+}
+
+export default AuthProvider
