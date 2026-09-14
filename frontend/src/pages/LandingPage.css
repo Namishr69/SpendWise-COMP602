@@ -1,7 +1,27 @@
+@import '@fontsource/manrope/400.css';
+@import '@fontsource/manrope/500.css';
+@import '@fontsource/manrope/600.css';
+@import '@fontsource/manrope/700.css';
+
 .landing-page {
     display: flex;
     min-height: 100vh;
     width: 100%;
+    font-family: 'Manrope', system-ui, sans-serif;
+}
+
+/* Everything on the landing page uses Manrope... */
+.landing-page h1,
+.landing-page h2,
+.landing-page h3,
+.landing-page p,
+.landing-page a {
+    font-family: 'Manrope', system-ui, sans-serif;
+}
+
+/* ...except the SpendWise wordmark, which keeps the app heading font. */
+.landing-logo {
+    font-family: var(--font-heading);
 }
 
 .landing-left {
@@ -30,13 +50,14 @@
     gap: var(--space-sm);
     font-family: var(--font-heading);
     font-weight: 700;
-    font-size: 28px;
+    font-size: 44px;
     color: var(--color-ink);
+    margin-left: -20px;
 }
 
 .landing-logo__mark {
-    width: 32px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
     color: var(--color-ink);
 }
 
@@ -73,11 +94,11 @@
 
 /* Hero */
 .landing-hero {
-    margin-top: var(--space-2xl);
+    margin-top: auto;
 }
 
 .landing-hero h1 {
-    font-size: 52px;
+    font-size: 62px;
     line-height: 1.05;
     color: var(--color-ink);
 }
@@ -89,7 +110,7 @@
 .landing-hero p {
     margin-top: var(--space-md);
     color: var(--color-ink);
-    font-size: 16px;
+    font-size: 19px;
 }
 
 /* Features */
@@ -98,7 +119,7 @@
 }
 
 .landing-features__title {
-    font-size: 15px;
+    font-size: 18px;
     font-weight: 600;
     color: var(--color-ink);
     margin-bottom: var(--space-md);
@@ -122,7 +143,7 @@
 }
 
 .landing-feature-card__icon {
-    color: var(--color-gold);
+    color: var(--color-cream);
 }
 
 .landing-feature-card__icon svg {
@@ -133,7 +154,7 @@
 
 .landing-feature-card p {
     color: var(--color-cream);
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 500;
 }
 
@@ -145,7 +166,7 @@
 
 .landing-footer p {
     color: var(--color-ink);
-    font-size: 13px;
+    font-size: 15px;
 }
 
 /* Stack on narrow screens */
