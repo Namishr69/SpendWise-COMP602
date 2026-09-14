@@ -92,7 +92,11 @@ function LandingPage() {
                 </footer>
             </div>
 
-            <div className="landing-right"></div>
+            <div className="landing-right">
+                <p className="landing-right__tagline">
+                    See exactly where your money goes each month
+                </p>
+            </div>
         </div>
     )
 }

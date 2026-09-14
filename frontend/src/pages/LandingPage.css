@@ -35,6 +35,17 @@
 .landing-right {
     width: 60%;
     background-color: var(--color-sage);
+    display: flex;
+    justify-content: center;
+    padding: var(--space-2xl);
+}
+
+.landing-right__tagline {
+    font-family: 'Manrope', system-ui, sans-serif;
+    color: var(--color-white);
+    font-size: 22px;
+    font-weight: 600;
+    text-align: center;
 }
 
 /* Header: logo + CTA */
