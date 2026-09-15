@@ -1,14 +1,32 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+
 import AppShell from '../layouts/AppShell'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import { useSubscriptions } from '../context/subscriptionsContext'
+import { useCurrencyRate } from '../hooks/useCurrencyRate.js'
+import { formatCurrency } from '../utils/formatCurrency.js'
+
 import './SubscriptionsPage.css'
 
 function SubscriptionsPage() {
-  const { subscriptions, loading, error, deleteSubscription } = useSubscriptions()
+  const {
+    subscriptions,
+    loading,
+    error,
+    deleteSubscription,
+  } = useSubscriptions()
+
   const [deleting, setDeleting] = useState(null)
+
+  const { preferredCurrency, rate } = useCurrencyRate()
+
+  const showMoney = (amount) =>
+    formatCurrency(
+      (Number(amount) || 0) * rate,
+      preferredCurrency
+    )
 
   if (loading) {
     return (
@@ -35,7 +53,10 @@ function SubscriptionsPage() {
           <p>View and manage your recurring payments.</p>
         </div>
 
-        <Link className="subscriptions-add" to="/subscriptions/new">
+        <Link
+          className="subscriptions-add"
+          to="/subscriptions/new"
+        >
           + Add subscription
         </Link>
       </header>
@@ -45,15 +66,25 @@ function SubscriptionsPage() {
       ) : (
         <section className="subscriptions-grid">
           {subscriptions.map((subscription) => (
-            <Card key={subscription.id} className="subscription-card">
+            <Card
+              key={subscription.id}
+              className="subscription-card"
+            >
               <div>
                 <h2>{subscription.name}</h2>
+
                 <p>
-                  ${subscription.amount.toFixed(2)} /{' '}
+                  {showMoney(subscription.amount)} /{' '}
                   {subscription.billingCycle.toLowerCase()}
                 </p>
-                <p>Next payment: {subscription.nextPaymentDate}</p>
-                <p>Status: {subscription.status}</p>
+
+                <p>
+                  Next payment: {subscription.nextPaymentDate}
+                </p>
+
+                <p>
+                  Status: {subscription.status}
+                </p>
               </div>
 
               <div className="subscription-card__actions">
@@ -68,8 +99,16 @@ function SubscriptionsPage() {
                   className="subscription-delete"
                   disabled={deleting === subscription.id}
                   onClick={async () => {
-                    if (!window.confirm(`Delete "${subscription.name}"? This cannot be undone.`)) return
+                    if (
+                      !window.confirm(
+                        `Delete "${subscription.name}"? This cannot be undone.`
+                      )
+                    ) {
+                      return
+                    }
+
                     setDeleting(subscription.id)
+
                     try {
                       await deleteSubscription(subscription.id)
                     } catch {
@@ -79,7 +118,9 @@ function SubscriptionsPage() {
                     }
                   }}
                 >
-                  {deleting === subscription.id ? 'Deleting…' : 'Delete'}
+                  {deleting === subscription.id
+                    ? 'Deleting…'
+                    : 'Delete'}
                 </button>
               </div>
             </Card>
