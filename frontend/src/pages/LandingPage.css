@@ -1,0 +1,201 @@
+@import '@fontsource/manrope/400.css';
+@import '@fontsource/manrope/500.css';
+@import '@fontsource/manrope/600.css';
+@import '@fontsource/manrope/700.css';
+
+.landing-page {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+    font-family: 'Manrope', system-ui, sans-serif;
+}
+
+/* Everything on the landing page uses Manrope... */
+.landing-page h1,
+.landing-page h2,
+.landing-page h3,
+.landing-page p,
+.landing-page a {
+    font-family: 'Manrope', system-ui, sans-serif;
+}
+
+/* ...except the SpendWise wordmark, which keeps the app heading font. */
+.landing-logo {
+    font-family: var(--font-heading);
+}
+
+.landing-left {
+    display: flex;
+    flex-direction: column;
+    width: 40%;
+    background-color: var(--color-gold);
+    padding: var(--space-2xl);
+}
+
+.landing-right {
+    width: 60%;
+    background-color: var(--color-sage);
+    display: flex;
+    justify-content: center;
+    padding: var(--space-2xl);
+}
+
+.landing-right__tagline {
+    font-family: 'Manrope', system-ui, sans-serif;
+    color: var(--color-white);
+    font-size: 22px;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* Header: logo + CTA */
+.landing-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.landing-logo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 44px;
+    color: var(--color-ink);
+    margin-left: -20px;
+}
+
+.landing-logo__mark {
+    width: 44px;
+    height: 44px;
+    color: var(--color-ink);
+}
+
+.landing-nav {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.landing-cta {
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    background-color: var(--color-ink);
+    color: var(--color-white);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.landing-cta:hover {
+    background-color: #000;
+}
+
+.landing-cta--ghost {
+    background-color: transparent;
+    color: var(--color-ink);
+    border: 1px solid var(--color-ink);
+}
+
+.landing-cta--ghost:hover {
+    background-color: var(--color-ink);
+    color: var(--color-white);
+}
+
+/* Hero */
+.landing-hero {
+    margin-top: auto;
+}
+
+.landing-hero h1 {
+    font-size: 62px;
+    line-height: 1.05;
+    color: var(--color-ink);
+}
+
+.landing-hero h1 span {
+    color: var(--color-sage);
+}
+
+.landing-hero p {
+    margin-top: var(--space-md);
+    color: var(--color-ink);
+    font-size: 19px;
+}
+
+/* Features */
+.landing-features {
+    margin-top: var(--space-2xl);
+}
+
+.landing-features__title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-ink);
+    margin-bottom: var(--space-md);
+}
+
+.landing-features-cards {
+    display: flex;
+    gap: var(--space-md);
+}
+
+.landing-feature-card {
+    flex: 1;
+    background-color: var(--color-forest);
+    padding: var(--space-lg);
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-md);
+}
+
+.landing-feature-card__icon {
+    color: var(--color-cream);
+}
+
+.landing-feature-card__icon svg {
+    width: 28px;
+    height: 28px;
+    display: block;
+}
+
+.landing-feature-card p {
+    color: var(--color-cream);
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* Footer */
+.landing-footer {
+    margin-top: auto;
+    padding-top: var(--space-2xl);
+}
+
+.landing-footer p {
+    color: var(--color-ink);
+    font-size: 15px;
+}
+
+/* Stack on narrow screens */
+@media (max-width: 768px) {
+    .landing-page {
+        flex-direction: column;
+    }
+
+    .landing-left,
+    .landing-right {
+        width: 100%;
+    }
+
+    .landing-right {
+        min-height: 200px;
+    }
+
+    .landing-hero h1 {
+        font-size: 40px;
+    }
+}

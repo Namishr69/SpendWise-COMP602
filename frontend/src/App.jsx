@@ -17,12 +17,20 @@ import EditTransactionPage from './pages/EditTransactionPage.jsx'
 import AlertsPage from './pages/AlertsPage.jsx'
 import InsightsPage from './pages/InsightsPage.jsx'
 import ProfilePage from './pages/ProfilePage.jsx'
+import LandingPage from './pages/LandingPage.jsx'
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route
+          path="/"
+          element={
+            <PublicRoute>
+              <LandingPage />
+            </PublicRoute>
+          }
+        />
 
         <Route path="/login" element={<LoginPage />} />
 
