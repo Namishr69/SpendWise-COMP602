@@ -13,6 +13,7 @@ import { getBankTransactions } from '../api/bankDataApi.js'
 import { getTransactions } from '../api/transactionApi.js'
 import { AuthContext } from '../context/authContext.js'
 import { compareMonthToPrevious } from '../utils/monthlySpend.js'
+import { getPayments } from '../api/subscriptionApi.js'
 
 function InsightsPage() {
   const { subscriptions, loading, error } = useSubscriptions()
@@ -27,18 +28,33 @@ function InsightsPage() {
       preferredCurrency,
     )
 
-  useEffect(() => {
+    useEffect(() => {
     if (!currentUser) return
     let cancelled = false
 
     async function loadComparison() {
       try {
-        const [bankTxns, manualTxns] = await Promise.all([
+        const [bankTxns, manualTxns, paymentsPerSub] = await Promise.all([
           getBankTransactions({ limit: 500 }).catch(() => []),
           getTransactions(currentUser).catch(() => []),
+          Promise.all(
+            subscriptions.map((s) =>
+              getPayments(s.id)
+                .then((payments) => [s.id, payments])
+                .catch(() => [s.id, []])
+            )
+          ),
         ])
+
         if (!cancelled) {
-          setComparison(compareMonthToPrevious([...bankTxns, ...manualTxns]))
+          const paymentsBySubscriptionId = Object.fromEntries(paymentsPerSub)
+          setComparison(
+            compareMonthToPrevious(
+              [...bankTxns, ...manualTxns],
+              subscriptions,
+              paymentsBySubscriptionId,
+            )
+          )
         }
       } catch (err) {
         console.error('Failed to load month comparison:', err)
@@ -49,7 +65,7 @@ function InsightsPage() {
     return () => {
       cancelled = true
     }
-  }, [currentUser])
+  }, [currentUser, subscriptions])
 
   if (loading) {
     return (
