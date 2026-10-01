@@ -1,3 +1,4 @@
+import { useContext, useEffect, useState } from 'react'
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
 import { useSubscriptions } from '../context/subscriptionsContext.js'
@@ -8,16 +9,47 @@ import {
   calculateTotalMonthlySpend,
 } from '../utils/budgetCalculations.js'
 import './InsightsPage.css'
+import { getBankTransactions } from '../api/bankDataApi.js'
+import { getTransactions } from '../api/transactionApi.js'
+import { AuthContext } from '../context/authContext.js'
+import { compareMonthToPrevious } from '../utils/monthlySpend.js'
 
 function InsightsPage() {
   const { subscriptions, loading, error } = useSubscriptions()
   const { preferredCurrency, rate } = useCurrencyRate()
+  const { currentUser } = useContext(AuthContext)
+
+  const [comparison, setComparison] = useState(null)
 
   const showMoney = (amount) =>
     formatCurrency(
       (Number(amount) || 0) * rate,
       preferredCurrency,
     )
+
+  useEffect(() => {
+    if (!currentUser) return
+    let cancelled = false
+
+    async function loadComparison() {
+      try {
+        const [bankTxns, manualTxns] = await Promise.all([
+          getBankTransactions({ limit: 500 }).catch(() => []),
+          getTransactions(currentUser).catch(() => []),
+        ])
+        if (!cancelled) {
+          setComparison(compareMonthToPrevious([...bankTxns, ...manualTxns]))
+        }
+      } catch (err) {
+        console.error('Failed to load month comparison:', err)
+      }
+    }
+
+    loadComparison()
+    return () => {
+      cancelled = true
+    }
+  }, [currentUser])
 
   if (loading) {
     return (
@@ -60,6 +92,37 @@ function InsightsPage() {
         <p className="insights-total">
           {showMoney(totalMonthlySpend)}
         </p>
+      </Card>
+
+      <Card style={{ marginTop: 16 }}>
+        <h3>This month vs last month</h3>
+
+        {!comparison ? (
+          <p>Loading comparison…</p>
+        ) : (
+          <div className="insights-comparison">
+            <div className="insights-comparison__month">
+              <p className="insights-comparison__label">Last month</p>
+              <p className="insights-comparison__amount">
+                {showMoney(comparison.previousMonth)}
+              </p>
+            </div>
+
+            <div className={`insights-comparison__arrow ${comparison.isIncrease ? 'insights-comparison__arrow--up' : 'insights-comparison__arrow--down'}`}>
+              {comparison.isIncrease ? '↑' : '↓'}
+              {comparison.percentChange !== null && (
+                <span>{Math.abs(comparison.percentChange).toFixed(0)}%</span>
+              )}
+            </div>
+
+            <div className="insights-comparison__month">
+              <p className="insights-comparison__label">This month</p>
+              <p className="insights-comparison__amount">
+                {showMoney(comparison.currentMonth)}
+              </p>
+            </div>
+          </div>
+        )}
       </Card>
 
       <Card style={{ marginTop: 16 }}>
