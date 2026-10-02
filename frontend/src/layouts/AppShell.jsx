@@ -235,7 +235,7 @@ function AppShell({
         <header className="app-shell__topbar">
           {!hideTopbarTitle && (
             <div>
-              <p>
+ <p>
                 {getGreeting()}
                 {displayName && `, ${displayName}`}
               </p>
