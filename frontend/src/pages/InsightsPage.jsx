@@ -14,6 +14,7 @@ import { getTransactions } from '../api/transactionApi.js'
 import { AuthContext } from '../context/authContext.js'
 import { compareMonthToPrevious } from '../utils/monthlySpend.js'
 import { getPayments } from '../api/subscriptionApi.js'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 
 function InsightsPage() {
   const { subscriptions, loading, error } = useSubscriptions()
@@ -28,7 +29,7 @@ function InsightsPage() {
       preferredCurrency,
     )
 
-    useEffect(() => {
+  useEffect(() => {
     if (!currentUser) return
     let cancelled = false
 
@@ -100,6 +101,20 @@ function InsightsPage() {
     }))
     .sort((a, b) => b.monthlyAmount - a.monthlyAmount)
 
+  const pieColors = ['#1f3b2c', '#7c9473', '#e8c468', '#d9b65b', '#5c6b60', '#8fa37e']
+
+  const pieData = breakdown.map((item) => ({
+    name: item.name,
+    value: item.monthlyAmount,
+  }))
+
+  const barData = comparison
+    ? [
+        { name: 'Last month', amount: comparison.previousMonth },
+        { name: 'This month', amount: comparison.currentMonth },
+      ]
+    : []
+
   return (
     <AppShell activeNav="Insights">
       <Card>
@@ -116,28 +131,41 @@ function InsightsPage() {
         {!comparison ? (
           <p>Loading comparison…</p>
         ) : (
-          <div className="insights-comparison">
-            <div className="insights-comparison__month">
-              <p className="insights-comparison__label">Last month</p>
-              <p className="insights-comparison__amount">
-                {showMoney(comparison.previousMonth)}
-              </p>
+          <>
+            <div className="insights-comparison">
+              <div className="insights-comparison__month">
+                <p className="insights-comparison__label">Last month</p>
+                <p className="insights-comparison__amount">
+                  {showMoney(comparison.previousMonth)}
+                </p>
+              </div>
+
+              <div className={`insights-comparison__arrow ${comparison.isIncrease ? 'insights-comparison__arrow--up' : 'insights-comparison__arrow--down'}`}>
+                {comparison.isIncrease ? '↑' : '↓'}
+                {comparison.percentChange !== null && (
+                  <span>{Math.abs(comparison.percentChange).toFixed(0)}%</span>
+                )}
+              </div>
+
+              <div className="insights-comparison__month">
+                <p className="insights-comparison__label">This month</p>
+                <p className="insights-comparison__amount">
+                  {showMoney(comparison.currentMonth)}
+                </p>
+              </div>
             </div>
 
-            <div className={`insights-comparison__arrow ${comparison.isIncrease ? 'insights-comparison__arrow--up' : 'insights-comparison__arrow--down'}`}>
-              {comparison.isIncrease ? '↑' : '↓'}
-              {comparison.percentChange !== null && (
-                <span>{Math.abs(comparison.percentChange).toFixed(0)}%</span>
-              )}
+            <div style={{ width: '100%', height: 200, marginTop: 20 }}>
+              <ResponsiveContainer>
+                <BarChart data={barData}>
+                  <XAxis dataKey="name" stroke="var(--color-ink-soft)" fontSize={13} />
+                  <YAxis stroke="var(--color-ink-soft)" fontSize={13} />
+                  <Tooltip formatter={(value) => showMoney(value)} />
+                  <Bar dataKey="amount" fill="#1f3b2c" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-
-            <div className="insights-comparison__month">
-              <p className="insights-comparison__label">This month</p>
-              <p className="insights-comparison__amount">
-                {showMoney(comparison.currentMonth)}
-              </p>
-            </div>
-          </div>
+          </>
         )}
       </Card>
 
@@ -179,6 +207,34 @@ function InsightsPage() {
               )
             })}
           </ul>
+        )}
+      </Card>
+
+      <Card style={{ marginTop: 16 }}>
+        <h3>Spend breakdown</h3>
+
+        {pieData.length === 0 ? (
+          <p>No active subscriptions yet.</p>
+        ) : (
+          <div style={{ width: '100%', height: 260 }}>
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={60}
+                  outerRadius={90}
+                  paddingAngle={2}
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={entry.name} fill={pieColors[index % pieColors.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => showMoney(value)} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         )}
       </Card>
     </AppShell>
