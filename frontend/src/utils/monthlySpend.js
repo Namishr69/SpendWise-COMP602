@@ -45,27 +45,38 @@ export function calculateMonthSpend(transactions, year, month) {
 export function calculateSubscriptionTotalForMonth(subscriptions, paymentsBySubscriptionId, year, month) {
   const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999)
 
-  return subscriptions
-    .filter((s) => s.status?.toLowerCase() === 'active')
-    .filter((s) => {
-      if (!s.createdAt) return true
+  return subscriptions.reduce((total, s) => {
+    const payments = paymentsBySubscriptionId[s.id] || []
+    const paymentsThisMonth = payments.filter((p) => {
+      const date = getTransactionDate(p)
+      return date && date.getFullYear() === year && date.getMonth() === month
+    })
+
+    // A real, dated payment is ground truth — count it for the month it
+    // actually happened in, regardless of the subscription's current
+    // status or when it was created. This matters for backdated payments
+    // (e.g. logging a payment for last month) and for subscriptions that
+    // have since been cancelled but genuinely were paid for in the past.
+    if (paymentsThisMonth.length > 0) {
+      const actual = paymentsThisMonth.reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
+      return total + actual
+    }
+
+    // No real payment data for this month — fall back to the estimate,
+    // but only if the subscription was actually active and existed by
+    // this month.
+    const isActive = s.status?.toLowerCase() === 'active'
+    const existedByThisMonth = !s.createdAt || (() => {
       const created = new Date(s.createdAt)
       return !Number.isNaN(created.getTime()) && created <= endOfMonth
-    })
-    .reduce((total, s) => {
-      const payments = paymentsBySubscriptionId[s.id] || []
-      const paymentsThisMonth = payments.filter((p) => {
-        const date = getTransactionDate(p)
-        return date && date.getFullYear() === year && date.getMonth() === month
-      })
+    })()
 
-      if (paymentsThisMonth.length > 0) {
-        const actual = paymentsThisMonth.reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
-        return total + actual
-      }
-
+    if (isActive && existedByThisMonth) {
       return total + normalizeSubscriptionToMonthly(s.amount, s.billingCycle)
-    }, 0)
+    }
+
+    return total
+  }, 0)
 }
 
 /**
