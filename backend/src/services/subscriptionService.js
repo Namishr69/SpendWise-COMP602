@@ -20,8 +20,8 @@ const subscriptionService = {
         if (!name) {
             throw new Error('Name is required');
         }
-        if (!Number.isFinite(amount) || amount <= 0) {
-            throw new Error('Amount must be greater than zero');
+        if (!Number.isFinite(amount) || amount < 0) {
+            throw new Error('Amount must be zero or greater');
         }
 
         const subscriptionDate = (data.subscriptionDate || '').trim();
@@ -67,8 +67,8 @@ const subscriptionService = {
 
         if (changes.amount !== undefined) {
             const amount = Number(changes.amount);
-            if (!Number.isFinite(amount) || amount <= 0) {
-                throw new Error('Amount must be greater than zero');
+            if (!Number.isFinite(amount) || amount < 0) {
+                throw new Error('Amount must be zero or greater');
             }
             update.amount = amount;
         }
@@ -121,8 +121,8 @@ const subscriptionService = {
         if (!date) {
             throw new Error('Date is required');
         }
-        if (!Number.isFinite(amount) || amount <= 0) {
-            throw new Error('Amount must be greater than zero');
+        if (!Number.isFinite(amount) || amount < 0) {
+            throw new Error('Amount must be zero or greater');
         }
 
         return await subscriptionRepo.createPayment(userId, subscriptionId, {

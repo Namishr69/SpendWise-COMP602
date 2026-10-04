@@ -130,6 +130,9 @@ const anzAuthService = {
                             'ReadTransactionsDebits',
                             'ReadScheduledPaymentsDetail',
                             'ReadDirectDebits',
+                            // Standing orders are a separate resource and need
+                            // their own permission, or the request is rejected.
+                            'ReadStandingOrdersDetail',
                             'ReadStatementsDetail',
                         ],
                         ExpirationDateTime: expiration.toISOString(),
