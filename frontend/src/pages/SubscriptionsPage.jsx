@@ -19,6 +19,7 @@ function SubscriptionsPage() {
   } = useSubscriptions()
 
   const [deleting, setDeleting] = useState(null)
+  const [sortBy, setSortBy] = useState('recent')
 
   const { preferredCurrency, rate } = useCurrencyRate()
 
@@ -64,7 +65,25 @@ function SubscriptionsPage() {
       {subscriptions.length === 0 ? (
         <p>No subscriptions yet.</p>
       ) : (
-        <section className="subscriptions-grid">
+        <>
+          <div className="subscriptions-sort">
+            <label htmlFor="subscriptions-sort-select">
+              Sort by
+            </label>
+            <select
+              id="subscriptions-sort-select"
+              className="subscriptions-sort__select"
+              value={sortBy}
+              onChange={(event) =>
+                setSortBy(event.target.value)
+              }
+            >
+              <option value="recent">Recently added</option>
+              <option value="renewal">Next renewal date</option>
+            </select>
+          </div>
+
+          <section className="subscriptions-grid">
           {subscriptions.map((subscription) => (
             <Card
               key={subscription.id}
@@ -125,7 +144,8 @@ function SubscriptionsPage() {
               </div>
             </Card>
           ))}
-        </section>
+          </section>
+        </>
       )}
     </AppShell>
   )

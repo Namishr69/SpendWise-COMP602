@@ -32,6 +32,26 @@
   gap: 1.25rem;
 }
 
+.subscriptions-sort {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.subscriptions-sort label {
+  font-weight: 600;
+  color: #5f6f52;
+}
+
+.subscriptions-sort__select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d7d7d7;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+}
+
 .subscription-card {
   display: flex;
   flex-direction: column;
