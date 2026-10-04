@@ -18,7 +18,7 @@
 const MIN_OCCURRENCES = 2;
 
 const CADENCES = [
-    { cycle: 'Weekly', minDays: 5, maxDays: 9, periodDays: 7 },
+    { cycle: 'Weekly', minDays: 0, maxDays: 9, periodDays: 7 },
     { cycle: 'Fortnightly', minDays: 12, maxDays: 16, periodDays: 14 },
     { cycle: 'Monthly', minDays: 26, maxDays: 35, periodDays: 30 },
     { cycle: 'Quarterly', minDays: 84, maxDays: 96, periodDays: 91 },
@@ -121,6 +121,24 @@ function detectionKeyFor(merchantKey, bucket, cycle) {
 }
 
 /**
+ * The key for a *declared* arrangement.
+ *
+ * A bank mandate id is the one identifier that genuinely distinguishes two
+ * recurring payments, so a declared candidate keeps its own mandate in the key.
+ * This is what stops four different standing arrangements of the same amount to
+ * the same payee collapsing onto one key — before this, the first candidate
+ * created a document and the other three "updated" it, so only one of four ever
+ * appeared on the Subscriptions page.
+ *
+ * Namespaced with `declared:` so it can never collide with the plain
+ * merchant|bucket|cycle key an inferred candidate uses for the same merchant.
+ */
+function declaredDetectionKeyFor(mandateId, merchantKey, bucket, cycle) {
+    const discriminator = mandateId ? `mandate:${mandateId}` : merchantKey;
+    return `declared:${discriminator}|${bucket}|${cycle}`;
+}
+
+/**
  * Builds a candidate from a group of declared records (scheduled payments /
  * direct debits). One record is enough — the bank already told us it recurs.
  */
@@ -169,8 +187,10 @@ export function detectRecurring(transactions) {
     const plain = debits.filter((t) => !DECLARED_RECORD_TYPES.has(t.recordType));
 
     const candidates = [];
-    // Every key already emitted, so the inferred pass never re-emits what a
-    // declared record (or an earlier inferred group) has already covered.
+    // Plain merchant|bucket|cycle keys already covered, so the inferred pass
+    // never re-emits what a declared record has already described. Kept in the
+    // plain form because that is what pass 2 computes; a declared candidate's
+    // own key is namespaced and would never match it.
     const claimedKeys = new Set();
 
     // --- Pass 1: declared recurring arrangements -----------------------------
@@ -194,21 +214,32 @@ export function detectRecurring(transactions) {
         const candidate = declaredCandidate(records);
         // A declared record with no usable amount would render as a "$0.00"
         // subscription; there is nothing to track, so skip it.
-        if (!(candidate.amount > 0)) continue;
+        if (!(candidate.amount >= 0)) continue;
 
         const merchantKey = normaliseMerchant(candidate.name);
-        const key = detectionKeyFor(
-            merchantKey,
-            amountBucket(candidate.amount),
-            candidate.billingCycle
-        );
+        const bucket = amountBucket(candidate.amount);
+        const mandateId = records.find((r) => r.mandateId)?.mandateId || null;
 
         candidates.push({
             ...candidate,
-            detectionKey: key,
+            detectionKey: declaredDetectionKeyFor(
+                mandateId,
+                merchantKey,
+                bucket,
+                candidate.billingCycle
+            ),
+            // The key an earlier version of this code would have stored for this
+            // arrangement (before mandate ids were kept). The persistence layer
+            // uses it to retire a doc the old scheme created, so upgrading does
+            // not leave a duplicate beside the new one.
+            legacyDetectionKey: detectionKeyFor(
+                merchantKey,
+                bucket,
+                candidate.billingCycle
+            ),
             source: 'declared',
         });
-        claimedKeys.add(key);
+        claimedKeys.add(detectionKeyFor(merchantKey, bucket, candidate.billingCycle));
     }
 
     // --- Pass 2: inferred patterns -------------------------------------------
@@ -245,7 +276,7 @@ export function detectRecurring(transactions) {
         const last = sorted[sorted.length - 1];
         const amounts = sorted.map((t) => t.amount);
         const latestAmount = amounts[amounts.length - 1];
-        if (!(latestAmount > 0)) continue;
+        if (!(latestAmount >= 0)) continue;
 
         const detectionKey = detectionKeyFor(
             groupKey.split('|')[0],

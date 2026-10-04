@@ -181,7 +181,7 @@ test('a declared record with no stated frequency still becomes a subscription', 
     assert.ok(candidates[0].confidence < 0.8);
 });
 
-test('a declared record with no amount is skipped, not shown as $0.00', () => {
+test('a declared record with no amount is included and shown as $0.00', () => {
     const mapped = mapTransaction({
         DirectDebitId: 'dd-3',
         Name: 'Unknown Payee',
@@ -189,7 +189,7 @@ test('a declared record with no amount is skipped, not shown as $0.00', () => {
     });
 
     assert.equal(mapped.amount, 0);
-    assert.equal(detectRecurring([mapped]).length, 0);
+    assert.equal(detectRecurring([mapped]).length, 1);
 });
 
 test('a declaration and its settled charges produce one subscription, not two', () => {
@@ -223,8 +223,54 @@ test('a declaration and its settled charges produce one subscription, not two', 
     assert.equal(candidates[0].source, 'declared');
 });
 
-test('detection is idempotent: the same input yields the same detection keys', () => {
-    const txns = [
+test('two distinct mandates of the same amount stay two subscriptions', () => {
+    // The bug that hid subscriptions from the page: the declared candidates were
+    // keyed on merchant|amount|cycle, so several different standing arrangements
+    // of equal amount collapsed onto one detection key. The first created a
+    // document and the rest "updated" it — four mandates, one card. Each mandate
+    // must now keep its own key.
+    const first = mapTransaction({
+        DirectDebitId: 'dd-alpha',
+        Name: 'A SP debtor',
+        Frequency: 'Monthly',
+        PreviousPaymentAmount: { Amount: '10.00', Currency: 'NZD' },
+        PreviousPaymentDateTime: '2025-03-05T00:00:00.000Z',
+    });
+    const second = mapTransaction({
+        DirectDebitId: 'dd-beta',
+        Name: 'A SP debtor',
+        Frequency: 'Monthly',
+        PreviousPaymentAmount: { Amount: '10.00', Currency: 'NZD' },
+        PreviousPaymentDateTime: '2025-03-07T00:00:00.000Z',
+    });
+
+    const candidates = detectRecurring([first, second]);
+
+    assert.equal(candidates.length, 2);
+    assert.notEqual(candidates[0].detectionKey, candidates[1].detectionKey);
+});
+
+test('a declared mandate and its settled charges still dedupe to one', () => {
+    // Namespacing the declared key must not break the opposite guarantee: the
+    // mandate record and the charges it produced are the same subscription.
+    const declared = mapTransaction({
+        DirectDebitId: 'dd-77',
+        Frequency: 'Monthly',
+        Name: 'A SP debtor',
+        PreviousPaymentAmount: { Amount: '10.00', Currency: 'NZD' },
+        PreviousPaymentDateTime: '2025-03-05T00:00:00.000Z',
+    });
+    const settled = [
+        debit({ merchant: 'A SP debtor', amount: 10, bookedAt: '2025-04-05T00:00:00.000Z' }),
+        debit({ merchant: 'A SP debtor', amount: 10, bookedAt: '2025-05-05T00:00:00.000Z' }),
+    ];
+
+    const candidates = detectRecurring([declared, ...settled]);
+    assert.equal(candidates.length, 1);
+    assert.equal(candidates[0].source, 'declared');
+});
+
+test('detection is idempotent: the same input yields the same detection keys', () => {    const txns = [
         mapTransaction({
             DirectDebitId: 'dd-9',
             Frequency: 'Monthly',
