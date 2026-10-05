@@ -5,6 +5,7 @@ import { auth } from '../firebase'
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
 import { CurrencyContext } from '../context/currencyContext.js'
+import { useSubscriptions } from '../context/subscriptionsContext'
 import { convertCurrency } from '../api/exchangeRateApi.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
 import { getAnzStatus } from '../api/anzApi.js'
@@ -29,6 +30,10 @@ function formatDate(iso) {
 
 function TransactionsPage() {
   const { preferredCurrency } = useContext(CurrencyContext)
+  // A sync detects subscriptions server-side, so the list has to be re-read
+  // afterwards — otherwise a detected subscription stays invisible until the
+  // user reloads the whole app.
+  const { refresh: refreshSubscriptions } = useSubscriptions()
 
   const [status, setStatus] = useState(null)
   const [accounts, setAccounts] = useState([])
@@ -114,6 +119,11 @@ function TransactionsPage() {
     try {
       const summary = await syncBankData()
       await load(auth.currentUser)
+
+      // Pick up anything the sync just detected, without a page reload. Silent
+      // so the transactions already on screen don't blank out mid-refresh.
+      await refreshSubscriptions({ silent: true }).catch(() => {})
+
       setSyncMessage(
         `Synced ${summary.transactionsSynced} transactions across ` +
           `${summary.accounts} account(s). ${summary.subscriptionsCreated} new ` +

@@ -10,6 +10,7 @@
 // whose name does not match an entry falls back to a "no link" message in the
 // UI rather than showing a broken link.
 export const CANCELLATION_MERCHANTS = [
+  // --- Streaming ---
   {
     label: 'Netflix',
     url: 'https://www.netflix.com/cancelplan',
@@ -31,19 +32,67 @@ export const CANCELLATION_MERCHANTS = [
     keywords: ['youtube'],
   },
   {
+    label: 'Twitch',
+    url: 'https://www.twitch.tv/settings/subscriptions',
+    keywords: ['twitch'],
+  },
+  {
+    label: 'Paramount+',
+    url: 'https://www.paramountplus.com/account/',
+    keywords: ['paramount'],
+  },
+  {
+    label: 'Apple TV+',
+    url: 'https://tv.apple.com/settings',
+    keywords: ['apple tv'],
+  },
+  // --- NZ-specific services ---
+  {
+    label: 'Neon NZ',
+    url: 'https://www.neontv.co.nz/account',
+    keywords: ['neon nz', 'neon tv', 'neon'],
+  },
+  {
+    label: 'Spark NZ',
+    url: 'https://www.spark.co.nz/shop/account/myaccount/',
+    keywords: ['spark nz', 'spark'],
+  },
+  {
+    label: 'One NZ',
+    url: 'https://www.one.nz/my-account/',
+    keywords: ['one nz', 'one new zealand', 'vodafone nz'],
+  },
+  {
+    label: 'Sky TV NZ',
+    url: 'https://www.sky.co.nz/my-sky',
+    keywords: ['sky tv', 'sky nz', 'sky sport'],
+  },
+  // --- Gaming ---
+  {
+    label: 'Xbox / Game Pass',
+    url: 'https://account.microsoft.com/services',
+    keywords: ['xbox', 'game pass'],
+  },
+  {
+    label: 'PlayStation Plus',
+    url: 'https://www.playstation.com/en-nz/playstation-plus/',
+    keywords: ['playstation', 'ps plus', 'playstation plus', 'psn'],
+  },
+  {
+    label: 'Nintendo Switch Online',
+    url: 'https://accounts.nintendo.com/profile/settings',
+    keywords: ['nintendo'],
+  },
+  {
+    label: 'Steam',
+    url: 'https://store.steampowered.com/account/subscriptions',
+    keywords: ['steam'],
+  },
+  // --- Productivity & cloud ---
+  {
     label: 'Apple',
     url: 'https://apps.apple.com/account/subscriptions',
     keywords: ['apple', 'itunes', 'app store'],
-  },
-  {
-    label: 'Amazon Prime',
-    url: 'https://www.amazon.com/gp/primecentral',
-    keywords: ['amazon prime', 'prime video'],
-  },
-  {
-    label: 'Adobe',
-    url: 'https://account.adobe.com/plans',
-    keywords: ['adobe'],
   },
   {
     label: 'Microsoft 365',
@@ -51,19 +100,83 @@ export const CANCELLATION_MERCHANTS = [
     keywords: ['microsoft', 'office 365'],
   },
   {
+    label: 'Adobe',
+    url: 'https://account.adobe.com/plans',
+    keywords: ['adobe'],
+  },
+  {
     label: 'Dropbox',
     url: 'https://www.dropbox.com/account/plan',
     keywords: ['dropbox'],
   },
+  {
+    label: 'Google One',
+    url: 'https://one.google.com/settings',
+    keywords: ['google one'],
+  },
+  {
+    label: 'Notion',
+    url: 'https://www.notion.so/profile/billing',
+    keywords: ['notion'],
+  },
+  {
+    label: 'Canva',
+    url: 'https://www.canva.com/settings/billing',
+    keywords: ['canva'],
+  },
+  {
+    label: 'Slack',
+    url: 'https://slack.com/account/settings',
+    keywords: ['slack'],
+  },
+  {
+    label: 'Zoom',
+    url: 'https://zoom.us/billing',
+    keywords: ['zoom'],
+  },
+  {
+    label: 'GitHub',
+    url: 'https://github.com/settings/billing',
+    keywords: ['github'],
+  },
+  // --- Reading & media ---
   {
     label: 'Audible',
     url: 'https://www.audible.com/account/overview',
     keywords: ['audible'],
   },
   {
-    label: 'Google One',
-    url: 'https://one.google.com/settings',
-    keywords: ['google one'],
+    label: 'Substack',
+    url: 'https://substack.com/account/billing',
+    keywords: ['substack'],
+  },
+  {
+    label: 'Patreon',
+    url: 'https://www.patreon.com/settings/memberships',
+    keywords: ['patreon'],
+  },
+  // --- Fitness ---
+  {
+    label: 'Les Mills',
+    url: 'https://www.lesmills.com/nz/ondemand/account/',
+    keywords: ['les mills'],
+  },
+  // --- E-commerce & shopping ---
+  {
+    label: 'Amazon Prime',
+    url: 'https://www.amazon.com/gp/primecentral',
+    keywords: ['amazon prime', 'prime video'],
+  },
+  // --- Food delivery ---
+  {
+    label: 'Uber Eats',
+    url: 'https://www.ubereats.com/nz/settings',
+    keywords: ['uber eats', 'ubereats'],
+  },
+  {
+    label: 'Uber',
+    url: 'https://www.uber.com/nz/en/r/account/',
+    keywords: ['uber'],
   },
 ]
 

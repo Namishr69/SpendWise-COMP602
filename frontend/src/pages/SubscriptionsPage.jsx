@@ -86,7 +86,7 @@ function SubscriptionsPage() {
 
                 <p>
                   {showMoney(subscription.amount)} /{' '}
-                  {subscription.billingCycle.toLowerCase()}
+                  {(subscription.billingCycle || 'Monthly').toLowerCase()}
                 </p>
 
                 <p>
