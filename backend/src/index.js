@@ -7,6 +7,7 @@ import exchangeRateRoutes from './routes/exchangeRateRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import anzRoutes from './routes/anzRoutes.js';
+import gmailRoutes from './routes/gmailRoutes.js';
 import budgetRoutes from './routes/budgetRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
 
@@ -26,6 +27,7 @@ app.use('/api', exchangeRateRoutes);
 app.use('/api', userRoutes);
 app.use('/api', subscriptionRoutes);
 app.use('/api', anzRoutes);
+app.use('/api', gmailRoutes);
 app.use('/api', budgetRoutes);
 app.use('/api', transactionRoutes);
 
