@@ -47,10 +47,19 @@ function SubscriptionsPage() {
 
   const sortedSubscriptions =
     sortBy === 'renewal'
-      ? [...subscriptions].sort(
-          (a, b) =>
-            new Date(a.nextPaymentDate) - new Date(b.nextPaymentDate)
-        )
+      ? [...subscriptions].sort((a, b) => {
+          const dateA = a.nextPaymentDate
+            ? new Date(a.nextPaymentDate)
+            : null
+          const dateB = b.nextPaymentDate
+            ? new Date(b.nextPaymentDate)
+            : null
+
+          if (dateA && dateB) return dateA - dateB
+          if (dateA) return -1
+          if (dateB) return 1
+          return 0
+        })
       : subscriptions
 
   return (
