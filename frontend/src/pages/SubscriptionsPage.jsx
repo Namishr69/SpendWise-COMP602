@@ -46,8 +46,14 @@ function SubscriptionsPage() {
   }
 
   const sortedSubscriptions =
-    sortBy === 'renewal'
-      ? [...subscriptions].sort((a, b) => {
+    sortBy === 'recent'
+      ? subscriptions
+      : [...subscriptions].sort((a, b) => {
+          if (sortBy === 'name') {
+            return (a.name || '').localeCompare(b.name || '')
+          }
+
+          // sortBy === 'renewal'
           const dateA = a.nextPaymentDate
             ? new Date(a.nextPaymentDate)
             : null
@@ -60,7 +66,6 @@ function SubscriptionsPage() {
           if (dateB) return 1
           return 0
         })
-      : subscriptions
 
   return (
     <AppShell activeNav="Subscriptions">
@@ -107,6 +112,14 @@ function SubscriptionsPage() {
                 onClick={() => setSortBy('renewal')}
               >
                 Next renewal date
+              </button>
+              <button
+                type="button"
+                className={sortBy === 'name' ? 'is-active' : ''}
+                aria-pressed={sortBy === 'name'}
+                onClick={() => setSortBy('name')}
+              >
+                Name
               </button>
             </div>
           </div>
