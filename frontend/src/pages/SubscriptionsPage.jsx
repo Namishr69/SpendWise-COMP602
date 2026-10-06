@@ -119,7 +119,7 @@ function SubscriptionsPage() {
                 aria-pressed={sortBy === 'name'}
                 onClick={() => setSortBy('name')}
               >
-                Name
+                Name (A–Z)
               </button>
             </div>
           </div>
