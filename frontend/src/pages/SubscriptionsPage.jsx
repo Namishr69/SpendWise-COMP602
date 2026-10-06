@@ -84,20 +84,31 @@ function SubscriptionsPage() {
       ) : (
         <>
           <div className="subscriptions-sort">
-            <label htmlFor="subscriptions-sort-select">
+            <span className="subscriptions-sort__label">
               Sort by
-            </label>
-            <select
-              id="subscriptions-sort-select"
-              className="subscriptions-sort__select"
-              value={sortBy}
-              onChange={(event) =>
-                setSortBy(event.target.value)
-              }
+            </span>
+            <div
+              className="subscriptions-sort__toggle"
+              role="group"
+              aria-label="Sort subscriptions"
             >
-              <option value="recent">Recently added</option>
-              <option value="renewal">Next renewal date</option>
-            </select>
+              <button
+                type="button"
+                className={sortBy === 'recent' ? 'is-active' : ''}
+                aria-pressed={sortBy === 'recent'}
+                onClick={() => setSortBy('recent')}
+              >
+                Recently added
+              </button>
+              <button
+                type="button"
+                className={sortBy === 'renewal' ? 'is-active' : ''}
+                aria-pressed={sortBy === 'renewal'}
+                onClick={() => setSortBy('renewal')}
+              >
+                Next renewal date
+              </button>
+            </div>
           </div>
 
           <section className="subscriptions-grid">

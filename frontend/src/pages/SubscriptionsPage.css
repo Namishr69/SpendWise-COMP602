@@ -35,38 +35,50 @@
 .subscriptions-sort {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.75rem;
   margin-bottom: 1.25rem;
 }
 
-.subscriptions-sort label {
+.subscriptions-sort__label {
   font-size: 13px;
   font-weight: 600;
   color: var(--color-ink-soft);
 }
 
-.subscriptions-sort__select {
-  appearance: none;
+.subscriptions-sort__toggle {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  background: var(--color-tan);
+  border-radius: var(--radius-md);
+}
+
+.subscriptions-sort__toggle button {
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--color-ink);
-  padding: 10px 40px 10px 14px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background-color: var(--color-white);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235c6b60' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
+  color: var(--color-ink-soft);
+  padding: 7px 14px;
+  border: none;
+  border-radius: calc(var(--radius-md) - 3px);
+  background: transparent;
   cursor: pointer;
-  transition: border-color 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
-.subscriptions-sort__select:hover {
-  border-color: var(--color-sage);
+.subscriptions-sort__toggle button:hover {
+  color: var(--color-ink);
 }
 
-.subscriptions-sort__select:focus-visible {
+.subscriptions-sort__toggle button.is-active {
+  background: var(--color-white);
+  color: var(--color-forest);
+  box-shadow: 0 1px 3px rgba(31, 59, 44, 0.12);
+}
+
+.subscriptions-sort__toggle button:focus-visible {
   outline: 2px solid var(--color-forest);
   outline-offset: 1px;
 }
