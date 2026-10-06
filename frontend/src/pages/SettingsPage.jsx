@@ -2,6 +2,7 @@ import { useContext, useState } from 'react'
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
 import ConnectBankSection from '../components/ConnectBankSection.jsx'
+import ConnectGmailSection from '../components/ConnectGmailSection.jsx'
 import { AuthContext } from '../context/authContext.js'
 import { CurrencyContext } from '../context/currencyContext.js'
 import { BudgetContext } from '../context/BudgetProvider.jsx'
@@ -268,6 +269,7 @@ function SettingsPage() {
         {isBanksOpen && (
           <div className="settings-section-content">
             <ConnectBankSection />
+            <ConnectGmailSection />
           </div>
         )}
       </Card>
