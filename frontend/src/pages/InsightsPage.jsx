@@ -15,6 +15,8 @@ import { AuthContext } from '../context/authContext.js'
 import { compareMonthToPrevious } from '../utils/monthlySpend.js'
 import { getPayments } from '../api/subscriptionApi.js'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { LineChart, Line } from 'recharts'
+import { getMonthlyTotals } from '../utils/spendingTrend.js'
 
 function InsightsPage() {
   const { subscriptions, loading, error } = useSubscriptions()
@@ -22,6 +24,7 @@ function InsightsPage() {
   const { currentUser } = useContext(AuthContext)
 
   const [comparison, setComparison] = useState(null)
+  const [trend, setTrend] = useState(null)
 
   const showMoney = (amount) =>
     formatCurrency(
@@ -49,13 +52,9 @@ function InsightsPage() {
 
         if (!cancelled) {
           const paymentsBySubscriptionId = Object.fromEntries(paymentsPerSub)
-          setComparison(
-            compareMonthToPrevious(
-              [...bankTxns, ...manualTxns],
-              subscriptions,
-              paymentsBySubscriptionId,
-            )
-          )
+          const allTxns = [...bankTxns, ...manualTxns]
+          setComparison(compareMonthToPrevious(allTxns, subscriptions, paymentsBySubscriptionId))
+          setTrend(getMonthlyTotals(allTxns, subscriptions, paymentsBySubscriptionId))
         }
       } catch (err) {
         console.error('Failed to load month comparison:', err)
@@ -166,6 +165,31 @@ function InsightsPage() {
               </ResponsiveContainer>
             </div>
           </>
+        )}
+      </Card>
+
+      <Card style={{ marginTop: 16 }}>
+        <h3>Spending trend</h3>
+
+        {!trend ? (
+          <p>Loading trend…</p>
+        ) : (
+          <div style={{ width: '100%', height: 220, marginTop: 12 }}>
+            <ResponsiveContainer>
+              <LineChart data={trend}>
+                <XAxis dataKey="label" stroke="var(--color-ink-soft)" fontSize={13} />
+                <YAxis stroke="var(--color-ink-soft)" fontSize={13} />
+                <Tooltip formatter={(value) => showMoney(value)} />
+                <Line
+                  type="monotone"
+                  dataKey="total"
+                  stroke="#1f3b2c"
+                  strokeWidth={2}
+                  dot={{ r: trend.length === 1 ? 5 : 3 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         )}
       </Card>
 
