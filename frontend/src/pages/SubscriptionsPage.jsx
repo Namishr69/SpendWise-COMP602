@@ -111,7 +111,7 @@ function SubscriptionsPage() {
                 aria-pressed={sortBy === 'renewal'}
                 onClick={() => setSortBy('renewal')}
               >
-                Upcoming
+                Renewal date
               </button>
               <button
                 type="button"
