@@ -45,6 +45,14 @@ function SubscriptionsPage() {
     )
   }
 
+  const sortedSubscriptions =
+    sortBy === 'renewal'
+      ? [...subscriptions].sort(
+          (a, b) =>
+            new Date(a.nextPaymentDate) - new Date(b.nextPaymentDate)
+        )
+      : subscriptions
+
   return (
     <AppShell activeNav="Subscriptions">
       <header className="subscriptions-header">
@@ -84,7 +92,7 @@ function SubscriptionsPage() {
           </div>
 
           <section className="subscriptions-grid">
-          {subscriptions.map((subscription) => (
+          {sortedSubscriptions.map((subscription) => (
             <Card
               key={subscription.id}
               className="subscription-card"
