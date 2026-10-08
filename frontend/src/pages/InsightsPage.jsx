@@ -234,31 +234,66 @@ function InsightsPage() {
         )}
       </Card>
 
-      <Card style={{ marginTop: 16 }}>
+            <Card style={{ marginTop: 16 }}>
         <h3>Spend breakdown</h3>
 
         {pieData.length === 0 ? (
           <p>No active subscriptions yet.</p>
         ) : (
-          <div style={{ width: '100%', height: 260 }}>
-            <ResponsiveContainer>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={2}
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={entry.name} fill={pieColors[index % pieColors.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => showMoney(value)} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          <>
+                        <div
+              className="insights-donut"
+              style={{ position: 'relative', width: '100%', height: 300 }}
+            >
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius="62%"
+                    outerRadius="88%"
+                    paddingAngle={0}
+                    stroke="none"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={entry.name} fill={pieColors[index % pieColors.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => showMoney(value)} />
+                </PieChart>
+              </ResponsiveContainer>
+
+              <div className="insights-donut__center">
+                <span className="insights-donut__center-label">Total / mo</span>
+                <span className="insights-donut__center-amount">
+                  {showMoney(totalMonthlySpend)}
+                </span>
+              </div>
+            </div>
+
+            <ul className="insights-legend">
+              {pieData.map((entry, index) => {
+                const percent =
+                  totalMonthlySpend > 0
+                    ? (entry.value / totalMonthlySpend) * 100
+                    : 0
+
+                return (
+                  <li key={entry.name} className="insights-legend__item">
+                    <span
+                      className="insights-legend__swatch"
+                      style={{ background: pieColors[index % pieColors.length] }}
+                    />
+                    <span className="insights-legend__name">{entry.name}</span>
+                    <span className="insights-legend__amount">
+                      {showMoney(entry.value)} · {percent.toFixed(0)}%
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          </>
         )}
       </Card>
     </AppShell>
