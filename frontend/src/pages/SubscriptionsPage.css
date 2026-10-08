@@ -76,3 +76,22 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.subscription-cancel-row {
+  margin-top: 0.75rem;
+}
+
+.subscription-cancel {
+  font-weight: 700;
+  color: var(--color-forest);
+  text-decoration: none;
+}
+
+.subscription-cancel:hover {
+  text-decoration: underline;
+}
+
+.subscription-cancel-fallback {
+  color: var(--color-ink-soft);
+  font-style: italic;
+}

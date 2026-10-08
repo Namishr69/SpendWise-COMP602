@@ -3,6 +3,7 @@ import anzAccountService from '../services/anzAccountService.js';
 import anzSyncService from '../services/anzSyncService.js';
 import dashboardService from '../services/dashboardService.js';
 import bankDataRepo from '../repositories/bankDataRepo.js';
+import subscriptionRepo from '../repositories/subscriptionRepo.js';
 
 /**
  * Nothing here returns an ANZ access or refresh token. The browser only ever
@@ -139,11 +140,19 @@ const anzController = {
     async disconnect(req, res) {
         try {
             const result = await anzAuthService.disconnect(req.userId);
-            // Remove synced bank data too, so unlinking leaves nothing behind.
+            // Remove synced bank data so unlinking leaves nothing behind.
             try {
                 await bankDataRepo.deleteAllBankData(req.userId);
             } catch (error) {
                 console.error('Bank data cleanup failed on disconnect:', error.message);
+            }
+            // Remove subscriptions that were auto-detected from ANZ data.
+            // Manually-added subscriptions (no source field) are never touched.
+            try {
+                const removed = await subscriptionRepo.deleteAllDetected(req.userId);
+                console.log(`[anz-disconnect] removed ${removed} anz-detected subscription(s) for user ${req.userId}`);
+            } catch (error) {
+                console.error('Detected subscription cleanup failed on disconnect:', error.message);
             }
             res.json(result);
         } catch (error) {

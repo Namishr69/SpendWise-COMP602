@@ -54,6 +54,43 @@ const subscriptionRepo = {
         await docRef.set(data, { merge: true });
         return { id: paymentId, ...data };
     },
+
+    /**
+     * Deletes every subscription that was created by ANZ auto-detection
+     * (source === 'anz-detected'). Called when the user disconnects their ANZ
+     * account so detected subscriptions don't linger after the data that
+     * produced them is gone. Manually-added subscriptions are never touched.
+     *
+     * Payment sub-collections are deleted first — Firestore does not cascade
+     * deletes to sub-collections when the parent document is removed.
+     */
+    async deleteAllDetected(userId) {
+        const col = db.collection('users').doc(userId).collection('subscriptions');
+        const snapshot = await col.where('source', '==', 'anz-detected').get();
+
+        const BATCH_LIMIT = 450;
+
+        // Delete payments sub-collections first.
+        for (const subDoc of snapshot.docs) {
+            const payments = await subDoc.ref.collection('payments').get();
+            for (let i = 0; i < payments.docs.length; i += BATCH_LIMIT) {
+                const chunk = payments.docs.slice(i, i + BATCH_LIMIT);
+                const batch = db.batch();
+                chunk.forEach((p) => batch.delete(p.ref));
+                await batch.commit();
+            }
+        }
+
+        // Now delete the subscription documents themselves.
+        for (let i = 0; i < snapshot.docs.length; i += BATCH_LIMIT) {
+            const chunk = snapshot.docs.slice(i, i + BATCH_LIMIT);
+            const batch = db.batch();
+            chunk.forEach((d) => batch.delete(d.ref));
+            await batch.commit();
+        }
+
+        return snapshot.docs.length;
+    },
 };
 
 export default subscriptionRepo;
