@@ -37,5 +37,16 @@ const userRepository = {
 
         return budget;
     },
+
+        async updateDarkMode(userId, darkMode) {
+        await usersCollection.doc(userId).set(
+            {
+                darkMode,
+            },
+            { merge: true }
+        );
+
+        return darkMode;
+    },
 };
 export default userRepository;
