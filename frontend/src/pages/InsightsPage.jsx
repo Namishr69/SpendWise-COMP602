@@ -15,6 +15,8 @@ import { AuthContext } from '../context/authContext.js'
 import { compareMonthToPrevious } from '../utils/monthlySpend.js'
 import { getPayments } from '../api/subscriptionApi.js'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { LineChart, Line } from 'recharts'
+import { getMonthlyTotals } from '../utils/spendingTrend.js'
 
 function InsightsPage() {
   const { subscriptions, loading, error } = useSubscriptions()
@@ -22,6 +24,7 @@ function InsightsPage() {
   const { currentUser } = useContext(AuthContext)
 
   const [comparison, setComparison] = useState(null)
+  const [trend, setTrend] = useState(null)
 
   const showMoney = (amount) =>
     formatCurrency(
@@ -49,13 +52,9 @@ function InsightsPage() {
 
         if (!cancelled) {
           const paymentsBySubscriptionId = Object.fromEntries(paymentsPerSub)
-          setComparison(
-            compareMonthToPrevious(
-              [...bankTxns, ...manualTxns],
-              subscriptions,
-              paymentsBySubscriptionId,
-            )
-          )
+          const allTxns = [...bankTxns, ...manualTxns]
+          setComparison(compareMonthToPrevious(allTxns, subscriptions, paymentsBySubscriptionId))
+          setTrend(getMonthlyTotals(allTxns, subscriptions, paymentsBySubscriptionId))
         }
       } catch (err) {
         console.error('Failed to load month comparison:', err)
@@ -170,6 +169,31 @@ function InsightsPage() {
       </Card>
 
       <Card style={{ marginTop: 16 }}>
+        <h3>Spending trend</h3>
+
+        {!trend ? (
+          <p>Loading trend…</p>
+        ) : (
+          <div style={{ width: '100%', height: 220, marginTop: 12 }}>
+            <ResponsiveContainer>
+              <LineChart data={trend}>
+                <XAxis dataKey="label" stroke="var(--color-ink-soft)" fontSize={13} />
+                <YAxis stroke="var(--color-ink-soft)" fontSize={13} />
+                <Tooltip formatter={(value) => showMoney(value)} />
+                <Line
+                  type="monotone"
+                  dataKey="total"
+                  stroke="#1f3b2c"
+                  strokeWidth={2}
+                  dot={{ r: trend.length === 1 ? 5 : 3 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </Card>
+
+      <Card style={{ marginTop: 16 }}>
         <h3>Spend by subscription</h3>
 
         {breakdown.length === 0 ? (
@@ -210,31 +234,66 @@ function InsightsPage() {
         )}
       </Card>
 
-      <Card style={{ marginTop: 16 }}>
+            <Card style={{ marginTop: 16 }}>
         <h3>Spend breakdown</h3>
 
         {pieData.length === 0 ? (
           <p>No active subscriptions yet.</p>
         ) : (
-          <div style={{ width: '100%', height: 260 }}>
-            <ResponsiveContainer>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={2}
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={entry.name} fill={pieColors[index % pieColors.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => showMoney(value)} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          <>
+                        <div
+              className="insights-donut"
+              style={{ position: 'relative', width: '100%', height: 300 }}
+            >
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius="62%"
+                    outerRadius="88%"
+                    paddingAngle={0}
+                    stroke="none"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={entry.name} fill={pieColors[index % pieColors.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => showMoney(value)} />
+                </PieChart>
+              </ResponsiveContainer>
+
+              <div className="insights-donut__center">
+                <span className="insights-donut__center-label">Total / mo</span>
+                <span className="insights-donut__center-amount">
+                  {showMoney(totalMonthlySpend)}
+                </span>
+              </div>
+            </div>
+
+            <ul className="insights-legend">
+              {pieData.map((entry, index) => {
+                const percent =
+                  totalMonthlySpend > 0
+                    ? (entry.value / totalMonthlySpend) * 100
+                    : 0
+
+                return (
+                  <li key={entry.name} className="insights-legend__item">
+                    <span
+                      className="insights-legend__swatch"
+                      style={{ background: pieColors[index % pieColors.length] }}
+                    />
+                    <span className="insights-legend__name">{entry.name}</span>
+                    <span className="insights-legend__amount">
+                      {showMoney(entry.value)} · {percent.toFixed(0)}%
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          </>
         )}
       </Card>
     </AppShell>
