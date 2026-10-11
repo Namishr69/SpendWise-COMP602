@@ -6,6 +6,7 @@ import Card from '../components/ui/Card'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import SubscriptionNotes from '../components/SubscriptionNotes'
+import PriceChangeAlerts from '../components/PriceChangeAlerts'
 import { useSubscriptions } from '../context/subscriptionsContext'
 import { useCurrencyRate } from '../hooks/useCurrencyRate.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
@@ -59,6 +60,8 @@ function SubscriptionDetailPage() {
   const [paymentAmount, setPaymentAmount] = useState('')
   const [paymentError, setPaymentError] = useState('')
   const [adding, setAdding] = useState(false)
+  // Bumped after each added payment so a new price change alert shows up.
+  const [alertsVersion, setAlertsVersion] = useState(0)
 
   useEffect(() => {
     if (!subscription) return
@@ -149,6 +152,7 @@ function SubscriptionDetailPage() {
 
       setPaymentDate(localToday())
       setPaymentAmount('')
+      setAlertsVersion((version) => version + 1)
     } catch (err) {
       setPaymentError(err.message)
     } finally {
@@ -179,6 +183,11 @@ function SubscriptionDetailPage() {
           {subscription.billingCycle.toLowerCase()}
         </p>
       </header>
+
+      <PriceChangeAlerts
+        subscriptionId={subscription.id}
+        refreshKey={alertsVersion}
+      />
 
       <section className="detail-summary">
         <Card>
