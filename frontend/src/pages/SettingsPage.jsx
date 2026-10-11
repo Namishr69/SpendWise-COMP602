@@ -12,6 +12,8 @@ import Button from '../components/ui/Button.jsx'
 import { useNavigate } from 'react-router-dom'
 import Input from '../components/ui/Input.jsx'
 import { updateBudget } from '../api/budgetApi.js'
+import { ThemeContext } from '../context/ThemeProvider.jsx'
+import { updateDarkMode } from '../api/darkModeApi.js'
 
 const BUDGET_PERIODS = ['Weekly', 'Monthly', 'Yearly']
 
@@ -38,12 +40,28 @@ function SettingsPage() {
   const [budgetPeriod, setBudgetPeriod] = useState(
     budget?.period ?? 'Monthly'
   )
+  const { darkMode, setDarkModeState } = useContext(ThemeContext)
+  const [savingTheme, setSavingTheme] = useState(false)
 
   const [budgetMessage, setBudgetMessage] = useState('')
   const [budgetError, setBudgetError] = useState('')
   const [savingBudget, setSavingBudget] = useState(false)
 
   const navigate = useNavigate()
+
+  async function handleToggleDarkMode() {
+    const newValue = !darkMode
+    setDarkModeState(newValue) // apply immediately, per acceptance test 1
+    setSavingTheme(true)
+    try {
+      await updateDarkMode(currentUser, newValue)
+    } catch (error) {
+      console.error('Failed to save dark mode:', error)
+      setDarkModeState(!newValue) // revert on failure
+    } finally {
+      setSavingTheme(false)
+    }
+  }
 
   async function handleLogout() {
     if (loggingOut) return
@@ -244,6 +262,23 @@ function SettingsPage() {
                 {budgetMessage}
               </p>
             )}
+
+            <div className="settings-option" style={{ marginTop: 20 }}>
+              <div className="settings-option-text">
+                <h3>Dark mode</h3>
+                <p>Switch to a dark theme that's easier on the eyes at night.</p>
+              </div>
+
+              <label className="settings-toggle">
+                <input
+                  type="checkbox"
+                  checked={darkMode}
+                  onChange={handleToggleDarkMode}
+                  disabled={savingTheme}
+                />
+                <span className="settings-toggle__slider"></span>
+              </label>
+            </div>
           </div>
         )}
       </Card>

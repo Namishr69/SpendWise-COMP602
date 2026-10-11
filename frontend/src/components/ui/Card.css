@@ -5,8 +5,7 @@
 }
 
 .sw-card--cream {
-  background: var(--color-white);
-  color: var(--color-ink);
+  background: var(--color-surface);
 }
 
 .sw-card--forest {
