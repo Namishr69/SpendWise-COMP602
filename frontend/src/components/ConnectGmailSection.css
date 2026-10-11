@@ -37,3 +37,16 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Inbox-scan action: the "Scan inbox for subscriptions" button + its result. */
+.gmail-sync {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.gmail-sync .bank-meta {
+  margin: 0;
+}
