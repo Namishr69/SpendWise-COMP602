@@ -34,3 +34,14 @@ export function getGmailPreview() {
 export function disconnectGmail() {
   return apiRequest('/gmail/connection', { method: 'DELETE' })
 }
+
+/**
+ * Triggers a full inbox scan: the backend fetches up to 200 recent emails,
+ * parses subscription receipts/confirmations, and upserts the results into
+ * Firestore alongside existing bank-sourced subscriptions.
+ *
+ * Returns { scanned, parsed, created, updated }.
+ */
+export function syncGmail() {
+  return apiRequest('/gmail/sync', { method: 'POST' })
+}
