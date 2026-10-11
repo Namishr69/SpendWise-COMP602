@@ -1,5 +1,6 @@
 import gmailAuthService from '../services/gmailAuthService.js';
 import gmailService from '../services/gmailService.js';
+import gmailSyncService from '../services/gmailSyncService.js';
 
 /**
  * Nothing here returns an access or refresh token. The browser only ever
@@ -85,6 +86,17 @@ const gmailController = {
       res.json(result);
     } catch (error) {
       console.error('Gmail disconnect failed:', error.message);
+      res.status(statusForError(error.message)).json({ error: error.message });
+    }
+  },
+
+  // POST /api/gmail/sync — scan the inbox and save subscription data to Firestore
+  async sync(req, res) {
+    try {
+      const summary = await gmailSyncService.syncSubscriptions(req.userId);
+      res.json(summary);
+    } catch (error) {
+      console.error('Gmail sync failed:', error.message);
       res.status(statusForError(error.message)).json({ error: error.message });
     }
   },

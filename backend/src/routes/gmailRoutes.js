@@ -12,5 +12,7 @@ router.post('/gmail/callback', verifyToken, gmailController.callback);
 router.get('/gmail/status', verifyToken, gmailController.status);
 router.get('/gmail/preview', verifyToken, gmailController.preview);
 router.delete('/gmail/connection', verifyToken, gmailController.disconnect);
+// Scans the inbox and saves detected subscriptions into Firestore.
+router.post('/gmail/sync', verifyToken, gmailController.sync);
 
 export default router;
