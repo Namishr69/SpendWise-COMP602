@@ -7,7 +7,7 @@ import { useSubscriptions } from '../context/subscriptionsContext'
 import { useCurrencyRate } from '../hooks/useCurrencyRate.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
 import { sourceLabel } from '../utils/subscriptionSource.js'
-import { getCancellationLink } from '../utils/cancellationLinks.js'
+import { resolveCancellation } from '../utils/cancellationLinks.js'
 
 import './SubscriptionsPage.css'
 
@@ -75,7 +75,7 @@ function SubscriptionsPage() {
       ) : (
         <section className="subscriptions-grid">
           {subscriptions.map((subscription) => {
-            const cancelUrl = getCancellationLink(subscription.name)
+            const cancellation = resolveCancellation(subscription.name)
 
             return (
             <Card
@@ -106,14 +106,25 @@ function SubscriptionsPage() {
                 </p>
 
                 <p className="subscription-cancel-row">
-                  {cancelUrl ? (
+                  {cancellation ? (
                     <a
-                      className="subscription-cancel"
-                      href={cancelUrl}
+                      className={
+                        cancellation.kind === 'official'
+                          ? 'subscription-cancel'
+                          : 'subscription-cancel subscription-cancel--search'
+                      }
+                      href={cancellation.url}
                       target="_blank"
                       rel="noopener noreferrer"
+                      title={
+                        cancellation.kind === 'official'
+                          ? 'Opens this merchant’s own cancellation page'
+                          : 'No official link on file — opens a web search'
+                      }
                     >
-                      Cancel subscription ↗
+                      {cancellation.kind === 'official'
+                        ? 'Cancel subscription ↗'
+                        : 'Find how to cancel ↗'}
                     </a>
                   ) : (
                     <span className="subscription-cancel-fallback">
