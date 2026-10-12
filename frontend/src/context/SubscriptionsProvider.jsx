@@ -93,6 +93,7 @@ export function SubscriptionsProvider({ children }) {
         subscriptions,
         loading,
         error,
+        refresh,
         getSubscription,
         updateSubscription,
         deleteSubscription,

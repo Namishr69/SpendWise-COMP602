@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import AppShell from '../layouts/AppShell'
@@ -15,10 +15,18 @@ function SubscriptionsPage() {
     subscriptions,
     loading,
     error,
+    refresh,
     deleteSubscription,
   } = useSubscriptions()
 
   const [deleting, setDeleting] = useState(null)
+
+  // The OAuth callback runs a bank sync server-side, so by the time the user
+  // lands here new subscriptions may already exist. Re-read on mount rather
+  // than trusting whatever the provider loaded at sign-in.
+  useEffect(() => {
+    refresh({ silent: true }).catch(() => {})
+  }, [refresh])
 
   const { preferredCurrency, rate } = useCurrencyRate()
 
@@ -65,7 +73,10 @@ function SubscriptionsPage() {
         <p>No subscriptions yet.</p>
       ) : (
         <section className="subscriptions-grid">
-          {subscriptions.map((subscription) => (
+          {subscriptions.map((subscription) => {
+            const cancelUrl = getCancellationLink(subscription.name)
+
+            return (
             <Card
               key={subscription.id}
               className="subscription-card"
@@ -82,7 +93,7 @@ function SubscriptionsPage() {
 
                 <p>
                   {showMoney(subscription.amount)} /{' '}
-                  {subscription.billingCycle.toLowerCase()}
+                  {(subscription.billingCycle || 'Monthly').toLowerCase()}
                 </p>
 
                 <p>
@@ -91,6 +102,23 @@ function SubscriptionsPage() {
 
                 <p>
                   Status: {subscription.status}
+                </p>
+
+                <p className="subscription-cancel-row">
+                  {cancelUrl ? (
+                    <a
+                      className="subscription-cancel"
+                      href={cancelUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Cancel subscription ↗
+                    </a>
+                  ) : (
+                    <span className="subscription-cancel-fallback">
+                      No cancellation link available
+                    </span>
+                  )}
                 </p>
               </div>
 
@@ -131,7 +159,8 @@ function SubscriptionsPage() {
                 </button>
               </div>
             </Card>
-          ))}
+            )
+          })}
         </section>
       )}
     </AppShell>

@@ -2,58 +2,18 @@ import subscriptionRepo from '../repositories/subscriptionRepo.js';
 import priceAlertService, { findPriceChanges } from './priceAlertService.js';
 
 /**
- * Finds recurring payments hidden in a list of bank transactions and turns them
- * into subscription records.
+ * Turns recurring payments found in a list of bank transactions into stored
+ * subscription records.
  *
  * The detection itself (detectRecurring) is a pure function of a transaction
- * array, which is what makes it straightforward to test. detectAndPersist wraps
- * it with the Firestore reads and writes, and is careful to be idempotent: a
- * second sync of the same data must not create a second copy of a subscription.
+ * array — it lives in ./subscriptionDetection.js so it can be unit tested with
+ * no Firestore. detectAndPersist wraps it with the Firestore reads and writes,
+ * and is careful to be idempotent: a second sync of the same data must not
+ * create a second copy of a subscription.
  */
-const MIN_OCCURRENCES = 3;
 
-const CADENCES = [
-    { cycle: 'Weekly', minDays: 5, maxDays: 9, periodDays: 7 },
-    { cycle: 'Fortnightly', minDays: 12, maxDays: 16, periodDays: 14 },
-    { cycle: 'Monthly', minDays: 26, maxDays: 35, periodDays: 30 },
-    { cycle: 'Quarterly', minDays: 84, maxDays: 96, periodDays: 91 },
-    { cycle: 'Annually', minDays: 350, maxDays: 380, periodDays: 365 },
-];
-
-function normaliseMerchant(value) {
-    return String(value || '')
-        .toLowerCase()
-        .replace(/\bxx\d+\b/g, ' ')       // masked card numbers
-        .replace(/\b\d[\d/.-]{3,}\b/g, ' ') // long digit/date runs
-        .replace(/[^a-z\s]/g, ' ')          // punctuation
-        .replace(/\s+/g, ' ')
-        .trim();
-}
-
-/** Buckets an amount so near-equal charges group together (±5%, ~$1 floor). */
-function amountBucket(amount) {
-    const tolerance = Math.max(1, amount * 0.05);
-    return Math.round(amount / tolerance);
-}
-
-function median(numbers) {
-    const sorted = [...numbers].sort((a, b) => a - b);
-    const mid = Math.floor(sorted.length / 2);
-    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
-
-/** Matches a median gap in days to a known cadence, or null if none fits. */
-function classifyCadence(medianGapDays) {
-    return CADENCES.find(
-        (c) => medianGapDays >= c.minDays && medianGapDays <= c.maxDays
-    ) || null;
-}
-
-function addDays(isoDate, days) {
-    const date = new Date(isoDate);
-    date.setDate(date.getDate() + days);
-    return date.toISOString();
-}
+// Re-exported so existing importers of this module keep working.
+export { detectRecurring };
 
 function daysBetween(earlier, later) {
     return (new Date(later.bookedAt) - new Date(earlier.bookedAt)) /
@@ -169,8 +129,14 @@ function toCandidate({ detectionKey, cadence, transactions }) {
 }
 
 /**
- * Pure detection. Given transactions, returns candidate subscriptions with the
- * transactions that make up each one. No I/O.
+ * TEMPORARY DIAGNOSTIC — remove once subscription detection is confirmed
+ * working against live ANZ data.
+ *
+ * detection returning 0 candidates has two very different causes that look
+ * identical from the outside: the feed genuinely contains no repeating payment,
+ * or it does and detection is failing to see it. This prints the raw shape of
+ * what arrived and a grouping by merchant+amount, so the two are distinguishable
+ * from one log line.
  */
 export function detectRecurring(transactions) {
     // Only outgoing payments can be subscriptions. Tag each with its
@@ -224,7 +190,18 @@ const subscriptionDetectionService = {
      * touched.
      */
     async detectAndPersist(userId, transactions) {
+        dumpDetectionInput(transactions);
+
         const candidates = detectRecurring(transactions);
+
+        // A live sync can only be diagnosed from the log: it says how many rows
+        // arrived, how many were outgoing, how many declared themselves
+        // recurring, and what survived into subscriptions.
+        const debits = transactions.filter((t) => t.direction === 'debit').length;
+        const declaredRecurring = transactions.filter(
+            (t) => t.recordType === 'scheduledPayment' || t.recordType === 'directDebit'
+        ).length;
+
         if (candidates.length === 0) {
             return { detected: 0, created: 0, updated: 0, priceChanges: 0 };
         }
@@ -282,11 +259,13 @@ const subscriptionDetectionService = {
                 const sub = await subscriptionRepo.create(userId, {
                     name: subFields.name,
                     amount: subFields.amount,
-                    billingCycle: subFields.billingCycle,
+                    // Never null: the Subscriptions page calls .toLowerCase() on it.
+                    billingCycle: subFields.billingCycle || 'Monthly',
                     nextPaymentDate: subFields.nextPaymentDate,
                     status: 'Active',
                     source: 'anz-detected',
-                    detectionKey: subFields.detectionKey,
+                    detectedVia: subFields.source,
+                    detectionKey: candidate.detectionKey,
                     confidence: subFields.confidence,
                     createdAt: new Date().toISOString(),
                 });
