@@ -15,6 +15,28 @@
   border-radius: 8px;
 }
 
+.subscriptions-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.subscriptions-export {
+  padding: 0.65rem 1.1rem;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.subscriptions-export:hover {
+  background: var(--color-cream);
+}
+
 .subscriptions-eyebrow {
   margin-bottom: 0.4rem;
   font-weight: 700;
