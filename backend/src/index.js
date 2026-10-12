@@ -10,13 +10,13 @@ import anzRoutes from './routes/anzRoutes.js';
 import gmailRoutes from './routes/gmailRoutes.js';
 import budgetRoutes from './routes/budgetRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
+import priceAlertRoutes from './routes/priceAlertRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-
 app.get('/', (req, res) => {
   res.send('SpendWise API is running');
 });
@@ -30,6 +30,7 @@ app.use('/api', anzRoutes);
 app.use('/api', gmailRoutes);
 app.use('/api', budgetRoutes);
 app.use('/api', transactionRoutes);
+app.use('/api', priceAlertRoutes);
 
 // 404 for any unmatched route
 app.use((req, res) => {

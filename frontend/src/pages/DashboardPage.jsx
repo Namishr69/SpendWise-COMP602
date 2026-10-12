@@ -5,6 +5,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '../firebase'
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
+import PriceChangeAlerts from '../components/PriceChangeAlerts.jsx'
 import { BudgetContext } from '../context/BudgetProvider.jsx'
 import { useSubscriptions } from '../context/subscriptionsContext.js'
 import { convertCurrency } from '../api/exchangeRateApi.js'
@@ -304,6 +305,8 @@ function DashboardPage() {
             </p>
           </Card>
         )}
+
+      <PriceChangeAlerts />
 
       <div className="dashboard-stats">
         <Card

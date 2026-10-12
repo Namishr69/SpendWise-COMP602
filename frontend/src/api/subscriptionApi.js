@@ -23,7 +23,9 @@ export function updateSubscription(id, changes) {
 }
 
 export function deleteSubscription(id) {
-  return apiRequest(`/subscriptions/${id}`, { method: 'DELETE' })
+  return apiRequest(`/subscriptions/${id}`, {
+    method: 'DELETE',
+  })
 }
 
 export function getPayments(subscriptionId) {
