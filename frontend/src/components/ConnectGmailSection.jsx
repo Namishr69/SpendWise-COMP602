@@ -5,7 +5,9 @@ import {
   getGmailStatus,
   getGmailPreview,
   disconnectGmail,
+  syncGmail,
 } from '../api/gmailApi.js'
+import { useSubscriptions } from '../context/subscriptionsContext'
 import './ConnectGmailSection.css'
 
 /**
@@ -21,7 +23,13 @@ function ConnectGmailSection() {
   const [preview, setPreview] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isBusy, setIsBusy] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState(null)
   const [error, setError] = useState('')
+
+  // Lets a successful inbox scan surface its new subscriptions immediately,
+  // without waiting for a full page reload.
+  const { refreshSubscriptions } = useSubscriptions()
 
   useEffect(() => {
     let cancelled = false
@@ -79,10 +87,38 @@ function ConnectGmailSection() {
       await disconnectGmail()
       setStatus({ connected: false })
       setPreview(null)
+      setSyncResult(null)
     } catch (disconnectError) {
       setError(disconnectError.message)
     } finally {
       setIsBusy(false)
+    }
+  }
+
+  // Scans the connected inbox for subscription receipts and saves them to
+  // Firestore as `source: 'gmail-detected'` records. The backend returns a
+  // { scanned, parsed, created, updated } summary.
+  async function handleSync() {
+    setIsSyncing(true)
+    setError('')
+    setSyncResult(null)
+
+    try {
+      const result = await syncGmail()
+      setSyncResult(result)
+
+      // The scan may have created subscriptions — pull them into the shared
+      // list so the dashboard/Subscriptions page show them without a reload.
+      try {
+        await refreshSubscriptions()
+      } catch {
+        // The scan itself succeeded; a refresh failure only means the list
+        // updates on next load, so don't report it as a sync error.
+      }
+    } catch (syncError) {
+      setError(syncError.message)
+    } finally {
+      setIsSyncing(false)
     }
   }
 
@@ -126,6 +162,30 @@ function ConnectGmailSection() {
             : (isConnected ? 'Disconnect' : 'Connect Gmail')}
         </Button>
       </div>
+
+      {isConnected && (
+        <div className="gmail-sync">
+          <Button
+            variant="secondary"
+            onClick={handleSync}
+            disabled={isSyncing || isBusy}
+          >
+            {isSyncing ? 'Scanning inbox…' : 'Scan inbox for subscriptions'}
+          </Button>
+
+          {syncResult && (
+            <p className="bank-meta">
+              {syncResult.parsed > 0
+                ? `Saved ${syncResult.transactionsSaved} transaction${
+                    syncResult.transactionsSaved === 1 ? '' : 's'
+                  } from ${syncResult.scanned} emails — ${syncResult.created} new and ${syncResult.updated} updated subscription${
+                    syncResult.created + syncResult.updated === 1 ? '' : 's'
+                  }.`
+                : `No subscription emails found in ${syncResult.scanned} recent emails.`}
+            </p>
+          )}
+        </div>
+      )}
 
       {isConnected && preview && typeof preview.messagesTotal === 'number' && (
         <p className="bank-meta">

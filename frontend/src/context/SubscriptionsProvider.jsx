@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '../firebase'
 import { SubscriptionsContext } from './subscriptionsContext'
@@ -8,6 +8,21 @@ export function SubscriptionsProvider({ children }) {
   const [subscriptions, setSubscriptions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  // Re-fetch the signed-in user's subscriptions. Exposed on the context so
+  // flows that create subscriptions elsewhere (e.g. a Gmail inbox scan in
+  // Settings) can refresh the list without a full page reload.
+  const refreshSubscriptions = useCallback(async () => {
+    if (!auth.currentUser) {
+      setSubscriptions([])
+      return []
+    }
+
+    const data = await subscriptionApi.getSubscriptions()
+    setSubscriptions(data)
+    setError(null)
+    return data
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -82,6 +97,7 @@ export function SubscriptionsProvider({ children }) {
         updateSubscription,
         deleteSubscription,
         createSubscription,
+        refreshSubscriptions,
       }}
     >
       {children}
