@@ -2,10 +2,15 @@ const NEAR_LIMIT_THRESHOLD = 0.8
 
 export function normalizeSubscriptionToMonthly(amount, billingCycle) {
   switch (billingCycle) {
+    // 'Annually' and 'Yearly' are both in use — detection emits the former,
+    // the add-subscription form the latter.
     case 'Yearly':
+    case 'Annually':
       return amount / 12
     case 'Quarterly':
       return amount / 3
+    case 'Fortnightly':
+      return (amount * 26) / 12
     case 'Weekly':
       return (amount * 52) / 12
     case 'Monthly':

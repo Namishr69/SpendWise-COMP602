@@ -2,6 +2,7 @@
     import anzConfig from '../config/anz.js';
     import anzAuthService from './anzAuthService.js';
     import anzConnectionRepo from '../repositories/anzConnectionRepo.js';
+    import { mapTransaction } from './anzTransactionMapper.js';
 
     /**
      * Reads account, balance, and transaction data from the ANZ (Payments NZ)
@@ -43,142 +44,6 @@
             currency: raw.Currency || raw.currency || 'NZD',
             identification: account?.Identification || account?.identification || null,
             servicer: raw.Servicer?.Identification || 'ANZ Bank New Zealand',
-        };
-    }
-
-    function extractDisplayName(raw, index = 0) {
-        const genericSubstrings = [
-            'further details',
-            'merchant name that is long',
-            'party being paid',
-            'party paying',
-            'a. creditor',
-            'a. debtor',
-            'a. cardholder',
-            'examplebank',
-            'currentaccount',
-            'creditorpart',
-            'creditorcode',
-            'creditorref',
-            'debtorpart',
-            'debtorcode',
-            'debtorref',
-        ];
-
-        const candidates = [
-            raw.TransactionInformation,
-            raw.transactionInformation,
-            raw.description,
-            raw.MerchantDetails?.MerchantName,
-            raw.merchantDetails?.merchantName,
-            raw.Reference?.CreditorName,
-            raw.Reference?.DebtorName,
-            raw.TransactionReference?.CreditorReference?.Particulars,
-            raw.TransactionReference?.DebtorReference?.Particulars,
-            raw.Reference?.CreditorReference?.Particulars,
-            raw.Reference?.DebtorReference?.Particulars,
-            raw.CreditorAccount?.Name,
-            raw.DebtorAccount?.Name,
-            raw.MandateIdentification,
-            raw.merchantName,
-        ];
-
-        for (const val of candidates) {
-            if (typeof val === 'string' && val.trim().length > 0) {
-                const trimmed = val.trim();
-                const lower = trimmed.toLowerCase();
-                const isGeneric = genericSubstrings.some((sub) => lower.includes(sub));
-                if (!isGeneric) {
-                    return trimmed;
-                }
-            }
-        }
-
-        // Realistic merchant catalog for ANZ Sandbox mock records
-        const realisticMerchants = [
-            'Netflix',
-            'Spotify',
-            'Neon NZ',
-            'Disney+',
-            'Spark NZ',
-            'Woolworths NZ',
-            'Uber Eats',
-            'YouTube Premium',
-            'Les Mills Gym',
-            'Substack',
-            'Apple Services',
-            'ChatGPT Plus',
-        ];
-
-        const idStr = String(
-            raw.TransactionId ||
-            raw.ScheduledPaymentId ||
-            raw.DirectDebitId ||
-            index
-        );
-
-        let hash = 0;
-        for (let i = 0; i < idStr.length; i += 1) {
-            hash = (hash << 5) - hash + idStr.charCodeAt(i);
-            hash |= 0;
-        }
-
-        const idx = Math.abs(hash) % realisticMerchants.length;
-        return realisticMerchants[idx];
-    }
-
-    function mapTransaction(raw, index = 0) {
-        const indicator = String(
-            raw.CreditDebitIndicator || raw.creditDebitIndicator || raw.indicator || ''
-        ).toLowerCase();
-
-        const displayName = extractDisplayName(raw);
-
-        const amountObj =
-            raw.InstructedAmount ||
-            raw.PreviousPaymentAmount ||
-            raw.Amount ||
-            raw.amount;
-
-        let amount = 0;
-        let currency = 'NZD';
-
-        if (typeof amountObj === 'object' && amountObj !== null) {
-            amount = Number(amountObj.Amount ?? amountObj.amount ?? 0);
-            currency = amountObj.Currency || amountObj.currency || 'NZD';
-        } else if (typeof amountObj === 'number' || typeof amountObj === 'string') {
-            amount = Number(amountObj);
-            currency = raw.Currency || raw.currency || 'NZD';
-        }
-
-        const transactionId =
-            raw.TransactionId ||
-            raw.ScheduledPaymentId ||
-            raw.DirectDebitId ||
-            raw.StatementId ||
-            raw.transactionId ||
-            raw.Id ||
-            raw.id ||
-            `tx-${Date.now()}-${index}`;
-
-        const bookedAt =
-            raw.BookingDateTime ||
-            raw.ScheduledPaymentDateTime ||
-            raw.PreviousPaymentDateTime ||
-            raw.ValueDateTime ||
-            raw.TransactionDateTime ||
-            raw.BookingDate ||
-            raw.Date ||
-            new Date().toISOString();
-
-        return {
-            transactionId,
-            amount: Math.abs(amount),
-            currency,
-            direction: indicator.includes('credit') ? 'credit' : 'debit',
-            merchant: displayName,
-            description: displayName,
-            bookedAt,
         };
     }
 
@@ -263,10 +128,15 @@
                 `/accounts/${accountId}/transactions`,
                 `/accounts/${accountId}/scheduled-payments`,
                 `/accounts/${accountId}/direct-debits`,
+                // A standing order is the declared-recurring arrangement that
+                // carries an explicit frequency and next-payment date; without
+                // it those payments never appear at all.
+                `/accounts/${accountId}/standing-orders`,
                 `/transactions?fromBookingDateTime=${encodeURIComponent(fromDate)}`,
                 `/transactions`,
                 `/scheduled-payments`,
                 `/direct-debits`,
+                `/standing-orders`,
                 `/statements`,
             ];
 
@@ -292,6 +162,8 @@
                         list = payload.Data.ScheduledPayment;
                     } else if (Array.isArray(payload?.Data?.DirectDebit)) {
                         list = payload.Data.DirectDebit;
+                    } else if (Array.isArray(payload?.Data?.StandingOrder)) {
+                        list = payload.Data.StandingOrder;
                     } else if (Array.isArray(payload?.Data?.Statement)) {
                         list = payload.Data.Statement;
                     } else if (Array.isArray(payload?.Data?.transactions)) {

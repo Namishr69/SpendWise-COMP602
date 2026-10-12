@@ -11,6 +11,7 @@ function AlertsPage() {
   const { preferredCurrency } = useContext(CurrencyContext)
   const { budget } = useContext(BudgetContext)
   const { subscriptions, loading, error } = useSubscriptions()
+  const { alerts } = useAlerts(subscriptions, budget, preferredCurrency)
 
   if (loading) {
     return (
@@ -27,8 +28,6 @@ function AlertsPage() {
       </AppShell>
     )
   }
-
-  const { alerts } = useAlerts(subscriptions, budget, preferredCurrency)
 
   return (
     <AppShell activeNav="Alerts">
