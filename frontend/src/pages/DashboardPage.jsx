@@ -5,11 +5,13 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '../firebase'
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
+import PriceChangeAlerts from '../components/PriceChangeAlerts.jsx'
 import { BudgetContext } from '../context/BudgetProvider.jsx'
 import { useSubscriptions } from '../context/subscriptionsContext.js'
 import { convertCurrency } from '../api/exchangeRateApi.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
 import { normalizeBudgetToMonthly } from '../utils/budgetCalculations.js'
+import { sourceLabel } from '../utils/subscriptionSource.js'
 import { getDashboard } from '../api/bankDataApi.js'
 import { useAlerts } from '../hooks/useAlerts.js'
 import { useCurrencyRate } from '../hooks/useCurrencyRate.js'
@@ -456,6 +458,8 @@ function DashboardPage() {
             </p>
           </Card>
         )}
+
+      <PriceChangeAlerts />
 
       <div className="dashboard-stats">
         <Card

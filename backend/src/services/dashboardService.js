@@ -16,6 +16,18 @@ function startOfMonth(now) {
     return new Date(now.getFullYear(), now.getMonth(), 1);
 }
 
+/**
+ * True for a settled transaction that has actually happened.
+ *
+ * Scheduled payments and direct debits are stored alongside real transactions,
+ * but their bookedAt is the *next* due date, often in the future. Counting them
+ * would show money as already spent that has not left the account yet, and
+ * would double-count a payment whose settled transaction is also in the list.
+ */
+function isSettledSpend(transaction) {
+    return !transaction.recordType || transaction.recordType === 'transaction';
+}
+
 const dashboardService = {
     async getDashboard(userId) {
         const [transactions, subscriptions] = await Promise.all([
@@ -26,9 +38,14 @@ const dashboardService = {
         const now = new Date();
         const monthStart = startOfMonth(now);
 
-        // Money out this calendar month.
+        // Money out this calendar month, from settled transactions only.
         const spentThisMonth = transactions
-            .filter((t) => t.direction === 'debit' && new Date(t.bookedAt) >= monthStart)
+            .filter(
+                (t) =>
+                    t.direction === 'debit' &&
+                    isSettledSpend(t) &&
+                    new Date(t.bookedAt) >= monthStart
+            )
             .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
         const activeSubs = subscriptions.filter(
@@ -58,6 +75,7 @@ const dashboardService = {
             }));
 
         const recentTransactions = transactions
+            .filter(isSettledSpend)
             .slice(0, RECENT_TRANSACTION_LIMIT)
             .map((t) => ({
                 transactionId: t.transactionId,

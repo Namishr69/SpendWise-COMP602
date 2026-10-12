@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import AppShell from '../layouts/AppShell'
@@ -7,6 +7,8 @@ import { useSubscriptions } from '../context/subscriptionsContext'
 import { useCurrencyRate } from '../hooks/useCurrencyRate.js'
 import { useTranslations } from '../hooks/useTranslations.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
+import { sourceLabel } from '../utils/subscriptionSource.js'
+import { getCancellationLink } from '../utils/cancellationLinks.js'
 
 import './SubscriptionsPage.css'
 
@@ -37,6 +39,7 @@ function SubscriptionsPage() {
     subscriptions,
     loading,
     error,
+    refresh,
     deleteSubscription,
   } = useSubscriptions()
 

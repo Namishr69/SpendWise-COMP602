@@ -316,6 +316,11 @@ function TransactionsPage() {
   const connected =
     Boolean(status?.connected)
 
+  // The transactions collection holds both manually-added rows and the ones the
+  // Gmail scan detected; split them so each gets its own clearly-labelled card.
+  const manualTxns = manual.filter((t) => t.source !== 'gmail-detected')
+  const emailTxns = manual.filter((t) => t.source === 'gmail-detected')
+
   return (
     <AppShell activeNav="Transactions">
       <header className="transactions-header">
@@ -385,7 +390,16 @@ function TransactionsPage() {
         </Card>
       )}
 
-      {!connected ? (
+      {manualError && (
+        <Card className="transactions-notice">
+          <p>
+            Could not load your manual and email transactions:{' '}
+            {manualError.message}
+          </p>
+        </Card>
+      )}
+
+      {!connected && (
         <Card className="transactions-notice">
           <h3>
             {noBankConnectedText}

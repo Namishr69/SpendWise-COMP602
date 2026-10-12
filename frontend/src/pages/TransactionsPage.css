@@ -62,6 +62,23 @@
   margin-bottom: var(--space-lg);
 }
 
+/* Each list card ("From email", "Recent transactions", "Added manually") is a
+   section of the page. Without this they stack flush against each other, so
+   the two tables read as one block. Matches the accounts grid's bottom margin. */
+.transactions-section {
+  margin-bottom: var(--space-lg);
+}
+
+.transactions-section:last-child {
+  margin-bottom: 0;
+}
+
+/* The card's own padding sets the top gap; the list/empty-state below supplies
+   the space under the heading. */
+.transactions-section h3 {
+  margin-top: 0;
+}
+
 .transactions-account p {
   font-size: 13px;
   margin-bottom: var(--space-sm);
@@ -141,6 +158,25 @@
 
 .transactions-amount--credit {
   color: var(--color-success);
+}
+
+/* Email rows carry an extra subject + sender line. Give the text column room
+   to shrink (so long subjects ellipsis instead of squashing the amount) and
+   keep the amount at its natural width. */
+.transactions-list__email {
+  min-width: 0;
+  padding-right: 12px;
+}
+
+.transactions-list__email .transactions-list__name,
+.transactions-list__email .transactions-list__date {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transactions-list__item > .money {
+  flex-shrink: 0;
 }
 
 @media (max-width: 900px) {

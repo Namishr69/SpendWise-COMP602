@@ -679,6 +679,7 @@ function SettingsPage() {
         {isBanksOpen && (
           <div className="settings-section-content">
             <ConnectBankSection />
+            <ConnectGmailSection />
           </div>
         )}
       </Card>
