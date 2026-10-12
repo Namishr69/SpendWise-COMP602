@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '../firebase'
 import { SubscriptionsContext } from './subscriptionsContext'
@@ -9,43 +9,19 @@ export function SubscriptionsProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // Stops a refresh from setting state after unmount.
-  const mountedRef = useRef(true)
-
-  useEffect(() => {
-    mountedRef.current = true
-    return () => {
-      mountedRef.current = false
+  // Re-fetch the signed-in user's subscriptions. Exposed on the context so
+  // flows that create subscriptions elsewhere (e.g. a Gmail inbox scan in
+  // Settings) can refresh the list without a full page reload.
+  const refreshSubscriptions = useCallback(async () => {
+    if (!auth.currentUser) {
+      setSubscriptions([])
+      return []
     }
-  }, [])
 
-  /**
-   * Re-reads the subscription list from the API.
-   *
-   * Exposed on the context so a page can pull fresh data after an action that
-   * creates subscriptions server-side — notably a bank sync, which detects new
-   * recurring payments. Without this the list would stay frozen at whatever it
-   * held when the user signed in, and detected subscriptions would only appear
-   * after a full page reload.
-   *
-   * `silent` skips the loading flag, so a refresh triggered by a background
-   * sync doesn't blank a page that is already showing data.
-   */
-  const refresh = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) setLoading(true)
-
-    try {
-      const data = await subscriptionApi.getSubscriptions()
-      if (!mountedRef.current) return data
-      setSubscriptions(data)
-      setError(null)
-      return data
-    } catch (err) {
-      if (mountedRef.current) setError(err)
-      throw err
-    } finally {
-      if (mountedRef.current && !silent) setLoading(false)
-    }
+    const data = await subscriptionApi.getSubscriptions()
+    setSubscriptions(data)
+    setError(null)
+    return data
   }, [])
 
   useEffect(() => {
@@ -122,6 +98,7 @@ export function SubscriptionsProvider({ children }) {
         updateSubscription,
         deleteSubscription,
         createSubscription,
+        refreshSubscriptions,
       }}
     >
       {children}

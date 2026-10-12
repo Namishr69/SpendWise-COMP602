@@ -43,6 +43,24 @@ const transactionRepo = {
         };
     },
 
+    // Upserts a transaction under a caller-supplied id (e.g. a Gmail message
+    // id), so re-syncing the same email updates its row instead of adding a
+    // duplicate — the same idempotency trick bankDataRepo uses for bank txns.
+    async upsertById(userId, transactionId, data) {
+        const docRef = db
+            .collection('users')
+            .doc(userId)
+            .collection('transactions')
+            .doc(transactionId);
+
+        await docRef.set(data, { merge: true });
+
+        return {
+            id: transactionId,
+            ...data,
+        };
+    },
+
     async update(userId, transactionId, changes) {
         const docRef = db
             .collection('users')

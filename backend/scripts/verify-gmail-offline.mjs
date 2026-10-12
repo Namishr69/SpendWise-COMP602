@@ -48,6 +48,61 @@ function jsonResponse(obj, ok = true, status = 200) {
   return { ok, status, json: async () => obj, text: async () => text };
 }
 
+// Gmail base64url-encodes message bodies; the parser decodes them. Plain
+// base64 is fine here — the parser's -/_ → +// swap is a no-op on it.
+const b64 = (s) => Buffer.from(s, 'utf-8').toString('base64');
+
+// Inbox fixtures used by the sync tests. m1/m2 are known-service subscriptions
+// (→ subscription + transaction); m3's subject fails the receipt filter (never
+// body-fetched); m4 passes the subject filter but has no amount (→ null); m5 is
+// a one-off order from an unknown store (→ transaction only, not a sub).
+const SYNC_MESSAGES = {
+  m1: {
+    from: 'Netflix <info@netflix.com>',
+    subject: 'Your Netflix receipt',
+    date: 'Mon, 06 Oct 2026 10:00:00 +1300',
+    body: 'Thanks for your payment. Your monthly subscription is NZD $15.99.',
+  },
+  m2: {
+    from: 'Spotify <no-reply@spotify.com>',
+    subject: 'Spotify payment',
+    date: 'Tue, 07 Oct 2026 09:00:00 +1300',
+    body: 'Your payment of $12.99 was received. You are billed monthly.',
+  },
+  m3: {
+    from: 'A Friend <friend@example.com>',
+    subject: 'Weekly digest',
+    date: 'Wed, 08 Oct 2026 09:00:00 +1300',
+    body: 'Just saying hello, no money involved.',
+  },
+  m4: {
+    from: 'Local Cafe <hello@cafe.co.nz>',
+    subject: 'Payment received',
+    date: 'Thu, 09 Oct 2026 09:00:00 +1300',
+    body: 'Thanks! Your payment has been received.',
+  },
+  m5: {
+    from: 'URBAN THREADS <orders@urbanthreads.co.nz>',
+    subject: 'Your order from URBAN THREADS - Order Number: UT-36482',
+    date: 'Fri, 10 Oct 2026 09:00:00 +1300',
+    body: 'Thanks for your order! Order total: NZD $89.00.',
+  },
+  // m6/m7 are the same unknown merchant a month apart — not on the known-service
+  // allowlist, so they only become a subscription because they repeat.
+  m6: {
+    from: 'Harbour Gym <billing@harbourgym.co.nz>',
+    subject: 'Your Harbour Gym receipt',
+    date: 'Wed, 12 Aug 2026 09:00:00 +1200',
+    body: 'Membership payment received: NZD $42.00.',
+  },
+  m7: {
+    from: 'Harbour Gym <billing@harbourgym.co.nz>',
+    subject: 'Your Harbour Gym receipt',
+    date: 'Fri, 11 Sep 2026 09:00:00 +1200',
+    body: 'Membership payment received: NZD $42.00.',
+  },
+};
+
 global.fetch = async (url, options = {}) => {
   const body = options.body ? options.body.toString() : '';
   fetchCalls.push({ url, method: options.method || 'GET', body });
@@ -82,22 +137,39 @@ global.fetch = async (url, options = {}) => {
   }
 
   if (url.includes('/users/me/messages?')) {
+    // The inbox scan (sync) asks for INBOX and gets the full fixture set; the
+    // connection-flow proof list does not, and still sees exactly two.
+    if (url.includes('labelIds=INBOX')) {
+      return jsonResponse({
+        messages: [
+          { id: 'm1' }, { id: 'm2' }, { id: 'm3' },
+          { id: 'm4' }, { id: 'm5' }, { id: 'm6' }, { id: 'm7' },
+        ],
+      });
+    }
     return jsonResponse({ messages: [{ id: 'm1' }, { id: 'm2' }] });
   }
 
   if (url.includes('/users/me/messages/')) {
     const id = url.split('/messages/')[1].split('?')[0];
-    return jsonResponse({
-      id,
-      snippet: 'Your receipt',
-      payload: {
-        headers: [
-          { name: 'Subject', value: id === 'm1' ? 'Your Netflix receipt' : 'Spotify payment' },
-          { name: 'From', value: id === 'm1' ? 'Netflix <info@netflix.com>' : 'Spotify <no-reply@spotify.com>' },
-          { name: 'Date', value: 'Mon, 06 Oct 2026 10:00:00 +1300' },
-        ],
-      },
-    });
+    const m = SYNC_MESSAGES[id] || SYNC_MESSAGES.m1;
+    const headers = [
+      { name: 'Subject', value: m.subject },
+      { name: 'From', value: m.from },
+      { name: 'Date', value: m.date },
+    ];
+
+    // format=full carries the decoded body (for parsing); format=metadata
+    // carries headers only (the cheap subject pre-filter).
+    if (url.includes('format=full')) {
+      return jsonResponse({
+        id,
+        snippet: m.subject,
+        payload: { mimeType: 'text/plain', headers, body: { data: b64(m.body) } },
+      });
+    }
+
+    return jsonResponse({ id, snippet: m.subject, payload: { headers } });
   }
 
   throw new Error(`Unexpected fetch to ${url}`);
@@ -139,6 +211,12 @@ const repo = await mod('repositories/gmailConnectionRepo.js');
 const gmailAuthService = await mod('services/gmailAuthService.js');
 const gmailService = await mod('services/gmailService.js');
 const gmailController = await mod('controllers/gmailController.js');
+const gmailSyncService = await mod('services/gmailSyncService.js');
+const subscriptionRepo = await mod('repositories/subscriptionRepo.js');
+const transactionRepo = await mod('repositories/transactionRepo.js');
+const { parseReceiptEmail, looksLikeReceiptEmail } = await import(
+  new URL('services/gmailEmailParser.js', SRC).href
+);
 
 Object.assign(repo, makeInMemoryRepo());
 
@@ -229,6 +307,241 @@ const dis = await gmailAuthService.disconnect(UID);
 check('disconnect reports success', dis.disconnected === true);
 check('revoke endpoint was called', fetchCalls.some((c) => c.url.endsWith('/revoke')));
 check('connection removed', (await repo.getConnection(UID)) === null);
+
+// ---- 6. parser (pure) -----------------------------------------------------
+console.log('\n[gmailEmailParser — pure parsing]');
+check(
+  'known service + amount → subscription-merchant candidate',
+  (() => {
+    const r = parseReceiptEmail({
+      id: 'u1',
+      payload: {
+        mimeType: 'text/plain',
+        headers: [
+          { name: 'From', value: 'Netflix <info@netflix.com>' },
+          { name: 'Subject', value: 'Your receipt' },
+          { name: 'Date', value: 'Mon, 06 Oct 2026 10:00:00 +0000' },
+        ],
+        body: { data: b64('Your monthly payment is NZD $15.99') },
+      },
+    });
+    return (
+      r &&
+      r.merchant === 'Netflix' &&
+      r.amount === 15.99 &&
+      r.billingCycle === 'Monthly' &&
+      r.currency === 'NZD' &&
+      r.date === '2026-10-06' &&
+      r.isSubscriptionMerchant === true &&
+      r.gmailMessageId === 'u1'
+    );
+  })()
+);
+check(
+  'unknown store + amount → transaction candidate (not a subscription)',
+  (() => {
+    const r = parseReceiptEmail({
+      id: 'u2',
+      payload: {
+        headers: [
+          { name: 'From', value: 'URBAN THREADS <orders@urbanthreads.co.nz>' },
+          { name: 'Subject', value: 'Your order from URBAN THREADS - Order Number: UT-36482' },
+        ],
+        body: { data: b64('Order total: NZD $89.00') },
+      },
+    });
+    return r && r.merchant === 'Urban Threads' && r.amount === 89 && r.isSubscriptionMerchant === false;
+  })()
+);
+check(
+  'captures the email subject and sender address',
+  (() => {
+    const r = parseReceiptEmail({
+      id: 'u2s',
+      payload: {
+        headers: [
+          { name: 'From', value: 'URBAN THREADS <orders@urbanthreads.co.nz>' },
+          { name: 'Subject', value: 'Your order from URBAN THREADS - Order Number: UT-36482' },
+        ],
+        body: { data: b64('Order total: NZD $89.00') },
+      },
+    });
+    return (
+      r &&
+      r.subject === 'Your order from URBAN THREADS - Order Number: UT-36482' &&
+      r.sender === 'orders@urbanthreads.co.nz'
+    );
+  })()
+);
+check(
+  'subject names the merchant even when the sender is a generic bulk mailer',
+  (() => {
+    const r = parseReceiptEmail({
+      id: 'u2c',
+      payload: {
+        headers: [
+          { name: 'From', value: 'Shopify <no-reply@shopifyemail.com>' },
+          { name: 'Subject', value: 'Your order from URBAN THREADS - Order Number: UT-36482' },
+        ],
+        body: { data: b64('Order total: NZD $89.00') },
+      },
+    });
+    // Without the subject rule this would be "Shopifyemail", collapsing every
+    // store that uses the same mailer into one merchant.
+    return r && r.merchant === 'Urban Threads';
+  })()
+);
+check(
+  'merchant falls back to the email domain when there is no display name',
+  (() => {
+    const r = parseReceiptEmail({
+      id: 'u2b',
+      payload: {
+        headers: [{ name: 'From', value: 'receipts@bunnings.co.nz' }],
+        body: { data: b64('Purchase total $42.00') },
+      },
+    });
+    return r && r.merchant === 'Bunnings' && r.isSubscriptionMerchant === false;
+  })()
+);
+check(
+  'no amount → null (nothing to record as a spend)',
+  parseReceiptEmail({
+    id: 'u3',
+    payload: {
+      headers: [{ name: 'From', value: 'Spotify <no-reply@spotify.com>' }],
+      body: { data: b64('Thanks for being a member') },
+    },
+  }) === null
+);
+check(
+  'HTML body decoded + annual cycle + AUD (known service)',
+  (() => {
+    const r = parseReceiptEmail({
+      id: 'u4',
+      payload: {
+        mimeType: 'text/html',
+        headers: [{ name: 'From', value: 'Adobe <mail@adobe.com>' }],
+        body: { data: b64('<p>Your <b>annual</b> plan: AUD $99.00</p>') },
+      },
+    });
+    return r && r.merchant === 'Adobe' && r.amount === 99 && r.currency === 'AUD' && r.billingCycle === 'Annually' && r.isSubscriptionMerchant === true;
+  })()
+);
+check('looksLikeReceiptEmail true for a receipt subject', looksLikeReceiptEmail('Your Netflix receipt') === true);
+check('looksLikeReceiptEmail true for an order subject', looksLikeReceiptEmail('Your order from URBAN THREADS - Order Number: UT-36482') === true);
+check('looksLikeReceiptEmail false for an unrelated subject', looksLikeReceiptEmail('Weekly digest') === false);
+
+// ---- 7. sync (scan inbox → persist to Firestore) --------------------------
+function makeInMemorySubscriptionRepo() {
+  const subs = new Map();
+  const payments = new Map();
+  let seq = 0;
+  return {
+    async getAll() { return [...subs.values()].map((s) => ({ ...s })); },
+    async create(uid, data) { const id = `sub-${(seq += 1)}`; const rec = { id, ...data }; subs.set(id, rec); return { ...rec }; },
+    async update(uid, id, changes) { const next = { ...subs.get(id), ...changes }; subs.set(id, next); return { ...next }; },
+    async upsertPayment(uid, subId, paymentId, data) { payments.set(`${subId}:${paymentId}`, { id: paymentId, ...data }); return { id: paymentId, ...data }; },
+    _subs: subs,
+    _payments: payments,
+  };
+}
+
+function makeInMemoryTransactionRepo() {
+  const txns = new Map();
+  return {
+    async upsertById(uid, id, data) { txns.set(id, { id, ...data }); return { id, ...data }; },
+    async getAll() { return [...txns.values()].map((t) => ({ ...t })); },
+    _txns: txns,
+  };
+}
+
+console.log('\n[gmailSyncService — scan + persist]');
+const subRepo = makeInMemorySubscriptionRepo();
+Object.assign(subscriptionRepo, subRepo);
+const txnRepo = makeInMemoryTransactionRepo();
+Object.assign(transactionRepo, txnRepo);
+
+const SYNC_UID = 'sync-user';
+await repo.saveConnection(SYNC_UID, {
+  provider: 'gmail',
+  emailAddress: 'sync@gmail.com',
+  accessToken: 'access-sync',
+  refreshToken: 'refresh-sync',
+  accessTokenExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+  connectedAt: new Date().toISOString(),
+});
+
+const sync1 = await gmailSyncService.syncSubscriptions(SYNC_UID);
+check('scanned every inbox message', sync1.scanned === 7);
+check('parsed 5 receipts (2 known services + 1 order + 2 repeats)', sync1.parsed === 5);
+check('created 3 subscriptions (2 known + 1 repeat-detected)', sync1.created === 3);
+check('updated 0 on the first run', sync1.updated === 0);
+
+const stored = await subscriptionRepo.getAll(SYNC_UID);
+check('all stored with source=gmail-detected', stored.length === 3 && stored.every((s) => s.source === 'gmail-detected'));
+check(
+  'detectionKey is gmail|merchant|cycle',
+  stored.some((s) => s.detectionKey === 'gmail|Netflix|Monthly') &&
+    stored.some((s) => s.detectionKey === 'gmail|Spotify|Monthly')
+);
+check('Netflix amount captured from the body', stored.find((s) => s.name === 'Netflix')?.amount === 15.99);
+check('the one-off store order is NOT a subscription', !stored.some((s) => s.name === 'Urban Threads'));
+
+// Repeat receipts from a merchant that is not on the allowlist.
+const gym = stored.find((s) => s.name === 'Harbour Gym');
+check('two receipts from the same unknown merchant become a subscription', Boolean(gym));
+check('its cycle comes from the real 30-day gap', gym?.billingCycle === 'Monthly');
+check('repeat-detected subs carry lower confidence than known services', gym?.confidence === 0.6);
+check(
+  'every receipt in the group is recorded as a payment',
+  subRepo._payments.has(`${gym.id}:m6`) && subRepo._payments.has(`${gym.id}:m7`)
+);
+check(
+  'payment recorded under the Gmail message id',
+  subRepo._payments.has(`${stored.find((s) => s.name === 'Netflix').id}:m1`)
+);
+
+// Each parsed email is also stored as a transaction (Transactions page).
+check('wrote a transaction per parsed email', sync1.transactionsSaved === 5);
+check('exactly 5 transactions stored', txnRepo._txns.size === 5);
+check('transactions keyed by prefixed Gmail id', ['gmail_m1', 'gmail_m2', 'gmail_m5', 'gmail_m6', 'gmail_m7'].every((k) => txnRepo._txns.has(k)));
+check('transactions carry source=gmail-detected', [...txnRepo._txns.values()].every((t) => t.source === 'gmail-detected'));
+check('subscription transaction carries merchant + amount', txnRepo._txns.get('gmail_m1').name === 'Netflix' && txnRepo._txns.get('gmail_m1').amount === 15.99);
+check(
+  'URBAN THREADS order became a transaction (merchant from sender, category Purchase)',
+  txnRepo._txns.get('gmail_m5').name === 'Urban Threads' &&
+    txnRepo._txns.get('gmail_m5').amount === 89 &&
+    txnRepo._txns.get('gmail_m5').category === 'Purchase'
+);
+check('receipt subject with no amount was skipped (no m4 transaction)', !txnRepo._txns.has('gmail_m4'));
+check(
+  'stored transaction keeps the subject + sender for display',
+  txnRepo._txns.get('gmail_m5').subject ===
+    'Your order from URBAN THREADS - Order Number: UT-36482' &&
+    txnRepo._txns.get('gmail_m5').sender === 'orders@urbanthreads.co.nz'
+);
+
+// Idempotency: scanning the same inbox again creates nothing new.
+const sync2 = await gmailSyncService.syncSubscriptions(SYNC_UID);
+check('second run creates nothing', sync2.created === 0);
+check('second run refreshes the existing 3', sync2.updated === 3);
+check('still exactly 3 subscriptions', (await subscriptionRepo.getAll(SYNC_UID)).length === 3);
+check('no duplicate payments', subRepo._payments.size === 4);
+check('no duplicate transactions on re-run', txnRepo._txns.size === 5);
+
+console.log('\n[controller — sync response carries no tokens]');
+res = fakeRes();
+await gmailController.sync({ userId: SYNC_UID }, res);
+check('sync controller 200', res.statusCode === 200);
+check('sync returns a summary', typeof res.body.created === 'number' && typeof res.body.scanned === 'number');
+check('sync response leaks no token', !JSON.stringify(res.body).match(/access-|refresh-/));
+
+await expectThrows(
+  'sync without a connection rejected',
+  () => gmailSyncService.syncSubscriptions('nobody'),
+  'No Gmail connection'
+);
 
 console.log(`\n==== ${passed} passed, ${failed} failed ====`);
 process.exit(failed === 0 ? 0 : 1);

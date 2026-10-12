@@ -6,7 +6,7 @@ import Card from '../components/ui/Card'
 import { useSubscriptions } from '../context/subscriptionsContext'
 import { useCurrencyRate } from '../hooks/useCurrencyRate.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
-import { getCancellationLink } from '../utils/cancellationLinks.js'
+import { sourceLabel } from '../utils/subscriptionSource.js'
 
 import './SubscriptionsPage.css'
 
@@ -82,7 +82,14 @@ function SubscriptionsPage() {
               className="subscription-card"
             >
               <div>
-                <h2>{subscription.name}</h2>
+                <div className="subscription-card__heading">
+                  <h2>{subscription.name}</h2>
+                  {sourceLabel(subscription.source) && (
+                    <span className="subscription-source">
+                      {sourceLabel(subscription.source)}
+                    </span>
+                  )}
+                </div>
 
                 <p>
                   {showMoney(subscription.amount)} /{' '}

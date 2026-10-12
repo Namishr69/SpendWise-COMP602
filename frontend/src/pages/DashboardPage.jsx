@@ -11,6 +11,7 @@ import { useSubscriptions } from '../context/subscriptionsContext.js'
 import { convertCurrency } from '../api/exchangeRateApi.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
 import { normalizeBudgetToMonthly } from '../utils/budgetCalculations.js'
+import { sourceLabel } from '../utils/subscriptionSource.js'
 import { getDashboard } from '../api/bankDataApi.js'
 import { useAlerts } from '../hooks/useAlerts.js'
 import { useCurrencyRate } from '../hooks/useCurrencyRate.js'
@@ -469,6 +470,11 @@ function DashboardPage() {
                     <div>
                       <p className="dashboard-subs__name">
                         {subscription.name}
+                        {sourceLabel(subscription.source) && (
+                          <span className="dashboard-subs__source">
+                            {sourceLabel(subscription.source)}
+                          </span>
+                        )}
                       </p>
 
                       <p className="dashboard-subs__meta">

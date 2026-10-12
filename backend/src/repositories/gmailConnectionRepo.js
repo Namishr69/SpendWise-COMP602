@@ -1,16 +1,15 @@
 import { db } from '../config/firebase.js';
 
 /**
- * Firestore access for the user's Gmail connection.
+ * Firestore access for Gmail connections.
  *
- * Two collections, both nested under the user's own document (mirroring
- * anzConnectionRepo):
+ * Two sub-collections, nested under the user's own document:
  *   gmailAuthSessions/{state}   short-lived, single-use OAuth handshake state
- *   emailConnections/{provider} the long-lived stored connection + tokens
+ *   emailConnections/gmail     the long-lived token record
  *
- * Nesting the auth session under the user (rather than a top-level collection
- * keyed by state) means a leaked code+state pair cannot be redeemed by a
- * different account — the lookup only ever happens within one user's document.
+ * Nesting both under the user's document means a leaked state value cannot be
+ * redeemed by a different account — the lookup only ever happens within one
+ * user's sub-collection (mirrors the ANZ pattern in anzConnectionRepo.js).
  */
 
 const PROVIDER = 'gmail';
@@ -20,6 +19,8 @@ function userDoc(userId) {
 }
 
 const gmailConnectionRepo = {
+  // ── OAuth handshake sessions ─────────────────────────────────────────────
+
   async saveAuthSession(userId, state, data) {
     await userDoc(userId).collection('gmailAuthSessions').doc(state).set(data);
     return { state, ...data };
@@ -34,6 +35,8 @@ const gmailConnectionRepo = {
   async deleteAuthSession(userId, state) {
     await userDoc(userId).collection('gmailAuthSessions').doc(state).delete();
   },
+
+  // ── Long-lived connection record ─────────────────────────────────────────
 
   async saveConnection(userId, data) {
     await userDoc(userId).collection('emailConnections').doc(PROVIDER).set(data);
