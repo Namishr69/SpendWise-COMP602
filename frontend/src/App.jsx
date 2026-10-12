@@ -12,6 +12,7 @@ import SubscriptionDetailPage from './pages/SubscriptionDetailPage.jsx'
 import EditSubscriptionPage from './pages/EditSubscriptionPage.jsx'
 import AddSubscriptionPage from './pages/AddSubscriptionPage.jsx'
 import AnzCallbackPage from './pages/AnzCallbackPage.jsx'
+import GmailCallbackPage from './pages/GmailCallbackPage.jsx'
 import AddTransactionPage from './pages/AddTransactionPage.jsx'
 import EditTransactionPage from './pages/EditTransactionPage.jsx'
 import AlertsPage from './pages/AlertsPage.jsx'
@@ -152,6 +153,17 @@ function App() {
           element={
             <PrivateRoute>
               <AnzCallbackPage />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Google redirects here after the user consents to Gmail access.
+            Private for the same reason as the ANZ callback above. */}
+        <Route
+          path="/gmail/callback"
+          element={
+            <PrivateRoute>
+              <GmailCallbackPage />
             </PrivateRoute>
           }
         />

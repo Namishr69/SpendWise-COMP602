@@ -1,0 +1,39 @@
+/*
+ * Gmail-specific styles for the Settings → Connected accounts section. The
+ * badge / meta / error classes (.bank-badge, .bank-meta, .bank-error) and the
+ * row layout (.settings-option) are shared with the bank section, so only the
+ * recent-subjects proof list is defined here.
+ */
+
+.gmail-subjects {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+
+  border-top: 1px solid #e4e4e4;
+}
+
+.gmail-subjects__item {
+  padding: 10px 0;
+  border-bottom: 1px solid #e4e4e4;
+}
+
+.gmail-subjects__subject {
+  margin: 0 0 3px;
+  font-weight: 600;
+  font-size: 0.9rem;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gmail-subjects__from {
+  margin: 0;
+  opacity: 0.65;
+  font-size: 0.8rem;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
