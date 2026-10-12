@@ -1,4 +1,5 @@
 import subscriptionRepo from '../repositories/subscriptionRepo.js';
+import priceAlertService, { findPriceChanges } from './priceAlertService.js';
 
 const subscriptionService = {
     async listSubscriptions(userId) {
@@ -20,8 +21,8 @@ const subscriptionService = {
         if (!name) {
             throw new Error('Name is required');
         }
-        if (!Number.isFinite(amount) || amount <= 0) {
-            throw new Error('Amount must be greater than zero');
+        if (!Number.isFinite(amount) || amount < 0) {
+            throw new Error('Amount must be zero or greater');
         }
 
         const subscriptionDate = (data.subscriptionDate || '').trim();
@@ -68,8 +69,8 @@ const subscriptionService = {
 
         if (changes.amount !== undefined) {
             const amount = Number(changes.amount);
-            if (!Number.isFinite(amount) || amount <= 0) {
-                throw new Error('Amount must be greater than zero');
+            if (!Number.isFinite(amount) || amount < 0) {
+                throw new Error('Amount must be zero or greater');
             }
             update.amount = amount;
         }
@@ -114,6 +115,7 @@ const subscriptionService = {
         }
 
         await subscriptionRepo.remove(userId, subscriptionId);
+        await priceAlertService.removeAlertsForSubscription(userId, subscriptionId);
     },
 
     async listPayments(userId, subscriptionId) {
@@ -144,10 +146,23 @@ const subscriptionService = {
             throw new Error('Amount must be greater than zero');
         }
 
-        return await subscriptionRepo.createPayment(userId, subscriptionId, {
+        const payment = await subscriptionRepo.createPayment(userId, subscriptionId, {
             date,
             amount,
         });
+
+        // Compare the new payment against the one before it. The payment is
+        // already saved, so a failure here is logged rather than reported as
+        // a failed payment.
+        try {
+            const payments = await subscriptionRepo.listPayments(userId, subscriptionId);
+            const changes = findPriceChanges(payments, [payment.id]);
+            await priceAlertService.recordPriceChanges(userId, subscription, changes);
+        } catch (error) {
+            console.error(`Price change check failed for ${subscriptionId}:`, error.message);
+        }
+
+        return payment;
     },
 };
 

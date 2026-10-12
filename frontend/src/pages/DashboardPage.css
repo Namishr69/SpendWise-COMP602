@@ -66,6 +66,22 @@
   font-size: 15px;
 }
 
+/* "From email" / "From bank" pill shown inline after an auto-detected name. */
+.dashboard-subs__source {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--color-surface-alt, #eef2e8);
+  color: var(--color-ink-soft);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
 .dashboard-subs__meta {
   font-size: 13px;
   color: var(--color-ink-soft);

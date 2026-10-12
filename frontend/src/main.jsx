@@ -7,19 +7,22 @@ import AuthProvider from './context/AuthProvider.jsx'
 import CurrencyProvider from './context/CurrencyProvider.jsx'
 import BudgetProvider from './context/BudgetProvider.jsx'
 import ProfileProvider from './context/ProfileProvider.jsx'
+import ThemeProvider from './context/ThemeProvider.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AuthProvider>
-      <ProfileProvider>
-        <CurrencyProvider>
-          <BudgetProvider>
-            <SubscriptionsProvider>
-              <App />
-            </SubscriptionsProvider>
-          </BudgetProvider>
-        </CurrencyProvider>
-      </ProfileProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <ProfileProvider>
+          <CurrencyProvider>
+            <BudgetProvider>
+              <SubscriptionsProvider>
+                <App />
+              </SubscriptionsProvider>
+            </BudgetProvider>
+          </CurrencyProvider>
+        </ProfileProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </StrictMode>,
 )
