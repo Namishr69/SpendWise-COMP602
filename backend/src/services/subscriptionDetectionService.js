@@ -1,4 +1,5 @@
 import subscriptionRepo from '../repositories/subscriptionRepo.js';
+import { detectRecurring } from './subscriptionDetection.js';
 import priceAlertService, { findPriceChanges } from './priceAlertService.js';
 
 /**
@@ -15,119 +16,6 @@ import priceAlertService, { findPriceChanges } from './priceAlertService.js';
 // Re-exported so existing importers of this module keep working.
 export { detectRecurring };
 
-function daysBetween(earlier, later) {
-    return (new Date(later.bookedAt) - new Date(earlier.bookedAt)) /
-        (1000 * 60 * 60 * 24);
-}
-
-function sortByBookedAt(transactions) {
-    return [...transactions].sort((a, b) => (a.bookedAt < b.bookedAt ? -1 : 1));
-}
-
-/** Gaps between consecutive charges, in days. */
-function gapsInDays(sorted) {
-    const gaps = [];
-    for (let i = 1; i < sorted.length; i += 1) {
-        gaps.push(daysBetween(sorted[i - 1], sorted[i]));
-    }
-    return gaps;
-}
-
-function fitsCadence(gapDays, cadence) {
-    return gapDays >= cadence.minDays && gapDays <= cadence.maxDays;
-}
-
-/**
- * A price change moves every later charge into a different amount bucket, so
- * on their own those charges look like a separate series (or, for the first
- * couple after the change, like no series at all). This folds them back into
- * the subscription they continue, so the price change can be compared against
- * the charge before it rather than lost or detected as a new subscription.
- *
- * Two steps, per merchant:
- *  1. Extend each series with unclaimed charges that follow its last charge
- *     on cadence, whatever their amount.
- *  2. Merge a series into the one before it when it has the same cadence and
- *     starts after that one ends — the same subscription at a new price.
- *     Series that overlap in time are genuinely separate subscriptions.
- */
-function foldPriceChanges(series, debits) {
-    const claimed = new Set(series.flatMap((s) => s.transactions));
-
-    for (const s of series) {
-        const followOn = sortByBookedAt(
-            debits.filter(
-                (t) =>
-                    !claimed.has(t) &&
-                    t.merchantKey === s.merchantKey &&
-                    t.bookedAt > s.transactions[s.transactions.length - 1].bookedAt
-            )
-        );
-
-        for (const txn of followOn) {
-            const gap = daysBetween(s.transactions[s.transactions.length - 1], txn);
-            if (gap > s.cadence.maxDays) break;
-            if (!fitsCadence(gap, s.cadence)) continue; // a one-off purchase
-            s.transactions.push(txn);
-            claimed.add(txn);
-        }
-    }
-
-    const ordered = [...series].sort((a, b) =>
-        a.merchantKey !== b.merchantKey
-            ? (a.merchantKey < b.merchantKey ? -1 : 1)
-            : (a.transactions[0].bookedAt < b.transactions[0].bookedAt ? -1 : 1)
-    );
-
-    const folded = [];
-    for (const s of ordered) {
-        const previous = folded[folded.length - 1];
-        const continuesPrevious =
-            previous &&
-            previous.merchantKey === s.merchantKey &&
-            previous.cadence.cycle === s.cadence.cycle &&
-            s.transactions[0].bookedAt >
-                previous.transactions[previous.transactions.length - 1].bookedAt;
-
-        if (continuesPrevious) {
-            // Keep the earlier series' detectionKey so it still matches the
-            // subscription that was already persisted for it.
-            previous.transactions.push(...s.transactions);
-        } else {
-            folded.push(s);
-        }
-    }
-
-    return folded;
-}
-
-function toCandidate({ detectionKey, cadence, transactions }) {
-    const sorted = sortByBookedAt(transactions);
-    const gaps = gapsInDays(sorted);
-    const last = sorted[sorted.length - 1];
-
-    // Confidence: more occurrences and steadier gaps are more convincing.
-    const gapConsistency =
-        gaps.length > 0
-            ? gaps.filter((g) => fitsCadence(g, cadence)).length / gaps.length
-            : 0;
-    const confidence = Math.min(
-        1,
-        0.5 * gapConsistency + 0.5 * Math.min(1, sorted.length / 6)
-    );
-
-    return {
-        detectionKey,
-        name: (last.merchant || last.description || 'Subscription').trim(),
-        amount: Number(last.amount.toFixed(2)),
-        currency: last.currency || 'NZD',
-        billingCycle: cadence.cycle,
-        nextPaymentDate: addDays(last.bookedAt, cadence.periodDays).slice(0, 10),
-        confidence: Number(confidence.toFixed(2)),
-        transactions: sorted.map(({ merchantKey, ...txn }) => txn),
-    };
-}
-
 /**
  * TEMPORARY DIAGNOSTIC — remove once subscription detection is confirmed
  * working against live ANZ data.
@@ -138,41 +26,55 @@ function toCandidate({ detectionKey, cadence, transactions }) {
  * what arrived and a grouping by merchant+amount, so the two are distinguishable
  * from one log line.
  */
-export function detectRecurring(transactions) {
-    // Only outgoing payments can be subscriptions. Tag each with its
-    // normalised merchant so later steps can compare merchants cheaply.
-    const debits = transactions
-        .filter((t) => t.direction === 'debit')
-        .map((t) => ({ ...t, merchantKey: normaliseMerchant(t.merchant || t.description) }))
-        .filter((t) => t.merchantKey);
+function dumpDetectionInput(transactions) {
+    const preview = transactions.slice(0, 10).map((t) => ({
+        merchant: t.merchant,
+        amount: t.amount,
+        direction: t.direction,
+        recordType: t.recordType || 'transaction',
+        bookedAt: typeof t.bookedAt === 'string' ? t.bookedAt.slice(0, 10) : t.bookedAt,
+        mandateId: t.mandateId || null,
+        frequency: t.frequency || null,
+    }));
 
-    // Group by (normalised merchant + amount bucket).
+    console.log('[detection-dump] raw records (first 10):');
+    console.table(preview);
+
+    // Group by merchant+amount: any key appearing 2+ times is a series that
+    // *could* be a subscription, whether or not detection found it.
     const groups = new Map();
-    for (const txn of debits) {
-        const key = `${txn.merchantKey}|${amountBucket(txn.amount)}`;
-
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key).push(txn);
+    for (const t of transactions) {
+        const key = `${t.merchant} | ${t.amount} | ${t.recordType || 'transaction'}`;
+        const existing = groups.get(key) || { key, count: 0, dates: [] };
+        existing.count += 1;
+        if (typeof t.bookedAt === 'string') existing.dates.push(t.bookedAt.slice(0, 10));
+        groups.set(key, existing);
     }
 
-    const series = [];
+    const repeated = [...groups.values()]
+        .filter((g) => g.count >= 2)
+        .sort((a, b) => b.count - a.count)
+        .map((g) => ({
+            group: g.key,
+            occurrences: g.count,
+            dates: g.dates.sort().join(', '),
+        }));
 
-    for (const [key, groupTxns] of groups) {
-        if (groupTxns.length < MIN_OCCURRENCES) continue;
-
-        const sorted = sortByBookedAt(groupTxns);
-        const cadence = classifyCadence(median(gapsInDays(sorted)));
-        if (!cadence) continue;
-
-        series.push({
-            merchantKey: sorted[0].merchantKey,
-            detectionKey: `${key}|${cadence.cycle}`,
-            cadence,
-            transactions: sorted,
-        });
+    if (repeated.length === 0) {
+        console.log(
+            '[detection-dump] NO group of 2+ identical merchant+amount records exists — ' +
+                'the feed contains nothing repeating, so 0 candidates is correct for this data.'
+        );
+    } else {
+        console.log('[detection-dump] groups with 2+ occurrences (candidates for detection):');
+        console.table(repeated);
     }
 
-    return foldPriceChanges(series, debits).map(toCandidate);
+    console.log(
+        `[detection-dump] totals: records=${transactions.length} ` +
+            `debits=${transactions.filter((t) => t.direction === 'debit').length} ` +
+            `distinctGroups=${groups.size} repeatedGroups=${repeated.length}`
+    );
 }
 
 /** detectionKey is merchant|bucket|cycle; this drops the price bucket. */
@@ -203,6 +105,10 @@ const subscriptionDetectionService = {
         ).length;
 
         if (candidates.length === 0) {
+            console.log(
+                `[subscription-detection] txns=${transactions.length} debits=${debits} ` +
+                    `declaredRecurring=${declaredRecurring} candidates=0 created=0 updated=0`
+            );
             return { detected: 0, created: 0, updated: 0, priceChanges: 0 };
         }
 
@@ -249,6 +155,7 @@ const subscriptionDetectionService = {
                     amount: subFields.amount,
                     nextPaymentDate: subFields.nextPaymentDate,
                     confidence: subFields.confidence,
+                    billingCycle: subFields.billingCycle,
                     detectionKey: subFields.detectionKey,
                 };
                 await subscriptionRepo.update(userId, match.id, changes);
@@ -274,6 +181,23 @@ const subscriptionDetectionService = {
                 existingKeys.set(candidate.detectionKey, sub);
                 matchedIds.add(sub.id);
                 created += 1;
+            }
+
+            // One-time upgrade: earlier versions keyed declared candidates without
+            // the mandate, so several arrangements collapsed into a single doc.
+            // Now that each has its own doc, retire the old collapsed one so the
+            // page does not show both. Only ever removes an anz-detected doc that
+            // is genuinely superseded — a manually-created subscription has no
+            // detectionKey and is never touched.
+            if (
+                candidate.legacyDetectionKey
+                && candidate.legacyDetectionKey !== candidate.detectionKey
+            ) {
+                const legacy = existingKeys.get(candidate.legacyDetectionKey);
+                if (legacy && legacy.id !== subscription.id) {
+                    await subscriptionRepo.remove(userId, legacy.id);
+                    existingKeys.delete(candidate.legacyDetectionKey);
+                }
             }
 
             const knownPayments = isNew
@@ -311,6 +235,12 @@ const subscriptionDetectionService = {
             );
             priceChanges += alerts.length;
         }
+
+        console.log(
+            `[subscription-detection] txns=${transactions.length} debits=${debits} ` +
+                `declaredRecurring=${declaredRecurring} candidates=${candidates.length} ` +
+                `created=${created} updated=${updated} priceChanges=${priceChanges}`
+        );
 
         return { detected: candidates.length, created, updated, priceChanges };
     },
