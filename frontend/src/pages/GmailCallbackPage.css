@@ -1,0 +1,68 @@
+.gmail-callback {
+  min-height: 100vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 24px;
+}
+
+.gmail-callback__card {
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+}
+
+.gmail-callback__card h2 {
+  margin: 0 0 10px;
+  font-size: 1.5rem;
+}
+
+.gmail-callback__hint {
+  margin: 0;
+  opacity: 0.7;
+  font-size: 0.9rem;
+}
+
+.gmail-callback__subjects {
+  margin: 18px 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.gmail-callback__subjects li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  padding: 10px 0;
+  border-bottom: 1px solid #e4e4e4;
+}
+
+.gmail-callback__subjects li:last-child {
+  border-bottom: none;
+}
+
+.gmail-callback__subject {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.gmail-callback__subject-meta {
+  opacity: 0.65;
+  font-size: 0.82rem;
+}
+
+.gmail-callback__warning {
+  margin: 0 0 16px;
+  color: #8a6100;
+  font-size: 0.9rem;
+}
+
+.gmail-callback__error {
+  margin: 0 0 18px;
+  color: #b3261e;
+  font-size: 0.92rem;
+}

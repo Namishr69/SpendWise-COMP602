@@ -23,11 +23,9 @@ export function updateSubscription(id, changes) {
 }
 
 export function deleteSubscription(id) {
-  // Goes through apiRequest like every other call here: it attaches the ID
-  // token and normalises errors. The previous hand-rolled fetch referenced
-  // `auth` and `API_BASE`, neither of which this module imports, so Delete
-  // threw a ReferenceError instead of deleting anything.
-  return apiRequest(`/subscriptions/${id}`, { method: 'DELETE' })
+  return apiRequest(`/subscriptions/${id}`, {
+    method: 'DELETE',
+  })
 }
 
 export function getPayments(subscriptionId) {
