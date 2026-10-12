@@ -5,6 +5,7 @@ import App from './App.jsx'
 import { SubscriptionsProvider } from './context/SubscriptionsProvider.jsx'
 import AuthProvider from './context/AuthProvider.jsx'
 import CurrencyProvider from './context/CurrencyProvider.jsx'
+import LanguageProvider from './context/LanguageProvider.jsx'
 import BudgetProvider from './context/BudgetProvider.jsx'
 import ProfileProvider from './context/ProfileProvider.jsx'
 import ThemeProvider from './context/ThemeProvider.jsx'
@@ -15,11 +16,13 @@ createRoot(document.getElementById('root')).render(
       <AuthProvider>
         <ProfileProvider>
           <CurrencyProvider>
-            <BudgetProvider>
-              <SubscriptionsProvider>
-                <App />
-              </SubscriptionsProvider>
-            </BudgetProvider>
+            <LanguageProvider>
+              <BudgetProvider>
+                <SubscriptionsProvider>
+                  <App />
+                </SubscriptionsProvider>
+              </BudgetProvider>
+            </LanguageProvider>
           </CurrencyProvider>
         </ProfileProvider>
       </AuthProvider>

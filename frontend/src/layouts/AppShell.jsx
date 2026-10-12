@@ -2,6 +2,7 @@ import { useContext, useState, useRef, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { AuthContext } from '../context/authContext.js'
 import { ProfileContext } from '../context/ProfileProvider.jsx'
+import { useTranslations } from '../hooks/useTranslations.js'
 import './AppShell.css'
 
 const NAV_ITEMS = [
@@ -97,19 +98,23 @@ const NAV_ITEMS = [
   },
 ]
 
-function getGreeting() {
-  const hour = new Date().getHours()
-
-  if (hour < 12) {
-    return 'Good morning'
-  }
-
-  if (hour < 18) {
-    return 'Good afternoon'
-  }
-
-  return 'Good evening'
-}
+const APP_SHELL_TEXT = [
+  'Dashboard',
+  'Subscriptions',
+  'Transactions',
+  'Insights',
+  'Alerts',
+  'Settings',
+  'Good morning',
+  'Good afternoon',
+  'Good evening',
+  'Profile',
+  'Search',
+  'Account menu',
+  'View profile',
+  'Logging out...',
+  'Logout',
+]
 
 function AppShell({
   activeNav = '',
@@ -120,19 +125,55 @@ function AppShell({
   const { profile } = useContext(ProfileContext)
   const navigate = useNavigate()
 
+  const [
+    dashboardText,
+    subscriptionsText,
+    transactionsText,
+    insightsText,
+    alertsText,
+    settingsText,
+    goodMorningText,
+    goodAfternoonText,
+    goodEveningText,
+    profileText,
+    searchText,
+    accountMenuText,
+    viewProfileText,
+    loggingOutText,
+    logoutText,
+  ] = useTranslations(APP_SHELL_TEXT)
+
   const [menuOpen, setMenuOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const menuRef = useRef(null)
 
-  /*
-   * SpendWise profile takes priority.
-   * If there is no SpendWise profile name,
-   * fall back to the Google/Firebase Auth name.
-   */
   const displayName =
     profile?.firstName ||
     currentUser?.displayName ||
     ''
+
+  const translatedNavLabels = {
+    Dashboard: dashboardText,
+    Subscriptions: subscriptionsText,
+    Transactions: transactionsText,
+    Insights: insightsText,
+    Alerts: alertsText,
+    Settings: settingsText,
+  }
+
+  function getGreeting() {
+    const hour = new Date().getHours()
+
+    if (hour < 12) {
+      return goodMorningText
+    }
+
+    if (hour < 18) {
+      return goodAfternoonText
+    }
+
+    return goodEveningText
+  }
 
   async function handleLogout() {
     if (loggingOut) return
@@ -163,12 +204,24 @@ function AppShell({
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    document.addEventListener('keydown', handleEscape)
+    document.addEventListener(
+      'mousedown',
+      handleClickOutside
+    )
+    document.addEventListener(
+      'keydown',
+      handleEscape
+    )
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      document.removeEventListener('keydown', handleEscape)
+      document.removeEventListener(
+        'mousedown',
+        handleClickOutside
+      )
+      document.removeEventListener(
+        'keydown',
+        handleEscape
+      )
     }
   }, [])
 
@@ -196,7 +249,7 @@ function AppShell({
                 {item.icon}
               </span>
 
-              {item.label}
+              {translatedNavLabels[item.label]}
             </NavLink>
           ))}
         </nav>
@@ -226,7 +279,7 @@ function AppShell({
           </span>
 
           <span className="app-shell__profile-label">
-            {displayName || 'Profile'}
+            {displayName || profileText}
           </span>
         </button>
       </aside>
@@ -235,12 +288,14 @@ function AppShell({
         <header className="app-shell__topbar">
           {!hideTopbarTitle && (
             <div>
- <p>
+              <p>
                 {getGreeting()}
                 {displayName && `, ${displayName}`}
               </p>
 
-              <h2>{activeNav}</h2>
+              <h2>
+                {translatedNavLabels[activeNav] || activeNav}
+              </h2>
             </div>
           )}
 
@@ -250,7 +305,7 @@ function AppShell({
           >
             <input
               className="app-shell__search"
-              placeholder="Search"
+              placeholder={searchText}
             />
 
             <div
@@ -262,7 +317,7 @@ function AppShell({
                 onClick={() =>
                   setMenuOpen((value) => !value)
                 }
-                aria-label="Account menu"
+                aria-label={accountMenuText}
               >
                 {profile?.photoURL && (
                   <img
@@ -287,7 +342,7 @@ function AppShell({
                       navigate('/profile')
                     }}
                   >
-                    View profile
+                    {viewProfileText}
                   </button>
 
                   <button
@@ -295,8 +350,8 @@ function AppShell({
                     disabled={loggingOut}
                   >
                     {loggingOut
-                      ? 'Logging out...'
-                      : 'Logout'}
+                      ? loggingOutText
+                      : logoutText}
                   </button>
                 </div>
               )}
