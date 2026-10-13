@@ -6,5 +6,6 @@ const router = Router();
 
 router.get('/price-alerts', verifyToken, priceAlertController.getActive);
 router.patch('/price-alerts/:id/dismiss', verifyToken, priceAlertController.dismiss);
+router.post('/price-alerts/gmail-scan', verifyToken, priceAlertController.scanGmail);
 
 export default router;

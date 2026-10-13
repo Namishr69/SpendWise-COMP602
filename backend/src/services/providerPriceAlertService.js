@@ -1,7 +1,15 @@
+import priceAlertRepo from '../repositories/priceAlertRepo.js';
+import subscriptionRepo from '../repositories/subscriptionRepo.js';
+import gmailService from './gmailService.js';
+import { parsePriceChangeEmail } from './priceChangeEmailParser.js';
+
 /**
  * Turns price change announcements from subscription providers (e.g. "your
- * price is changing" emails) into price alerts. Pure function: plain data in,
- * the new alerts to create out. No Firestore or network calls.
+ * price is changing" emails) into price alerts.
+ *
+ * findProviderPriceAlerts is a pure function: plain data in, the new alerts
+ * to create out. The service methods wrap it with the Gmail and Firestore
+ * calls.
  */
 
 // Words that appear in sender names and domains but say nothing about which
@@ -110,3 +118,49 @@ export function findProviderPriceAlerts(subscriptions, announcements, existingAl
 
     return alerts;
 }
+
+/**
+ * The alert's document id comes from the change itself, so the same change
+ * can only ever be stored once — even if two scans race — and a dismissed
+ * announcement is never re-opened by a later scan.
+ */
+function announcementAlertId(alert) {
+    return `${alert.subscriptionId}_announced_${toCents(alert.newAmount)}_${alert.effectiveDate || 'undated'}`;
+}
+
+const providerPriceAlertService = {
+    /**
+     * Scans the user's Gmail for price change announcements and stores an
+     * alert for each one that matches a subscription. accessToken is a
+     * gmail.readonly OAuth token from the browser; it is not stored.
+     */
+    async scanGmail(userId, accessToken) {
+        const emails = await gmailService.fetchPriceChangeEmails(accessToken);
+        const announcements = emails.map(parsePriceChangeEmail).filter(Boolean);
+
+        const [subscriptions, existingAlerts] = await Promise.all([
+            subscriptionRepo.getAll(userId),
+            priceAlertRepo.listByType(userId, 'announcement'),
+        ]);
+
+        const created = [];
+
+        for (const alert of findProviderPriceAlerts(subscriptions, announcements, existingAlerts)) {
+            const stored = await priceAlertRepo.createIfAbsent(userId, announcementAlertId(alert), {
+                ...alert,
+                source: 'gmail',
+                dismissed: false,
+                detectedAt: new Date().toISOString(),
+            });
+            if (stored) created.push(stored);
+        }
+
+        return {
+            scanned: emails.length,
+            announcements: announcements.length,
+            created,
+        };
+    },
+};
+
+export default providerPriceAlertService;
