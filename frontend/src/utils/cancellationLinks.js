@@ -230,3 +230,41 @@ export function getCancellationLink(name) {
 
   return match ? match.url : null
 }
+
+// A web search for how to cancel with this merchant. Used only when there is no
+// curated entry — the curated list cannot realistically cover every gym, local
+// service or regional provider, and plenty of them have no self-service cancel
+// page at all (a form or written notice instead), so there is no official URL
+// to curate. A search is a genuinely useful next step where a dead end is not.
+//
+// The raw name is used rather than the normalised one, because punctuation and
+// capitalisation help the search engine ("Disney+" beats "disney").
+function searchUrlFor(name) {
+  const query = String(name || '').trim()
+  if (!query) return null
+
+  return `https://www.google.com/search?q=${encodeURIComponent(
+    `${query} cancel subscription`
+  )}`
+}
+
+/**
+ * Resolves what the UI should offer for a subscription, distinguishing the two
+ * cases so they can be labelled differently:
+ *
+ *   { kind: 'official', url }  a curated link to the merchant's own cancel page
+ *   { kind: 'search',   url }  a web search, when the merchant is not curated
+ *   null                       no usable name, so neither is possible
+ *
+ * Keeping the kinds separate is the point: a search result must never be
+ * presented as though it were the merchant's official cancellation page.
+ */
+export function resolveCancellation(name) {
+  const official = getCancellationLink(name)
+  if (official) {
+    return { kind: 'official', url: official }
+  }
+
+  const search = searchUrlFor(name)
+  return search ? { kind: 'search', url: search } : null
+}

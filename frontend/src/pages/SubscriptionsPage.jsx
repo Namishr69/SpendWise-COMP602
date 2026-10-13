@@ -8,7 +8,7 @@ import { useCurrencyRate } from '../hooks/useCurrencyRate.js'
 import { useTranslations } from '../hooks/useTranslations.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
 import { sourceLabel } from '../utils/subscriptionSource.js'
-import { getCancellationLink } from '../utils/cancellationLinks.js'
+import { resolveCancellation } from '../utils/cancellationLinks.js'
 
 import './SubscriptionsPage.css'
 
