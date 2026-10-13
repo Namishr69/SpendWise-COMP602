@@ -70,6 +70,7 @@ function InsightsPage() {
   ] = useTranslations(INSIGHTS_TEXT)
 
   const [comparison, setComparison] = useState(null)
+  const [trend, setTrend] = useState(null)
 
   const showMoney = (amount) =>
     formatCurrency(
