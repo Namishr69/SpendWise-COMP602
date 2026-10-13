@@ -3,6 +3,7 @@ import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
 import { useSubscriptions } from '../context/subscriptionsContext.js'
 import { useCurrencyRate } from '../hooks/useCurrencyRate.js'
+import { useTranslations } from '../hooks/useTranslations.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
 import {
   normalizeSubscriptionToMonthly,
@@ -14,14 +15,59 @@ import { getTransactions } from '../api/transactionApi.js'
 import { AuthContext } from '../context/authContext.js'
 import { compareMonthToPrevious } from '../utils/monthlySpend.js'
 import { getPayments } from '../api/subscriptionApi.js'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-import { LineChart, Line } from 'recharts'
-import { getMonthlyTotals } from '../utils/spendingTrend.js'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts'
+
+const INSIGHTS_TEXT = [
+  'Loading insights...',
+  'Could not load insights:',
+  'Total monthly spend',
+  'This month vs last month',
+  'Loading comparison...',
+  'Last month',
+  'This month',
+  'Spend by subscription',
+  'No active subscriptions yet.',
+  'per month',
+  'Spend breakdown',
+]
 
 function InsightsPage() {
-  const { subscriptions, loading, error } = useSubscriptions()
-  const { preferredCurrency, rate } = useCurrencyRate()
+  const {
+    subscriptions,
+    loading,
+    error,
+  } = useSubscriptions()
+
+  const {
+    preferredCurrency,
+    rate,
+  } = useCurrencyRate()
+
   const { currentUser } = useContext(AuthContext)
+
+  const [
+    loadingInsightsText,
+    loadErrorText,
+    totalMonthlySpendText,
+    comparisonTitleText,
+    loadingComparisonText,
+    lastMonthText,
+    thisMonthText,
+    spendBySubscriptionText,
+    noActiveSubscriptionsText,
+    perMonthText,
+    spendBreakdownText,
+  ] = useTranslations(INSIGHTS_TEXT)
 
   const [comparison, setComparison] = useState(null)
   const [trend, setTrend] = useState(null)
@@ -34,34 +80,66 @@ function InsightsPage() {
 
   useEffect(() => {
     if (!currentUser) return
+
     let cancelled = false
 
     async function loadComparison() {
       try {
-        const [bankTxns, manualTxns, paymentsPerSub] = await Promise.all([
-          getBankTransactions({ limit: 500 }).catch(() => []),
-          getTransactions(currentUser).catch(() => []),
+        const [
+          bankTxns,
+          manualTxns,
+          paymentsPerSub,
+        ] = await Promise.all([
+          getBankTransactions({
+            limit: 500,
+          }).catch(() => []),
+
+          getTransactions(
+            currentUser,
+          ).catch(() => []),
+
           Promise.all(
-            subscriptions.map((s) =>
-              getPayments(s.id)
-                .then((payments) => [s.id, payments])
-                .catch(() => [s.id, []])
-            )
+            subscriptions.map((subscription) =>
+              getPayments(subscription.id)
+                .then((payments) => [
+                  subscription.id,
+                  payments,
+                ])
+                .catch(() => [
+                  subscription.id,
+                  [],
+                ]),
+            ),
           ),
         ])
 
         if (!cancelled) {
-          const paymentsBySubscriptionId = Object.fromEntries(paymentsPerSub)
-          const allTxns = [...bankTxns, ...manualTxns]
-          setComparison(compareMonthToPrevious(allTxns, subscriptions, paymentsBySubscriptionId))
-          setTrend(getMonthlyTotals(allTxns, subscriptions, paymentsBySubscriptionId))
+          const paymentsBySubscriptionId =
+            Object.fromEntries(
+              paymentsPerSub,
+            )
+
+          setComparison(
+            compareMonthToPrevious(
+              [
+                ...bankTxns,
+                ...manualTxns,
+              ],
+              subscriptions,
+              paymentsBySubscriptionId,
+            ),
+          )
         }
       } catch (err) {
-        console.error('Failed to load month comparison:', err)
+        console.error(
+          'Failed to load month comparison:',
+          err,
+        )
       }
     }
 
     loadComparison()
+
     return () => {
       cancelled = true
     }
@@ -70,7 +148,7 @@ function InsightsPage() {
   if (loading) {
     return (
       <AppShell activeNav="Insights">
-        <p>Loading insights…</p>
+        <p>{loadingInsightsText}</p>
       </AppShell>
     )
   }
@@ -78,46 +156,77 @@ function InsightsPage() {
   if (error) {
     return (
       <AppShell activeNav="Insights">
-        <p>Could not load insights: {error.message}</p>
+        <p>
+          {loadErrorText} {error.message}
+        </p>
       </AppShell>
     )
   }
 
-  const activeSubscriptions = subscriptions.filter(
-    (s) => s.status?.toLowerCase() !== 'cancelled',
-  )
+  const activeSubscriptions =
+    subscriptions.filter(
+      (subscription) =>
+        subscription.status?.toLowerCase() !==
+        'cancelled',
+    )
 
-  const totalMonthlySpend = calculateTotalMonthlySpend(subscriptions)
+  const totalMonthlySpend =
+    calculateTotalMonthlySpend(
+      subscriptions,
+    )
 
   const breakdown = activeSubscriptions
-    .map((s) => ({
-      name: s.name,
-      monthlyAmount: normalizeSubscriptionToMonthly(
-        s.amount,
-        s.billingCycle,
-      ),
-      billingCycle: s.billingCycle,
+    .map((subscription) => ({
+      name: subscription.name,
+      monthlyAmount:
+        normalizeSubscriptionToMonthly(
+          subscription.amount,
+          subscription.billingCycle,
+        ),
+      billingCycle:
+        subscription.billingCycle,
     }))
-    .sort((a, b) => b.monthlyAmount - a.monthlyAmount)
+    .sort(
+      (a, b) =>
+        b.monthlyAmount -
+        a.monthlyAmount,
+    )
 
-  const pieColors = ['#1f3b2c', '#7c9473', '#e8c468', '#d9b65b', '#5c6b60', '#8fa37e']
+  const pieColors = [
+    '#1f3b2c',
+    '#7c9473',
+    '#e8c468',
+    '#d9b65b',
+    '#5c6b60',
+    '#8fa37e',
+  ]
 
-  const pieData = breakdown.map((item) => ({
-    name: item.name,
-    value: item.monthlyAmount,
-  }))
+  const pieData = breakdown.map(
+    (item) => ({
+      name: item.name,
+      value: item.monthlyAmount,
+    }),
+  )
 
   const barData = comparison
     ? [
-        { name: 'Last month', amount: comparison.previousMonth },
-        { name: 'This month', amount: comparison.currentMonth },
+        {
+          name: lastMonthText,
+          amount:
+            comparison.previousMonth,
+        },
+        {
+          name: thisMonthText,
+          amount:
+            comparison.currentMonth,
+        },
       ]
     : []
 
   return (
     <AppShell activeNav="Insights">
       <Card>
-        <h3>Total monthly spend</h3>
+        <h3>{totalMonthlySpendText}</h3>
 
         <p className="insights-total">
           {showMoney(totalMonthlySpend)}
@@ -125,42 +234,96 @@ function InsightsPage() {
       </Card>
 
       <Card style={{ marginTop: 16 }}>
-        <h3>This month vs last month</h3>
+        <h3>{comparisonTitleText}</h3>
 
         {!comparison ? (
-          <p>Loading comparison…</p>
+          <p>{loadingComparisonText}</p>
         ) : (
           <>
             <div className="insights-comparison">
               <div className="insights-comparison__month">
-                <p className="insights-comparison__label">Last month</p>
+                <p className="insights-comparison__label">
+                  {lastMonthText}
+                </p>
+
                 <p className="insights-comparison__amount">
-                  {showMoney(comparison.previousMonth)}
+                  {showMoney(
+                    comparison.previousMonth,
+                  )}
                 </p>
               </div>
 
-              <div className={`insights-comparison__arrow ${comparison.isIncrease ? 'insights-comparison__arrow--up' : 'insights-comparison__arrow--down'}`}>
-                {comparison.isIncrease ? '↑' : '↓'}
-                {comparison.percentChange !== null && (
-                  <span>{Math.abs(comparison.percentChange).toFixed(0)}%</span>
+              <div
+                className={`insights-comparison__arrow ${
+                  comparison.isIncrease
+                    ? 'insights-comparison__arrow--up'
+                    : 'insights-comparison__arrow--down'
+                }`}
+              >
+                {comparison.isIncrease
+                  ? '↑'
+                  : '↓'}
+
+                {comparison.percentChange !==
+                  null && (
+                  <span>
+                    {Math.abs(
+                      comparison.percentChange,
+                    ).toFixed(0)}
+                    %
+                  </span>
                 )}
               </div>
 
               <div className="insights-comparison__month">
-                <p className="insights-comparison__label">This month</p>
+                <p className="insights-comparison__label">
+                  {thisMonthText}
+                </p>
+
                 <p className="insights-comparison__amount">
-                  {showMoney(comparison.currentMonth)}
+                  {showMoney(
+                    comparison.currentMonth,
+                  )}
                 </p>
               </div>
             </div>
 
-            <div style={{ width: '100%', height: 200, marginTop: 20 }}>
+            <div
+              style={{
+                width: '100%',
+                height: 200,
+                marginTop: 20,
+              }}
+            >
               <ResponsiveContainer>
                 <BarChart data={barData}>
-                  <XAxis dataKey="name" stroke="var(--color-ink-soft)" fontSize={13} />
-                  <YAxis stroke="var(--color-ink-soft)" fontSize={13} />
-                  <Tooltip formatter={(value) => showMoney(value)} />
-                  <Bar dataKey="amount" fill="#1f3b2c" radius={[6, 6, 0, 0]} />
+                  <XAxis
+                    dataKey="name"
+                    stroke="var(--color-ink-soft)"
+                    fontSize={13}
+                  />
+
+                  <YAxis
+                    stroke="var(--color-ink-soft)"
+                    fontSize={13}
+                  />
+
+                  <Tooltip
+                    formatter={(value) =>
+                      showMoney(value)
+                    }
+                  />
+
+                  <Bar
+                    dataKey="amount"
+                    fill="#1f3b2c"
+                    radius={[
+                      6,
+                      6,
+                      0,
+                      0,
+                    ]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -169,41 +332,22 @@ function InsightsPage() {
       </Card>
 
       <Card style={{ marginTop: 16 }}>
-        <h3>Spending trend</h3>
-
-        {!trend ? (
-          <p>Loading trend…</p>
-        ) : (
-          <div style={{ width: '100%', height: 220, marginTop: 12 }}>
-            <ResponsiveContainer>
-              <LineChart data={trend}>
-                <XAxis dataKey="label" stroke="var(--color-ink-soft)" fontSize={13} />
-                <YAxis stroke="var(--color-ink-soft)" fontSize={13} />
-                <Tooltip formatter={(value) => showMoney(value)} />
-                <Line
-                  type="monotone"
-                  dataKey="total"
-                  stroke="#1f3b2c"
-                  strokeWidth={2}
-                  dot={{ r: trend.length === 1 ? 5 : 3 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </Card>
-
-      <Card style={{ marginTop: 16 }}>
-        <h3>Spend by subscription</h3>
+        <h3>
+          {spendBySubscriptionText}
+        </h3>
 
         {breakdown.length === 0 ? (
-          <p>No active subscriptions yet.</p>
+          <p>
+            {noActiveSubscriptionsText}
+          </p>
         ) : (
           <ul className="insights-list">
             {breakdown.map((item) => {
               const percent =
                 totalMonthlySpend > 0
-                  ? (item.monthlyAmount / totalMonthlySpend) * 100
+                  ? (item.monthlyAmount /
+                      totalMonthlySpend) *
+                    100
                   : 0
 
               return (
@@ -217,14 +361,19 @@ function InsightsPage() {
                     </span>
 
                     <span className="insights-list__amount">
-                      {showMoney(item.monthlyAmount)}/mo
+                      {showMoney(
+                        item.monthlyAmount,
+                      )}{' '}
+                      / {perMonthText}
                     </span>
                   </div>
 
                   <div className="insights-bar">
                     <div
                       className="insights-bar__fill"
-                      style={{ width: `${percent}%` }}
+                      style={{
+                        width: `${percent}%`,
+                      }}
                     />
                   </div>
                 </li>
@@ -234,66 +383,53 @@ function InsightsPage() {
         )}
       </Card>
 
-            <Card style={{ marginTop: 16 }}>
-        <h3>Spend breakdown</h3>
+      <Card style={{ marginTop: 16 }}>
+        <h3>{spendBreakdownText}</h3>
 
         {pieData.length === 0 ? (
-          <p>No active subscriptions yet.</p>
+          <p>
+            {noActiveSubscriptionsText}
+          </p>
         ) : (
-          <>
-                        <div
-              className="insights-donut"
-              style={{ position: 'relative', width: '100%', height: 300 }}
-            >
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius="62%"
-                    outerRadius="88%"
-                    paddingAngle={0}
-                    stroke="none"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={entry.name} fill={pieColors[index % pieColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => showMoney(value)} />
-                </PieChart>
-              </ResponsiveContainer>
+          <div
+            style={{
+              width: '100%',
+              height: 260,
+            }}
+          >
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={60}
+                  outerRadius={90}
+                  paddingAngle={2}
+                >
+                  {pieData.map(
+                    (entry, index) => (
+                      <Cell
+                        key={entry.name}
+                        fill={
+                          pieColors[
+                            index %
+                              pieColors.length
+                          ]
+                        }
+                      />
+                    ),
+                  )}
+                </Pie>
 
-              <div className="insights-donut__center">
-                <span className="insights-donut__center-label">Total / mo</span>
-                <span className="insights-donut__center-amount">
-                  {showMoney(totalMonthlySpend)}
-                </span>
-              </div>
-            </div>
-
-            <ul className="insights-legend">
-              {pieData.map((entry, index) => {
-                const percent =
-                  totalMonthlySpend > 0
-                    ? (entry.value / totalMonthlySpend) * 100
-                    : 0
-
-                return (
-                  <li key={entry.name} className="insights-legend__item">
-                    <span
-                      className="insights-legend__swatch"
-                      style={{ background: pieColors[index % pieColors.length] }}
-                    />
-                    <span className="insights-legend__name">{entry.name}</span>
-                    <span className="insights-legend__amount">
-                      {showMoney(entry.value)} · {percent.toFixed(0)}%
-                    </span>
-                  </li>
-                )
-              })}
-            </ul>
-          </>
+                <Tooltip
+                  formatter={(value) =>
+                    showMoney(value)
+                  }
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         )}
       </Card>
     </AppShell>

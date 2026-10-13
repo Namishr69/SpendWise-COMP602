@@ -14,8 +14,19 @@
 
 .transactions-header h1 {
   margin: 0;
-  padding-bottom: 20px;
-  padding-top: 10px;
+  line-height: 1.15;
+}
+
+.transactions-header h1 + p {
+  margin-top: 0.5rem;
+  line-height: 1.5;
+}
+
+.transactions-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-shrink: 0;
 }
 
 .transactions-refresh {
@@ -43,7 +54,10 @@
 
 .transactions-accounts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(220px, 1fr)
+  );
   gap: var(--space-md);
   margin-bottom: var(--space-lg);
 }
@@ -100,6 +114,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-md);
   padding: 10px 0;
   border-bottom: 1px solid var(--color-tan);
 }
@@ -117,6 +132,28 @@
 .transactions-list__date {
   font-size: 13px;
   color: var(--color-ink-soft);
+}
+
+.transactions-list__manual {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-md);
+  flex-shrink: 0;
+}
+
+.transactions-list__manual .money {
+  white-space: nowrap;
+}
+
+.transactions-list__edit {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.transactions-amount {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .transactions-amount--credit {
@@ -146,5 +183,19 @@
   .transactions-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .transactions-actions {
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .transactions-list__item {
+    align-items: flex-start;
+  }
+
+  .transactions-list__manual {
+    gap: var(--space-sm);
   }
 }
