@@ -13,7 +13,9 @@ const PRICE_CHANGE_PATTERNS = [
 
 // An amount with an optional currency code before the symbol, e.g. NZ$18.99.
 const AMOUNT = String.raw`(?:[A-Z]{2,3}\s?)?[$£€]\s?(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?)`;
-const FROM_TO_PATTERN = new RegExp(String.raw`\bfrom\s+${AMOUNT}\s+(?:to|→)\s+${AMOUNT}`, 'i');
+// A billing period after an amount, e.g. "$17.99/month" or "$17.99 per month".
+const PERIOD = String.raw`(?:\s*(?:\/|per\s|a\s)\s*(?:month|mo|year|yr|week|wk)\b)?`;
+const FROM_TO_PATTERN = new RegExp(String.raw`\bfrom\s+${AMOUNT}${PERIOD}\s+(?:to|→)\s+${AMOUNT}`, 'i');
 const NEW_AMOUNT_PATTERN = new RegExp(String.raw`\b(?:to|will be|now)\s+${AMOUNT}`, 'i');
 
 const MONTHS = {

@@ -36,6 +36,21 @@ describe('parsePriceChangeEmail', () => {
         });
     });
 
+    it('reads the old price when it is followed by a billing period', () => {
+        const email = {
+            id: 'msg9',
+            from: 'YouTube <noreply-purchases@youtube.com>',
+            subject: 'Your YouTube Premium membership price is increasing',
+            body: 'Your price will increase from NZ$17.99/month to NZ$19.99/month on 15 December 2026.',
+            receivedAt: '2026-10-01T09:00:00.000Z',
+        };
+
+        expect(parsePriceChangeEmail(email)).toMatchObject({
+            currentAmount: 17.99,
+            newAmount: 19.99,
+        });
+    });
+
     it('reads US-style dates written month first', () => {
         const email = {
             id: 'msg3',

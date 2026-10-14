@@ -1,0 +1,17 @@
+.gmail-scan {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e4e4e4;
+}
+
+.gmail-scan__result {
+  margin: 14px 0 0;
+  opacity: 0.75;
+  font-size: 0.88rem;
+}
+
+.gmail-scan__error {
+  margin: 14px 0 0;
+  color: #b3261e;
+  font-size: 0.88rem;
+}

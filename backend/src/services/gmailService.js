@@ -29,11 +29,21 @@ async function gmailGet(accessToken, path) {
     }
 
     const data = await res.json().catch(() => null);
+    const googleMessage = data?.error?.message || '';
+
+    // Google's consent popup lists Gmail as a checkbox; leaving it unticked
+    // still returns a token, just one that cannot read mail.
+    if (res.status === 403 && /insufficient authentication scopes/i.test(googleMessage)) {
+        throw gmailError(
+            403,
+            'SpendWise was not allowed to read your Gmail. Scan again and tick the Gmail permission in the Google popup.'
+        );
+    }
 
     if (!res.ok) {
-        // A 403 usually means the scope was not granted or the Gmail API is not
-        // enabled for the project; Google's message says which.
-        throw gmailError(502, `Gmail request failed: ${data?.error?.message || res.status}`);
+        // Anything else, e.g. the Gmail API not being enabled for the project;
+        // Google's message says what went wrong.
+        throw gmailError(502, `Gmail request failed: ${googleMessage || res.status}`);
     }
 
     return data;
