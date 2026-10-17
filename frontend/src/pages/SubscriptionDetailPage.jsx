@@ -9,15 +9,52 @@ import SubscriptionNotes from '../components/SubscriptionNotes'
 import PriceChangeAlerts from '../components/PriceChangeAlerts'
 import { useSubscriptions } from '../context/subscriptionsContext'
 import { useCurrencyRate } from '../hooks/useCurrencyRate.js'
+import { useTranslations } from '../hooks/useTranslations.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
-import { getPayments, createPayment } from '../api/subscriptionApi'
+import {
+  getPayments,
+  createPayment,
+} from '../api/subscriptionApi'
 
 import './SubscriptionDetailPage.css'
 
+const SUBSCRIPTION_DETAIL_TEXT = [
+  'Loading subscription...',
+  'Subscription not found',
+  'Back to subscriptions',
+  'Edit subscription',
+  'Total spent',
+  'Next payment',
+  'Not set',
+  'Subscription date',
+  'Status',
+  'Payment history',
+  'Loading payment history...',
+  'No payment history is available.',
+  'Payment date',
+  'Amount',
+  'Add payment',
+  'Adding...',
+  'Enter a payment date.',
+  'Enter an amount greater than zero.',
+  'Monthly',
+  'Weekly',
+  'Quarterly',
+  'Yearly',
+  'Active',
+  'Cancelled',
+]
+
 function localToday() {
   const now = new Date()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
+
+  const month = String(
+    now.getMonth() + 1,
+  ).padStart(2, '0')
+
+  const day = String(
+    now.getDate(),
+  ).padStart(2, '0')
 
   return `${now.getFullYear()}-${month}-${day}`
 }
@@ -27,10 +64,17 @@ function localDateFromISO(iso) {
 
   const date = new Date(iso)
 
-  if (Number.isNaN(date.getTime())) return ''
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
 
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(
+    date.getMonth() + 1,
+  ).padStart(2, '0')
+
+  const day = String(
+    date.getDate(),
+  ).padStart(2, '0')
 
   return `${date.getFullYear()}-${month}-${day}`
 }
@@ -44,24 +88,117 @@ function SubscriptionDetailPage() {
     updateSubscription,
   } = useSubscriptions()
 
-  const subscription = getSubscription(subscriptionId)
+  const subscription =
+    getSubscription(subscriptionId)
 
-  const { preferredCurrency, rate } = useCurrencyRate()
+  const {
+    preferredCurrency,
+    rate,
+  } = useCurrencyRate()
+
+  const [
+    loadingSubscriptionText,
+    subscriptionNotFoundText,
+    backToSubscriptionsText,
+    editSubscriptionText,
+    totalSpentText,
+    nextPaymentText,
+    notSetText,
+    subscriptionDateText,
+    statusText,
+    paymentHistoryText,
+    loadingPaymentHistoryText,
+    noPaymentHistoryText,
+    paymentDateText,
+    amountText,
+    addPaymentText,
+    addingText,
+    paymentDateErrorText,
+    amountErrorText,
+    monthlyText,
+    weeklyText,
+    quarterlyText,
+    yearlyText,
+    activeText,
+    cancelledText,
+  ] = useTranslations(
+    SUBSCRIPTION_DETAIL_TEXT,
+  )
 
   const showMoney = (amount) =>
     formatCurrency(
       (Number(amount) || 0) * rate,
-      preferredCurrency
+      preferredCurrency,
     )
 
-  const [payments, setPayments] = useState([])
-  const [paymentsLoading, setPaymentsLoading] = useState(true)
-  const [paymentDate, setPaymentDate] = useState(localToday())
-  const [paymentAmount, setPaymentAmount] = useState('')
-  const [paymentError, setPaymentError] = useState('')
-  const [adding, setAdding] = useState(false)
-  // Bumped after each added payment so a new price change alert shows up.
-  const [alertsVersion, setAlertsVersion] = useState(0)
+  function translateBillingCycle(
+    billingCycle,
+  ) {
+    switch (
+      billingCycle?.toLowerCase()
+    ) {
+      case 'monthly':
+        return monthlyText
+
+      case 'weekly':
+        return weeklyText
+
+      case 'quarterly':
+        return quarterlyText
+
+      case 'yearly':
+      case 'annual':
+      case 'annually':
+        return yearlyText
+
+      default:
+        return billingCycle || ''
+    }
+  }
+
+  function translateStatus(
+    subscriptionStatus,
+  ) {
+    switch (
+      subscriptionStatus?.toLowerCase()
+    ) {
+      case 'active':
+        return activeText
+
+      case 'cancelled':
+      case 'canceled':
+        return cancelledText
+
+      default:
+        return subscriptionStatus || ''
+    }
+  }
+
+  const [payments, setPayments] =
+    useState([])
+
+  const [
+    paymentsLoading,
+    setPaymentsLoading,
+  ] = useState(true)
+
+  const [
+    paymentDate,
+    setPaymentDate,
+  ] = useState(localToday())
+
+  const [
+    paymentAmount,
+    setPaymentAmount,
+  ] = useState('')
+
+  const [
+    paymentError,
+    setPaymentError,
+  ] = useState('')
+
+  const [adding, setAdding] =
+    useState(false)
 
   useEffect(() => {
     if (!subscription) return
@@ -69,8 +206,12 @@ function SubscriptionDetailPage() {
     let cancelled = false
 
     async function loadPayments() {
+      setPaymentsLoading(true)
+
       try {
-        const data = await getPayments(subscription.id)
+        const data = await getPayments(
+          subscription.id,
+        )
 
         if (!cancelled) {
           setPayments(data)
@@ -96,7 +237,9 @@ function SubscriptionDetailPage() {
   if (loading) {
     return (
       <AppShell activeNav="Subscriptions">
-        <p>Loading subscription…</p>
+        <p>
+          {loadingSubscriptionText}
+        </p>
       </AppShell>
     )
   }
@@ -104,9 +247,12 @@ function SubscriptionDetailPage() {
   if (!subscription) {
     return (
       <AppShell activeNav="Subscriptions">
-        <h1>Subscription not found</h1>
+        <h1>
+          {subscriptionNotFoundText}
+        </h1>
+
         <Link to="/subscriptions">
-          Back to subscriptions
+          {backToSubscriptionsText}
         </Link>
       </AppShell>
     )
@@ -114,22 +260,33 @@ function SubscriptionDetailPage() {
 
   const totalSpent = payments.reduce(
     (total, payment) =>
-      total + (Number(payment.amount) || 0),
-    0
+      total +
+      (Number(payment.amount) || 0),
+    0,
   )
 
-  async function handleAddPayment(event) {
+  async function handleAddPayment(
+    event,
+  ) {
     event.preventDefault()
 
-    const amount = Number(paymentAmount)
+    const amount =
+      Number(paymentAmount)
 
     if (!paymentDate) {
-      setPaymentError('Enter a payment date.')
+      setPaymentError(
+        paymentDateErrorText,
+      )
       return
     }
 
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setPaymentError('Enter an amount greater than zero.')
+    if (
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+      setPaymentError(
+        amountErrorText,
+      )
       return
     }
 
@@ -137,13 +294,14 @@ function SubscriptionDetailPage() {
     setPaymentError('')
 
     try {
-      const created = await createPayment(
-        subscription.id,
-        {
-          date: paymentDate,
-          amount,
-        }
-      )
+      const created =
+        await createPayment(
+          subscription.id,
+          {
+            date: paymentDate,
+            amount,
+          },
+        )
 
       setPayments((current) => [
         created,
@@ -160,27 +318,158 @@ function SubscriptionDetailPage() {
     }
   }
 
+  function handleManageDevices() {
+    setManagingDevices(true)
+    setDeviceError('')
+  }
+
+  function handleDoneManagingDevices() {
+    setManagingDevices(false)
+    setEditingDeviceIndex(null)
+    setEditingDeviceName('')
+    setDeviceName('')
+    setDeviceError('')
+  }
+
+  async function handleAddDevice(event) {
+    event.preventDefault()
+
+    const trimmedName = deviceName.trim()
+
+    if (!trimmedName) {
+      setDeviceError('Enter a device name.')
+      return
+    }
+
+    setSavingDevice(true)
+    setDeviceError('')
+
+    try {
+      const updatedDevices = [
+        ...devices,
+        trimmedName,
+      ]
+
+      await updateSubscription(
+        subscription.id,
+        {
+          devices: updatedDevices,
+        }
+      )
+
+      setDeviceName('')
+    } catch (err) {
+      setDeviceError(
+        err.message || 'Failed to add device.'
+      )
+    } finally {
+      setSavingDevice(false)
+    }
+  }
+
+  function handleStartEditDevice(index) {
+    setEditingDeviceIndex(index)
+    setEditingDeviceName(devices[index])
+    setDeviceError('')
+  }
+
+  function handleCancelEditDevice() {
+    setEditingDeviceIndex(null)
+    setEditingDeviceName('')
+    setDeviceError('')
+  }
+
+  async function handleSaveDevice(index) {
+    const trimmedName = editingDeviceName.trim()
+
+    if (!trimmedName) {
+      setDeviceError('Enter a device name.')
+      return
+    }
+
+    setSavingDevice(true)
+    setDeviceError('')
+
+    try {
+      const updatedDevices = [...devices]
+      updatedDevices[index] = trimmedName
+
+      await updateSubscription(
+        subscription.id,
+        {
+          devices: updatedDevices,
+        }
+      )
+
+      setEditingDeviceIndex(null)
+      setEditingDeviceName('')
+    } catch (err) {
+      setDeviceError(
+        err.message || 'Failed to update device.'
+      )
+    } finally {
+      setSavingDevice(false)
+    }
+  }
+
+  async function handleDeleteDevice(index) {
+    setSavingDevice(true)
+    setDeviceError('')
+
+    try {
+      const updatedDevices = devices.filter(
+        (_, deviceIndex) =>
+          deviceIndex !== index
+      )
+
+      await updateSubscription(
+        subscription.id,
+        {
+          devices: updatedDevices,
+        }
+      )
+
+      if (editingDeviceIndex === index) {
+        setEditingDeviceIndex(null)
+        setEditingDeviceName('')
+      }
+    } catch (err) {
+      setDeviceError(
+        err.message || 'Failed to delete device.'
+      )
+    } finally {
+      setSavingDevice(false)
+    }
+  }
+
   return (
     <AppShell activeNav="Subscriptions">
       <div className="detail-actions">
         <Link to="/subscriptions">
-          ← Back to subscriptions
+          ← {backToSubscriptionsText}
         </Link>
 
         <Link
           className="edit-subscription-link"
           to={`/subscriptions/${subscription.id}/edit`}
         >
-          Edit subscription
+          {editSubscriptionText}
         </Link>
       </div>
 
       <header className="detail-header">
-        <h1>{subscription.name}</h1>
+        <h1>
+          {subscription.name}
+        </h1>
 
         <p>
-          {showMoney(subscription.amount)} /{' '}
-          {subscription.billingCycle.toLowerCase()}
+          {showMoney(
+            subscription.amount,
+          )}{' '}
+          /{' '}
+          {translateBillingCycle(
+            subscription.billingCycle,
+          )}
         </p>
       </header>
 
@@ -191,86 +480,289 @@ function SubscriptionDetailPage() {
 
       <section className="detail-summary">
         <Card>
-          <h2>Total spent</h2>
+          <h2>
+            {totalSpentText}
+          </h2>
+
           <p className="detail-total">
             {showMoney(totalSpent)}
           </p>
         </Card>
 
         <Card>
-          <h2>Next payment</h2>
+          <h2>
+            {nextPaymentText}
+          </h2>
+
           <p>
-            {subscription.nextPaymentDate || 'Not set'}
+            {subscription.nextPaymentDate ||
+              notSetText}
           </p>
         </Card>
 
         <Card>
-          <h2>Subscription date</h2>
+          <h2>
+            {subscriptionDateText}
+          </h2>
 
           <p>
             {subscription.subscriptionDate ||
               localDateFromISO(
-                subscription.createdAt
+                subscription.createdAt,
               ) ||
-              'Not set'}
+              notSetText}
           </p>
         </Card>
 
         <Card>
-          <h2>Status</h2>
-          <p>{subscription.status}</p>
+          <h2>
+            {statusText}
+          </h2>
+
+          <p>
+            {translateStatus(
+              subscription.status,
+            )}
+          </p>
         </Card>
       </section>
+
+      <Card className="subscription-devices">
+        <div className="device-header">
+          <h2>Devices</h2>
+
+          {!managingDevices ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleManageDevices}
+            >
+              Manage
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={savingDevice}
+              onClick={handleDoneManagingDevices}
+            >
+              Done
+            </Button>
+          )}
+        </div>
+
+        {deviceError && (
+          <p className="device-error">
+            {deviceError}
+          </p>
+        )}
+
+        {!managingDevices ? (
+          <>
+            {devices.length === 0 ? (
+              <p className="device-empty">
+                No devices are currently connected.
+              </p>
+            ) : (
+              <div className="device-tags">
+                {devices.map((device, index) => (
+                  <span
+                    className="device-tag"
+                    key={`${device}-${index}`}
+                  >
+                    {device}
+                  </span>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="device-manager">
+            {devices.length === 0 ? (
+              <p className="device-empty">
+                No devices are currently connected.
+              </p>
+            ) : (
+              <div className="device-manage-list">
+                {devices.map((device, index) => (
+                  <div
+                    className="device-manage-item"
+                    key={`${device}-${index}`}
+                  >
+                    {editingDeviceIndex === index ? (
+                      <div className="device-edit-row">
+                        <div className="device-edit-input">
+                          <Input
+                            id={`edit-device-${index}`}
+                            label="Device name"
+                            type="text"
+                            value={editingDeviceName}
+                            onChange={(event) =>
+                              setEditingDeviceName(
+                                event.target.value
+                              )
+                            }
+                          />
+                        </div>
+
+                        <div className="device-item-actions">
+                          <Button
+                            type="button"
+                            variant="primary"
+                            disabled={savingDevice}
+                            onClick={() =>
+                              handleSaveDevice(index)
+                            }
+                          >
+                            {savingDevice
+                              ? 'Saving…'
+                              : 'Save'}
+                          </Button>
+
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={savingDevice}
+                            onClick={handleCancelEditDevice}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="device-manage-name">
+                          {device}
+                        </span>
+
+                        <div className="device-item-actions">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={savingDevice}
+                            onClick={() =>
+                              handleStartEditDevice(index)
+                            }
+                          >
+                            Edit
+                          </Button>
+
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={savingDevice}
+                            onClick={() =>
+                              handleDeleteDevice(index)
+                            }
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <form
+              className="add-device-form"
+              onSubmit={handleAddDevice}
+              noValidate
+            >
+              <h3>Add device</h3>
+
+              <div className="add-device-controls">
+                <div className="add-device-input">
+                  <Input
+                    id="device-name"
+                    label="Device name"
+                    type="text"
+                    value={deviceName}
+                    onChange={(event) =>
+                      setDeviceName(event.target.value)
+                    }
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  variant="secondary"
+                  disabled={savingDevice}
+                >
+                  {savingDevice
+                    ? 'Saving…'
+                    : 'Add device'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        )}
+      </Card>
 
       <SubscriptionNotes
         notes={subscription.notes}
         onSave={async (text) => {
           await updateSubscription(
             subscription.id,
-            { notes: text }
+            {
+              notes: text,
+            },
           )
         }}
         onDelete={async () => {
           await updateSubscription(
             subscription.id,
-            { notes: '' }
+            {
+              notes: '',
+            },
           )
         }}
       />
 
       <Card className="payment-history">
-        <h2>Payment history</h2>
+        <h2>
+          {paymentHistoryText}
+        </h2>
 
         {paymentsLoading ? (
-          <p>Loading payment history…</p>
+          <p>
+            {loadingPaymentHistoryText}
+          </p>
         ) : payments.length === 0 ? (
-          <p>No payment history is available.</p>
+          <p>
+            {noPaymentHistoryText}
+          </p>
         ) : (
           <table>
             <thead>
               <tr>
                 <th scope="col">
-                  Payment date
+                  {paymentDateText}
                 </th>
 
                 <th scope="col">
-                  Amount
+                  {amountText}
                 </th>
               </tr>
             </thead>
 
             <tbody>
-              {payments.map((payment) => (
-                <tr key={payment.id}>
-                  <td>
-                    {payment.date}
-                  </td>
+              {payments.map(
+                (payment) => (
+                  <tr key={payment.id}>
+                    <td>
+                      {payment.date}
+                    </td>
 
-                  <td>
-                    {showMoney(payment.amount)}
-                  </td>
-                </tr>
-              ))}
+                    <td>
+                      {showMoney(
+                        payment.amount,
+                      )}
+                    </td>
+                  </tr>
+                ),
+              )}
             </tbody>
           </table>
         )}
@@ -280,7 +772,9 @@ function SubscriptionDetailPage() {
           onSubmit={handleAddPayment}
           noValidate
         >
-          <h3>Add payment</h3>
+          <h3>
+            {addPaymentText}
+          </h3>
 
           {paymentError && (
             <p className="add-payment-error">
@@ -290,23 +784,27 @@ function SubscriptionDetailPage() {
 
           <Input
             id="payment-date"
-            label="Payment date"
+            label={paymentDateText}
             type="date"
             value={paymentDate}
             onChange={(event) =>
-              setPaymentDate(event.target.value)
+              setPaymentDate(
+                event.target.value,
+              )
             }
           />
 
           <Input
             id="payment-amount"
-            label={`Amount (${preferredCurrency})`}
+            label={`${amountText} (${preferredCurrency})`}
             type="number"
             min="0.01"
             step="0.01"
             value={paymentAmount}
             onChange={(event) =>
-              setPaymentAmount(event.target.value)
+              setPaymentAmount(
+                event.target.value,
+              )
             }
           />
 
@@ -315,8 +813,8 @@ function SubscriptionDetailPage() {
             disabled={adding}
           >
             {adding
-              ? 'Adding…'
-              : 'Add payment'}
+              ? addingText
+              : addPaymentText}
           </Button>
         </form>
       </Card>

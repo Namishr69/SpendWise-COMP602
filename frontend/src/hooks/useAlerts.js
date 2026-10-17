@@ -5,6 +5,15 @@ import {
 } from '../utils/budgetCalculations.js'
 
 import { formatCurrency } from '../utils/formatCurrency.js'
+import { useTranslations } from './useTranslations.js'
+
+const ALERT_TEXT = [
+  "You've spent",
+  'of your',
+  'monthly budget',
+  'cancelled subscription',
+  'cancelled subscriptions',
+]
 
 export function useAlerts(
   subscriptions,
@@ -12,18 +21,31 @@ export function useAlerts(
   preferredCurrency,
   rate,
 ) {
-  const activeSubscriptions = subscriptions.filter(
-    (subscription) =>
-      subscription.status?.toLowerCase() !== 'cancelled',
-  )
+  const [
+    youveSpentText,
+    ofYourText,
+    monthlyBudgetText,
+    cancelledSubscriptionText,
+    cancelledSubscriptionsText,
+  ] = useTranslations(ALERT_TEXT)
+
+  const activeSubscriptions =
+    subscriptions.filter(
+      (subscription) =>
+        subscription.status?.toLowerCase() !==
+        'cancelled',
+    )
 
   const totalMonthlySpend =
-    calculateTotalMonthlySpend(subscriptions)
+    calculateTotalMonthlySpend(
+      subscriptions,
+    )
 
-  const nearBudgetLimit = isNearBudgetLimit(
-    totalMonthlySpend,
-    budget,
-  )
+  const nearBudgetLimit =
+    isNearBudgetLimit(
+      totalMonthlySpend,
+      budget,
+    )
 
   const showMoney = (amount) =>
     formatCurrency(
@@ -41,11 +63,11 @@ export function useAlerts(
       )
 
     alerts.push(
-      `You've spent ${showMoney(
+      `${youveSpentText} ${showMoney(
         totalMonthlySpend,
-      )} of your ${showMoney(
+      )} ${ofYourText} ${showMoney(
         monthlyBudget,
-      )} monthly budget`,
+      )} ${monthlyBudgetText}`,
     )
   }
 
@@ -55,8 +77,10 @@ export function useAlerts(
 
   if (cancelledCount > 0) {
     alerts.push(
-      `${cancelledCount} cancelled subscription${
-        cancelledCount > 1 ? 's' : ''
+      `${cancelledCount} ${
+        cancelledCount === 1
+          ? cancelledSubscriptionText
+          : cancelledSubscriptionsText
       }`,
     )
   }

@@ -43,6 +43,27 @@
   margin-top: 0;
 }
 
+/* Name + source badge ("From email" / "From bank") sit on one row. */
+.subscription-card__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.subscription-source {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e8efe0;
+  color: #5f6f52;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
 .subscription-card__actions {
   display: flex;
   align-items: center;
@@ -75,4 +96,31 @@
 .subscription-delete:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.subscription-cancel-row {
+  margin-top: 0.75rem;
+}
+
+.subscription-cancel {
+  font-weight: 700;
+  color: var(--color-forest);
+  text-decoration: none;
+}
+
+.subscription-cancel:hover {
+  text-decoration: underline;
+}
+
+/* A web-search fallback, shown when no official link is curated. Deliberately
+   quieter than .subscription-cancel so it does not read as the merchant's own
+   cancellation page. */
+.subscription-cancel--search {
+  font-weight: 600;
+  color: var(--color-ink-soft);
+}
+
+.subscription-cancel-fallback {
+  color: var(--color-ink-soft);
+  font-style: italic;
 }

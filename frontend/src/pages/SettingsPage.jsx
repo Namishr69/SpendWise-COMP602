@@ -1,64 +1,199 @@
 import { useContext, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
 import ConnectBankSection from '../components/ConnectBankSection.jsx'
+import ConnectGmailSection from '../components/ConnectGmailSection.jsx'
 import GmailPriceScanSection from '../components/GmailPriceScanSection.jsx'
+import Button from '../components/ui/Button.jsx'
+import Input from '../components/ui/Input.jsx'
+
 import { AuthContext } from '../context/authContext.js'
 import { CurrencyContext } from '../context/currencyContext.js'
+import { LanguageContext } from '../context/languageContext.js'
 import { BudgetContext } from '../context/BudgetProvider.jsx'
-import { updatePreferredCurrency } from '../api/currencyApi.js'
-import { SUPPORTED_CURRENCIES } from '../constants/currencies.js'
-import './SettingsPage.css'
-import Button from '../components/ui/Button.jsx'
-import { useNavigate } from 'react-router-dom'
-import Input from '../components/ui/Input.jsx'
-import { updateBudget } from '../api/budgetApi.js'
 import { ThemeContext } from '../context/ThemeProvider.jsx'
+
+import { updatePreferredCurrency } from '../api/currencyApi.js'
+import { updatePreferredLanguage } from '../api/languageApi.js'
+import { updateBudget } from '../api/budgetApi.js'
 import { updateDarkMode } from '../api/darkModeApi.js'
 
-const BUDGET_PERIODS = ['Weekly', 'Monthly', 'Yearly']
+import { SUPPORTED_CURRENCIES } from '../constants/currencies.js'
+import { LANGUAGES } from '../constants/languages.js'
+
+import { useTranslations } from '../hooks/useTranslations.js'
+
+import './SettingsPage.css'
+
+const BUDGET_PERIODS = [
+  'Weekly',
+  'Monthly',
+  'Yearly',
+]
+
+const SETTINGS_TEXT = [
+  'Personalise',
+  'Preferred currency',
+  'Choose the currency used to display your subscriptions and spending.',
+  'Preferred language',
+  'Choose the language used to display SpendWise.',
+  'Monthly budget',
+  "Set a recurring spend budget and get alerted when you're close to exceeding it.",
+  'Current budget',
+  'Amount',
+  'Weekly',
+  'Monthly',
+  'Yearly',
+  'Saving...',
+  'Save',
+  'Dark mode',
+  "Switch to a dark theme that's easier on the eyes at night.",
+  'Connected accounts',
+  'Account',
+  'Logging out...',
+  'Logout',
+  'Enter an amount greater than zero.',
+  'Budget saved',
+  'Language preference saved',
+  'Currency preference saved',
+]
 
 function SettingsPage() {
-  const { currentUser, signOut } = useContext(AuthContext)
+  const {
+    currentUser,
+    signOut,
+  } = useContext(AuthContext)
 
   const {
     preferredCurrency,
     setPreferredCurrency,
   } = useContext(CurrencyContext)
 
-  const { budget, setBudget } = useContext(BudgetContext)
+  const {
+    preferredLanguage,
+    setPreferredLanguage,
+  } = useContext(LanguageContext)
 
-  const [isPersonaliseOpen, setIsPersonaliseOpen] = useState(false)
-  const [isBanksOpen, setIsBanksOpen] = useState(false)
+  const {
+    budget,
+    setBudget,
+  } = useContext(BudgetContext)
 
-  const [message, setMessage] = useState('')
-  const [loggingOut, setLoggingOut] = useState(false)
+  const {
+    darkMode,
+    setDarkModeState,
+  } = useContext(ThemeContext)
 
-  const [budgetAmount, setBudgetAmount] = useState(
-    budget?.amount ?? ''
+  const [
+    personaliseText,
+    preferredCurrencyText,
+    currencyDescriptionText,
+    preferredLanguageText,
+    languageDescriptionText,
+    monthlyBudgetText,
+    budgetDescriptionText,
+    currentBudgetText,
+    amountText,
+    weeklyText,
+    monthlyText,
+    yearlyText,
+    savingText,
+    saveText,
+    darkModeText,
+    darkModeDescriptionText,
+    connectedAccountsText,
+    accountText,
+    loggingOutText,
+    logoutText,
+    amountErrorText,
+    budgetSavedText,
+    languageSavedText,
+    currencySavedText,
+  ] = useTranslations(
+    SETTINGS_TEXT,
   )
 
-  const [budgetPeriod, setBudgetPeriod] = useState(
-    budget?.period ?? 'Monthly'
-  )
-  const { darkMode, setDarkModeState } = useContext(ThemeContext)
-  const [savingTheme, setSavingTheme] = useState(false)
+  const [
+    isPersonaliseOpen,
+    setIsPersonaliseOpen,
+  ] = useState(false)
 
-  const [budgetMessage, setBudgetMessage] = useState('')
-  const [budgetError, setBudgetError] = useState('')
-  const [savingBudget, setSavingBudget] = useState(false)
+  const [
+    isBanksOpen,
+    setIsBanksOpen,
+  ] = useState(false)
+
+  const [
+    message,
+    setMessage,
+  ] = useState('')
+
+  const [
+    languageMessage,
+    setLanguageMessage,
+  ] = useState('')
+
+  const [
+    loggingOut,
+    setLoggingOut,
+  ] = useState(false)
+
+  const [
+    budgetAmount,
+    setBudgetAmount,
+  ] = useState(
+    budget?.amount ?? '',
+  )
+
+  const [
+    budgetPeriod,
+    setBudgetPeriod,
+  ] = useState(
+    budget?.period ?? 'Monthly',
+  )
+
+  const [
+    savingTheme,
+    setSavingTheme,
+  ] = useState(false)
+
+  const [
+    budgetMessage,
+    setBudgetMessage,
+  ] = useState('')
+
+  const [
+    budgetError,
+    setBudgetError,
+  ] = useState('')
+
+  const [
+    savingBudget,
+    setSavingBudget,
+  ] = useState(false)
 
   const navigate = useNavigate()
 
   async function handleToggleDarkMode() {
     const newValue = !darkMode
-    setDarkModeState(newValue) // apply immediately, per acceptance test 1
+
+    setDarkModeState(newValue)
     setSavingTheme(true)
+
     try {
-      await updateDarkMode(currentUser, newValue)
+      await updateDarkMode(
+        currentUser,
+        newValue,
+      )
     } catch (error) {
-      console.error('Failed to save dark mode:', error)
-      setDarkModeState(!newValue) // revert on failure
+      console.error(
+        'Failed to save dark mode:',
+        error,
+      )
+
+      setDarkModeState(!newValue)
     } finally {
       setSavingTheme(false)
     }
@@ -71,51 +206,123 @@ function SettingsPage() {
 
     try {
       await signOut()
-      navigate('/login', { replace: true })
+
+      navigate(
+        '/login',
+        {
+          replace: true,
+        },
+      )
     } finally {
       setLoggingOut(false)
     }
   }
 
-  async function handleSaveBudget(event) {
+  async function handleSaveBudget(
+    event,
+  ) {
     event.preventDefault()
 
     setBudgetMessage('')
     setBudgetError('')
 
-    const amount = Number(budgetAmount)
+    const amount =
+      Number(budgetAmount)
 
     if (
       !budgetAmount ||
       Number.isNaN(amount) ||
       amount <= 0
     ) {
-      setBudgetError('Enter an amount greater than zero.')
+      setBudgetError(
+        amountErrorText,
+      )
       return
     }
 
     setSavingBudget(true)
 
     try {
-      const result = await updateBudget(
-        currentUser,
-        amount,
-        budgetPeriod
-      )
+      const result =
+        await updateBudget(
+          currentUser,
+          amount,
+          budgetPeriod,
+        )
 
       setBudget(result.budget)
-      setBudgetMessage('Budget saved')
+
+      setBudgetMessage(
+        budgetSavedText,
+      )
     } catch (error) {
-      setBudgetError(error.message)
+      setBudgetError(
+        error.message,
+      )
     } finally {
       setSavingBudget(false)
     }
   }
 
+  async function handleLanguageChange(
+    event,
+  ) {
+    const newLanguage =
+      event.target.value
+
+    const previousLanguage =
+      preferredLanguage
+
+    setPreferredLanguage(
+      newLanguage,
+    )
+
+    setLanguageMessage('')
+
+    try {
+      await updatePreferredLanguage(
+        currentUser,
+        newLanguage,
+      )
+
+      setLanguageMessage(
+        languageSavedText,
+      )
+    } catch (error) {
+      setPreferredLanguage(
+        previousLanguage,
+      )
+
+      setLanguageMessage(
+        error.message,
+      )
+    }
+  }
+
   const isUnchanged =
     budget &&
-    Number(budgetAmount) === budget.amount &&
-    budgetPeriod === budget.period
+    Number(budgetAmount) ===
+      budget.amount &&
+    budgetPeriod ===
+      budget.period
+
+  function getTranslatedPeriod(
+    period,
+  ) {
+    if (period === 'Weekly') {
+      return weeklyText
+    }
+
+    if (period === 'Monthly') {
+      return monthlyText
+    }
+
+    if (period === 'Yearly') {
+      return yearlyText
+    }
+
+    return period
+  }
 
   return (
     <AppShell activeNav="Settings">
@@ -125,26 +332,38 @@ function SettingsPage() {
           type="button"
           className="settings-section-toggle"
           onClick={() =>
-            setIsPersonaliseOpen(!isPersonaliseOpen)
+            setIsPersonaliseOpen(
+              !isPersonaliseOpen,
+            )
           }
-          aria-expanded={isPersonaliseOpen}
+          aria-expanded={
+            isPersonaliseOpen
+          }
         >
-          <span>Personalise</span>
+          <span>
+            {personaliseText}
+          </span>
 
           <span className="settings-section-arrow">
-            {isPersonaliseOpen ? '▲' : '▼'}
+            {isPersonaliseOpen
+              ? '▲'
+              : '▼'}
           </span>
         </button>
 
         {isPersonaliseOpen && (
           <div className="settings-section-content">
+            {/* PREFERRED CURRENCY */}
             <div className="settings-option">
               <div className="settings-option-text">
-                <h3>Preferred currency</h3>
+                <h3>
+                  {preferredCurrencyText}
+                </h3>
 
                 <p>
-                  Choose the currency used to display your
-                  subscriptions and spending.
+                  {
+                    currencyDescriptionText
+                  }
                 </p>
               </div>
 
@@ -152,35 +371,60 @@ function SettingsPage() {
                 <select
                   id="preferred-currency"
                   className="settings-currency-select"
-                  value={preferredCurrency}
-                  onChange={async (event) => {
-                    const newCurrency = event.target.value
+                  value={
+                    preferredCurrency
+                  }
+                  onChange={async (
+                    event,
+                  ) => {
+                    const newCurrency =
+                      event.target
+                        .value
 
-                    setPreferredCurrency(newCurrency)
+                    setPreferredCurrency(
+                      newCurrency,
+                    )
+
                     setMessage('')
 
                     try {
                       await updatePreferredCurrency(
                         currentUser,
-                        newCurrency
+                        newCurrency,
                       )
 
                       setMessage(
-                        'Currency preference saved'
+                        currencySavedText,
                       )
-                    } catch (error) {
-                      setMessage(error.message)
+                    } catch (
+                      error
+                    ) {
+                      setMessage(
+                        error.message,
+                      )
                     }
                   }}
                 >
-                  {SUPPORTED_CURRENCIES.map((currency) => (
-                    <option
-                      key={currency.code}
-                      value={currency.code}
-                    >
-                      {currency.code} - {currency.name}
-                    </option>
-                  ))}
+                  {SUPPORTED_CURRENCIES.map(
+                    (currency) => (
+                      <option
+                        key={
+                          currency.code
+                        }
+                        value={
+                          currency.code
+                        }
+                      >
+                        {
+                          currency.code
+                        }{' '}
+                        -{' '}
+                        {
+                          currency.name
+                        }
+                      </option>
+                    ),
+                  )}
                 </select>
 
                 {message && (
@@ -191,28 +435,102 @@ function SettingsPage() {
               </div>
             </div>
 
+            {/* PREFERRED LANGUAGE */}
             <div
               className="settings-option"
-              style={{ marginTop: 20 }}
+              style={{
+                marginTop: 20,
+              }}
             >
               <div className="settings-option-text">
-                <h3>Monthly budget</h3>
+                <h3>
+                  {
+                    preferredLanguageText
+                  }
+                </h3>
 
                 <p>
-                  Set a recurring spend budget and get alerted
-                  when you're close to exceeding it.
+                  {
+                    languageDescriptionText
+                  }
+                </p>
+              </div>
+
+              <div>
+                <select
+                  id="preferred-language"
+                  className="settings-currency-select"
+                  value={
+                    preferredLanguage
+                  }
+                  onChange={
+                    handleLanguageChange
+                  }
+                >
+                  {LANGUAGES.map(
+                    (language) => (
+                      <option
+                        key={
+                          language.code
+                        }
+                        value={
+                          language.code
+                        }
+                      >
+                        {
+                          language.name
+                        }
+                      </option>
+                    ),
+                  )}
+                </select>
+
+                {languageMessage && (
+                  <p className="settings-message">
+                    {
+                      languageMessage
+                    }
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* MONTHLY BUDGET */}
+            <div
+              className="settings-option"
+              style={{
+                marginTop: 20,
+              }}
+            >
+              <div className="settings-option-text">
+                <h3>
+                  {monthlyBudgetText}
+                </h3>
+
+                <p>
+                  {
+                    budgetDescriptionText
+                  }
                 </p>
 
                 {budget && (
                   <p className="settings-budget-current">
-                    Current budget: {budget.amount} /{' '}
-                    {budget.period}
+                    {
+                      currentBudgetText
+                    }
+                    :{' '}
+                    {budget.amount} /{' '}
+                    {getTranslatedPeriod(
+                      budget.period,
+                    )}
                   </p>
                 )}
               </div>
 
               <form
-                onSubmit={handleSaveBudget}
+                onSubmit={
+                  handleSaveBudget
+                }
                 className="settings-budget-form"
               >
                 <Input
@@ -220,40 +538,67 @@ function SettingsPage() {
                   type="number"
                   min="0.01"
                   step="0.01"
-                  placeholder="Amount"
-                  value={budgetAmount}
-                  onChange={(event) =>
-                    setBudgetAmount(event.target.value)
+                  placeholder={
+                    amountText
                   }
-                  error={budgetError}
+                  value={
+                    budgetAmount
+                  }
+                  onChange={(
+                    event,
+                  ) =>
+                    setBudgetAmount(
+                      event.target
+                        .value,
+                    )
+                  }
+                  error={
+                    budgetError
+                  }
                 />
 
                 <select
                   className="settings-currency-select"
-                  value={budgetPeriod}
-                  onChange={(event) =>
-                    setBudgetPeriod(event.target.value)
+                  value={
+                    budgetPeriod
+                  }
+                  onChange={(
+                    event,
+                  ) =>
+                    setBudgetPeriod(
+                      event.target
+                        .value,
+                    )
                   }
                 >
-                  {BUDGET_PERIODS.map((period) => (
-                    <option
-                      key={period}
-                      value={period}
-                    >
-                      {period}
-                    </option>
-                  ))}
+                  {BUDGET_PERIODS.map(
+                    (period) => (
+                      <option
+                        key={
+                          period
+                        }
+                        value={
+                          period
+                        }
+                      >
+                        {getTranslatedPeriod(
+                          period,
+                        )}
+                      </option>
+                    ),
+                  )}
                 </select>
 
                 <Button
                   type="submit"
                   disabled={
-                    isUnchanged || savingBudget
+                    isUnchanged ||
+                    savingBudget
                   }
                 >
                   {savingBudget
-                    ? 'Saving...'
-                    : 'Save'}
+                    ? savingText
+                    : saveText}
                 </Button>
               </form>
             </div>
@@ -264,19 +609,39 @@ function SettingsPage() {
               </p>
             )}
 
-            <div className="settings-option" style={{ marginTop: 20 }}>
+            {/* DARK MODE */}
+            <div
+              className="settings-option"
+              style={{
+                marginTop: 20,
+              }}
+            >
               <div className="settings-option-text">
-                <h3>Dark mode</h3>
-                <p>Switch to a dark theme that's easier on the eyes at night.</p>
+                <h3>
+                  {darkModeText}
+                </h3>
+
+                <p>
+                  {
+                    darkModeDescriptionText
+                  }
+                </p>
               </div>
 
               <label className="settings-toggle">
                 <input
                   type="checkbox"
-                  checked={darkMode}
-                  onChange={handleToggleDarkMode}
-                  disabled={savingTheme}
+                  checked={
+                    darkMode
+                  }
+                  onChange={
+                    handleToggleDarkMode
+                  }
+                  disabled={
+                    savingTheme
+                  }
                 />
+
                 <span className="settings-toggle__slider"></span>
               </label>
             </div>
@@ -285,33 +650,52 @@ function SettingsPage() {
       </Card>
 
       {/* CONNECTED ACCOUNTS */}
-      <Card style={{ marginTop: 16 }}>
+      <Card
+        style={{
+          marginTop: 16,
+        }}
+      >
         <button
           type="button"
           className="settings-section-toggle"
           onClick={() =>
-            setIsBanksOpen(!isBanksOpen)
+            setIsBanksOpen(
+              !isBanksOpen,
+            )
           }
-          aria-expanded={isBanksOpen}
+          aria-expanded={
+            isBanksOpen
+          }
         >
-          <span>Connected accounts</span>
+          <span>
+            {connectedAccountsText}
+          </span>
 
           <span className="settings-section-arrow">
-            {isBanksOpen ? '▲' : '▼'}
+            {isBanksOpen
+              ? '▲'
+              : '▼'}
           </span>
         </button>
 
         {isBanksOpen && (
           <div className="settings-section-content">
             <ConnectBankSection />
+            <ConnectGmailSection />
             <GmailPriceScanSection />
           </div>
         )}
       </Card>
 
       {/* ACCOUNT */}
-      <Card style={{ marginTop: 16 }}>
-        <h3>Account</h3>
+      <Card
+        style={{
+          marginTop: 16,
+        }}
+      >
+        <h3>
+          {accountText}
+        </h3>
 
         <p
           style={{
@@ -328,8 +712,8 @@ function SettingsPage() {
           disabled={loggingOut}
         >
           {loggingOut
-            ? 'Logging out...'
-            : 'Logout'}
+            ? loggingOutText
+            : logoutText}
         </Button>
       </Card>
     </AppShell>

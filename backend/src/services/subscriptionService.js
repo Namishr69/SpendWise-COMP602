@@ -21,8 +21,8 @@ const subscriptionService = {
         if (!name) {
             throw new Error('Name is required');
         }
-        if (!Number.isFinite(amount) || amount <= 0) {
-            throw new Error('Amount must be greater than zero');
+        if (!Number.isFinite(amount) || amount < 0) {
+            throw new Error('Amount must be zero or greater');
         }
 
         const subscriptionDate = (data.subscriptionDate || '').trim();
@@ -35,6 +35,7 @@ const subscriptionService = {
             subscriptionDate,
             status: (data.status || 'Active').trim(),
             notes: (data.notes || '').trim().slice(0, 500),
+            devices: [],
             createdAt: new Date().toISOString(),
         };
 
@@ -68,8 +69,8 @@ const subscriptionService = {
 
         if (changes.amount !== undefined) {
             const amount = Number(changes.amount);
-            if (!Number.isFinite(amount) || amount <= 0) {
-                throw new Error('Amount must be greater than zero');
+            if (!Number.isFinite(amount) || amount < 0) {
+                throw new Error('Amount must be zero or greater');
             }
             update.amount = amount;
         }
@@ -77,14 +78,27 @@ const subscriptionService = {
         if (changes.billingCycle !== undefined) {
             update.billingCycle = String(changes.billingCycle).trim();
         }
+
         if (changes.nextPaymentDate !== undefined) {
             update.nextPaymentDate = String(changes.nextPaymentDate).trim();
         }
+
         if (changes.status !== undefined) {
             update.status = String(changes.status).trim();
         }
+
         if (changes.notes !== undefined) {
             update.notes = String(changes.notes).trim().slice(0, 500);
+        }
+
+        if (changes.devices !== undefined) {
+            if (!Array.isArray(changes.devices)) {
+                throw new Error('Devices must be a list');
+            }
+
+            update.devices = changes.devices
+                .map((device) => String(device).trim())
+                .filter((device) => device.length > 0);
         }
 
         if (Object.keys(update).length === 0) {
@@ -99,20 +113,24 @@ const subscriptionService = {
         if (!existing) {
             throw new Error('Subscription not found');
         }
+
         await subscriptionRepo.remove(userId, subscriptionId);
         await priceAlertService.removeAlertsForSubscription(userId, subscriptionId);
     },
 
     async listPayments(userId, subscriptionId) {
         const subscription = await subscriptionRepo.getById(userId, subscriptionId);
+
         if (!subscription) {
             throw new Error('Subscription not found');
         }
+
         return await subscriptionRepo.listPayments(userId, subscriptionId);
     },
 
     async createPayment(userId, subscriptionId, data) {
         const subscription = await subscriptionRepo.getById(userId, subscriptionId);
+
         if (!subscription) {
             throw new Error('Subscription not found');
         }
@@ -123,6 +141,7 @@ const subscriptionService = {
         if (!date) {
             throw new Error('Date is required');
         }
+
         if (!Number.isFinite(amount) || amount <= 0) {
             throw new Error('Amount must be greater than zero');
         }

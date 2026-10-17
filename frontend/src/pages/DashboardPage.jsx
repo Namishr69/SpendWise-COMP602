@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { onAuthStateChanged } from 'firebase/auth'
 
@@ -11,15 +11,14 @@ import { useSubscriptions } from '../context/subscriptionsContext.js'
 import { convertCurrency } from '../api/exchangeRateApi.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
 import { normalizeBudgetToMonthly } from '../utils/budgetCalculations.js'
+import { sourceLabel } from '../utils/subscriptionSource.js'
 import { getDashboard } from '../api/bankDataApi.js'
 import { useAlerts } from '../hooks/useAlerts.js'
 import { useCurrencyRate } from '../hooks/useCurrencyRate.js'
-import { useContext } from 'react'
+import { useTranslations } from '../hooks/useTranslations.js'
 
 import './DashboardPage.css'
 
-// Shown before bank data loads and whenever the user is signed out or not yet
-// connected, so the page always renders sane zeros instead of crashing.
 const EMPTY_DASHBOARD = {
   currency: 'NZD',
   hasData: false,
@@ -32,6 +31,39 @@ const EMPTY_DASHBOARD = {
   upcomingBills: [],
   recentTransactions: [],
 }
+
+const DASHBOARD_TEXT = [
+  'Loading dashboard...',
+  'Could not load subscriptions:',
+  'Could not load your bank data:',
+  'No bank data yet',
+  'Connect your bank in Settings to see spending, upcoming bills and automatically detected subscriptions.',
+  'Spent this month',
+  'Active subs',
+  'Due this week',
+  'Detected subs',
+  'Alerts',
+  'My Subscriptions',
+  'No subscriptions yet',
+  'Add your first subscription to start tracking your spending.',
+  '+ Add subscription',
+  'Current Budget',
+  'per month',
+  'spent so far',
+  'No budget set. Add one in Settings.',
+  'No alerts right now.',
+  'Upcoming bills',
+  'Due',
+  'Recent activity',
+
+  // Predefined subscription and budget values.
+  'Monthly',
+  'Weekly',
+  'Quarterly',
+  'Yearly',
+  'Active',
+  'Cancelled',
+]
 
 function formatDate(iso) {
   if (!iso) return ''
@@ -57,7 +89,41 @@ function DashboardPage() {
     error: subsError,
   } = useSubscriptions()
 
-  const { preferredCurrency, rate } = useCurrencyRate()
+  const {
+    preferredCurrency,
+    rate,
+  } = useCurrencyRate()
+
+  const [
+    loadingDashboardText,
+    subscriptionsErrorText,
+    bankErrorText,
+    noBankDataText,
+    connectBankText,
+    spentThisMonthText,
+    activeSubsText,
+    dueThisWeekText,
+    detectedSubsText,
+    alertsText,
+    mySubscriptionsText,
+    noSubscriptionsText,
+    addFirstSubscriptionText,
+    addSubscriptionText,
+    currentBudgetText,
+    perMonthText,
+    spentSoFarText,
+    noBudgetText,
+    noAlertsText,
+    upcomingBillsText,
+    dueText,
+    recentActivityText,
+    monthlyText,
+    weeklyText,
+    quarterlyText,
+    yearlyText,
+    activeText,
+    cancelledText,
+  ] = useTranslations(DASHBOARD_TEXT)
 
   const showMoney = (amount) =>
     formatCurrency(
@@ -65,16 +131,61 @@ function DashboardPage() {
       preferredCurrency,
     )
 
+  function translatePeriod(period) {
+    switch (period?.toLowerCase()) {
+      case 'monthly':
+        return monthlyText
+
+      case 'weekly':
+        return weeklyText
+
+      case 'quarterly':
+        return quarterlyText
+
+      case 'yearly':
+      case 'annual':
+      case 'annually':
+        return yearlyText
+
+      default:
+        return period || ''
+    }
+  }
+
+  function translateStatus(status) {
+    switch (status?.toLowerCase()) {
+      case 'cancelled':
+      case 'canceled':
+        return cancelledText
+
+      case 'active':
+        return activeText
+
+      default:
+        return status || activeText
+    }
+  }
+
   // Bank-synced figures from ANZ, kept separate from the manually tracked
   // subscriptions above so one failing never blanks the other.
-  const [dashboard, setDashboard] = useState(EMPTY_DASHBOARD)
-  const [bankLoading, setBankLoading] = useState(true)
-  const [bankError, setBankError] = useState(null)
+  const [dashboard, setDashboard] =
+    useState(EMPTY_DASHBOARD)
+
+  const [bankLoading, setBankLoading] =
+    useState(true)
+
+  const [bankError, setBankError] =
+    useState(null)
 
   // Bank figures converted into the user's preferred currency.
-  const [bankStats, setBankStats] = useState(null)
-  const [bills, setBills] = useState([])
-  const [transactions, setTransactions] = useState([])
+  const [bankStats, setBankStats] =
+    useState(null)
+
+  const [bills, setBills] =
+    useState([])
+
+  const [transactions, setTransactions] =
+    useState([])
 
   // Fetch once we know who is signed in — mirrors SubscriptionsProvider so the
   // Firebase ID token is available when the request goes out.
@@ -125,7 +236,8 @@ function DashboardPage() {
     let cancelled = false
 
     async function convert() {
-      const source = dashboard.currency || 'NZD'
+      const source =
+        dashboard.currency || 'NZD'
 
       const {
         stats: s,
@@ -141,32 +253,47 @@ function DashboardPage() {
         )
 
       try {
-        const [spent, due] = await Promise.all([
-          toPreferred(s.spentThisMonth),
-          toPreferred(s.dueThisWeek),
-        ])
-
-        const convertedBills = await Promise.all(
-          upcomingBills.map(async (bill) => ({
-            ...bill,
-            amount: await toPreferred(
-              bill.amount,
-              bill.currency,
+        const [spent, due] =
+          await Promise.all([
+            toPreferred(
+              s.spentThisMonth,
             ),
-            currency: preferredCurrency,
-          })),
-        )
-
-        const convertedTxns = await Promise.all(
-          recentTransactions.map(async (transaction) => ({
-            ...transaction,
-            amount: await toPreferred(
-              transaction.amount,
-              transaction.currency,
+            toPreferred(
+              s.dueThisWeek,
             ),
-            currency: preferredCurrency,
-          })),
-        )
+          ])
+
+        const convertedBills =
+          await Promise.all(
+            upcomingBills.map(
+              async (bill) => ({
+                ...bill,
+                amount:
+                  await toPreferred(
+                    bill.amount,
+                    bill.currency,
+                  ),
+                currency:
+                  preferredCurrency,
+              }),
+            ),
+          )
+
+        const convertedTxns =
+          await Promise.all(
+            recentTransactions.map(
+              async (transaction) => ({
+                ...transaction,
+                amount:
+                  await toPreferred(
+                    transaction.amount,
+                    transaction.currency,
+                  ),
+                currency:
+                  preferredCurrency,
+              }),
+            ),
+          )
 
         if (cancelled) {
           return
@@ -175,12 +302,16 @@ function DashboardPage() {
         setBankStats({
           spentThisMonth: spent,
           dueThisWeek: due,
-          detectedSubs: s.detectedSubs,
-          currency: preferredCurrency,
+          detectedSubs:
+            s.detectedSubs,
+          currency:
+            preferredCurrency,
         })
 
         setBills(convertedBills)
-        setTransactions(convertedTxns)
+        setTransactions(
+          convertedTxns,
+        )
       } catch (err) {
         console.error(
           'Currency conversion failed:',
@@ -193,14 +324,19 @@ function DashboardPage() {
         }
 
         setBankStats({
-          spentThisMonth: s.spentThisMonth,
-          dueThisWeek: s.dueThisWeek,
-          detectedSubs: s.detectedSubs,
+          spentThisMonth:
+            s.spentThisMonth,
+          dueThisWeek:
+            s.dueThisWeek,
+          detectedSubs:
+            s.detectedSubs,
           currency: source,
         })
 
         setBills(upcomingBills)
-        setTransactions(recentTransactions)
+        setTransactions(
+          recentTransactions,
+        )
       }
     }
 
@@ -209,7 +345,10 @@ function DashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [dashboard, preferredCurrency])
+  }, [
+    dashboard,
+    preferredCurrency,
+  ])
 
   const {
     alerts,
@@ -226,7 +365,9 @@ function DashboardPage() {
   if (subsLoading) {
     return (
       <AppShell activeNav="Dashboard">
-        <p>Loading dashboard…</p>
+        <p>
+          {loadingDashboardText}
+        </p>
       </AppShell>
     )
   }
@@ -234,48 +375,62 @@ function DashboardPage() {
   const now = new Date()
 
   const weekFromNow = new Date(
-    now.getTime() + 7 * 24 * 60 * 60 * 1000,
+    now.getTime() +
+      7 * 24 * 60 * 60 * 1000,
   )
 
-  const dueThisWeekTotal = activeSubscriptions
-    .filter((subscription) => {
-      if (!subscription.nextPaymentDate) {
-        return false
-      }
+  const dueThisWeekTotal =
+    activeSubscriptions
+      .filter((subscription) => {
+        if (
+          !subscription.nextPaymentDate
+        ) {
+          return false
+        }
 
-      const due = new Date(
-        subscription.nextPaymentDate,
+        const due = new Date(
+          subscription.nextPaymentDate,
+        )
+
+        return (
+          due >= now &&
+          due <= weekFromNow
+        )
+      })
+      .reduce(
+        (sum, subscription) =>
+          sum +
+          (Number(
+            subscription.amount,
+          ) || 0),
+        0,
       )
 
-      return due >= now && due <= weekFromNow
-    })
-    .reduce(
-      (sum, subscription) =>
-        sum +
-        (Number(subscription.amount) || 0),
-      0,
-    )
-
-  const sorted = [...subscriptions].sort(
-    (a, b) => a.name.localeCompare(b.name),
+  const sorted = [
+    ...subscriptions,
+  ].sort((a, b) =>
+    a.name.localeCompare(b.name),
   )
 
   // Prefer the bank's spend figure once a connection has synced.
   // Otherwise use manually tracked subscription spending.
   const spentDisplay =
-    dashboard.hasData && bankStats
+    dashboard.hasData &&
+    bankStats
       ? formatCurrency(
           bankStats.spentThisMonth,
           bankStats.currency,
         )
-      : showMoney(totalMonthlySpend)
+      : showMoney(
+          totalMonthlySpend,
+        )
 
   return (
     <AppShell activeNav="Dashboard">
       {subsError && (
         <Card className="dashboard-notice">
           <p>
-            Could not load subscriptions:{' '}
+            {subscriptionsErrorText}{' '}
             {subsError.message}
           </p>
         </Card>
@@ -284,7 +439,7 @@ function DashboardPage() {
       {bankError && (
         <Card className="dashboard-notice">
           <p>
-            Could not load your bank data:{' '}
+            {bankErrorText}{' '}
             {bankError.message}
           </p>
         </Card>
@@ -294,13 +449,12 @@ function DashboardPage() {
         !bankError &&
         !dashboard.hasData && (
           <Card className="dashboard-notice">
-            <h3>No bank data yet</h3>
+            <h3>
+              {noBankDataText}
+            </h3>
 
             <p>
-              Connect your bank in{' '}
-              <strong>Settings</strong> to see
-              spending, upcoming bills and
-              automatically detected subscriptions.
+              {connectBankText}
             </p>
           </Card>
         )}
@@ -312,7 +466,9 @@ function DashboardPage() {
           tone="forest"
           className="dashboard-stat"
         >
-          <p>Spent this month</p>
+          <p>
+            {spentThisMonthText}
+          </p>
 
           <h2 className="money">
             {spentDisplay}
@@ -323,10 +479,14 @@ function DashboardPage() {
           tone="forest"
           className="dashboard-stat"
         >
-          <p>Active subs</p>
+          <p>
+            {activeSubsText}
+          </p>
 
           <h2>
-            {activeSubscriptions.length}
+            {
+              activeSubscriptions.length
+            }
           </h2>
         </Card>
 
@@ -334,10 +494,14 @@ function DashboardPage() {
           tone="forest"
           className="dashboard-stat"
         >
-          <p>Due this week</p>
+          <p>
+            {dueThisWeekText}
+          </p>
 
           <h2 className="money">
-            {showMoney(dueThisWeekTotal)}
+            {showMoney(
+              dueThisWeekTotal,
+            )}
           </h2>
         </Card>
 
@@ -347,12 +511,13 @@ function DashboardPage() {
         >
           <p>
             {dashboard.hasData
-              ? 'Detected subs'
-              : 'Alerts'}
+              ? detectedSubsText
+              : alertsText}
           </p>
 
           <h2>
-            {dashboard.hasData && bankStats
+            {dashboard.hasData &&
+            bankStats
               ? bankStats.detectedSubs
               : alerts.length}
           </h2>
@@ -361,7 +526,9 @@ function DashboardPage() {
 
       <div className="dashboard-grid">
         <Card>
-          <h3>My Subscriptions</h3>
+          <h3>
+            {mySubscriptionsText}
+          </h3>
 
           {sorted.length === 0 ? (
             <div className="dashboard-empty">
@@ -440,73 +607,92 @@ function DashboardPage() {
               </svg>
 
               <p className="dashboard-empty__title">
-                No subscriptions yet
+                {noSubscriptionsText}
               </p>
 
               <p className="dashboard-empty__hint">
-                Add your first subscription to
-                start tracking your spending.
+                {
+                  addFirstSubscriptionText
+                }
               </p>
 
               <Link
                 to="/subscriptions/new"
                 className="dashboard-empty__cta"
               >
-                + Add subscription
+                {addSubscriptionText}
               </Link>
             </div>
           ) : (
             <ul className="dashboard-subs">
-              {sorted.map((subscription) => (
-                <li
-                  key={subscription.id}
-                  className="dashboard-subs__item"
-                >
-                  <Link
-                    to={`/subscriptions/${subscription.id}`}
-                    className="dashboard-subs__link"
+              {sorted.map(
+                (subscription) => (
+                  <li
+                    key={
+                      subscription.id
+                    }
+                    className="dashboard-subs__item"
                   >
-                    <div>
-                      <p className="dashboard-subs__name">
-                        {subscription.name}
-                      </p>
-
-                      <p className="dashboard-subs__meta">
-                        {showMoney(
-                          subscription.amount,
-                        )}{' '}
-                        /{' '}
-                        {subscription.billingCycle?.toLowerCase()}
-                      </p>
-                    </div>
-
-                    <span
-                      className={`dashboard-subs__status dashboard-subs__status--${
-                        subscription.status?.toLowerCase() ===
-                        'cancelled'
-                          ? 'cancelled'
-                          : 'active'
-                      }`}
+                    <Link
+                      to={`/subscriptions/${subscription.id}`}
+                      className="dashboard-subs__link"
                     >
-                      {subscription.status ||
-                        'Active'}
-                    </span>
-                  </Link>
-                </li>
-              ))}
+                      <div>
+                        <p className="dashboard-subs__name">
+                          {
+                            subscription.name
+                          }
+                        </p>
+
+                        <p className="dashboard-subs__meta">
+                          {showMoney(
+                            subscription.amount,
+                          )}{' '}
+                          /{' '}
+                          {translatePeriod(
+                            subscription.billingCycle,
+                          )}
+                        </p>
+                      </div>
+
+                      <span
+                        className={`dashboard-subs__status dashboard-subs__status--${
+                          subscription.status?.toLowerCase() ===
+                            'cancelled' ||
+                          subscription.status?.toLowerCase() ===
+                            'canceled'
+                            ? 'cancelled'
+                            : 'active'
+                        }`}
+                      >
+                        {translateStatus(
+                          subscription.status,
+                        )}
+                      </span>
+                    </Link>
+                  </li>
+                ),
+              )}
             </ul>
           )}
         </Card>
 
         <div className="dashboard-side">
           <Card>
-            <h3>Current Budget</h3>
+            <h3>
+              {currentBudgetText}
+            </h3>
 
             {budget ? (
               <>
                 <p className="dashboard-budget-amount">
-                  {showMoney(budget.amount)} /{' '}
-                  {budget.period}
+                  {showMoney(
+                    budget.amount,
+                  )}{' '}
+                  /{' '}
+                  {translatePeriod(
+                    budget.period,
+                  )}
                 </p>
 
                 <p className="dashboard-budget-equivalent">
@@ -517,7 +703,7 @@ function DashboardPage() {
                       budget.period,
                     ),
                   )}{' '}
-                  per month
+                  {perMonthText}
                 </p>
 
                 <div className="dashboard-budget-bar">
@@ -545,70 +731,84 @@ function DashboardPage() {
                   {showMoney(
                     totalMonthlySpend,
                   )}{' '}
-                  spent so far
+                  {spentSoFarText}
                 </p>
               </>
             ) : (
               <p>
-                No budget set. Add one in Settings.
+                {noBudgetText}
               </p>
             )}
           </Card>
 
           <Card>
-            <h3>Alerts</h3>
+            <h3>{alertsText}</h3>
 
             <div className="dashboard-chips">
               {alerts.length === 0 ? (
-                <p>No alerts right now.</p>
+                <p>
+                  {noAlertsText}
+                </p>
               ) : (
-                alerts.map((alert) => (
-                  <span
-                    key={alert}
-                    className="dashboard-chip"
-                  >
-                    {alert}
-                  </span>
-                ))
+                alerts.map(
+                  (alert) => (
+                    <span
+                      key={alert}
+                      className="dashboard-chip"
+                    >
+                      {alert}
+                    </span>
+                  ),
+                )
               )}
             </div>
           </Card>
 
           {bills.length > 0 && (
             <Card>
-              <h3>Upcoming bills</h3>
+              <h3>
+                {upcomingBillsText}
+              </h3>
 
               <ul className="dashboard-list">
-                {bills.map((bill) => (
-                  <li
-                    key={`${bill.name}-${bill.due}`}
-                    className="dashboard-list__item"
-                  >
-                    <div>
-                      <p className="dashboard-list__name">
-                        {bill.name}
-                      </p>
+                {bills.map(
+                  (bill) => (
+                    <li
+                      key={`${bill.name}-${bill.due}`}
+                      className="dashboard-list__item"
+                    >
+                      <div>
+                        <p className="dashboard-list__name">
+                          {bill.name}
+                        </p>
 
-                      <p className="dashboard-list__due">
-                        Due {formatDate(bill.due)}
-                      </p>
-                    </div>
+                        <p className="dashboard-list__due">
+                          {dueText}{' '}
+                          {formatDate(
+                            bill.due,
+                          )}
+                        </p>
+                      </div>
 
-                    <span className="money">
-                      {formatCurrency(
-                        bill.amount,
-                        bill.currency,
-                      )}
-                    </span>
-                  </li>
-                ))}
+                      <span className="money">
+                        {formatCurrency(
+                          bill.amount,
+                          bill.currency,
+                        )}
+                      </span>
+                    </li>
+                  ),
+                )}
               </ul>
             </Card>
           )}
 
-          {transactions.length > 0 && (
+          {transactions.length >
+            0 && (
             <Card>
-              <h3>Recent activity</h3>
+              <h3>
+                {recentActivityText}
+              </h3>
 
               <ul className="dashboard-list">
                 {transactions.map(
