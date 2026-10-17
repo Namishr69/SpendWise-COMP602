@@ -7,8 +7,6 @@ import { useSubscriptions } from '../context/subscriptionsContext'
 import { useCurrencyRate } from '../hooks/useCurrencyRate.js'
 import { useTranslations } from '../hooks/useTranslations.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
-import { sourceLabel } from '../utils/subscriptionSource.js'
-import { resolveCancellation } from '../utils/cancellationLinks.js'
 
 import './SubscriptionsPage.css'
 
@@ -43,8 +41,8 @@ function SubscriptionsPage() {
     deleteSubscription,
   } = useSubscriptions()
 
-  const [deleting, setDeleting] =
-    useState(null)
+  const [deleting, setDeleting] = useState(null)
+  const [sortBy, setSortBy] = useState('recent')
 
   const {
     preferredCurrency,
@@ -147,6 +145,28 @@ function SubscriptionsPage() {
     )
   }
 
+  const sortedSubscriptions =
+    sortBy === 'recent'
+      ? subscriptions
+      : [...subscriptions].sort((a, b) => {
+          if (sortBy === 'name') {
+            return (a.name || '').localeCompare(b.name || '')
+          }
+
+          // sortBy === 'renewal'
+          const dateA = a.nextPaymentDate
+            ? new Date(a.nextPaymentDate)
+            : null
+          const dateB = b.nextPaymentDate
+            ? new Date(b.nextPaymentDate)
+            : null
+
+          if (dateA && dateB) return dateA - dateB
+          if (dateA) return -1
+          if (dateB) return 1
+          return 0
+        })
+
   return (
     <AppShell activeNav="Subscriptions">
       <header className="subscriptions-header">
@@ -177,9 +197,28 @@ function SubscriptionsPage() {
           {noSubscriptionsText}
         </p>
       ) : (
-        <section className="subscriptions-grid">
-          {subscriptions.map(
-            (subscription) => (
+        <>
+          <div className="subscriptions-sort">
+            <label
+              className="subscriptions-sort__label"
+              htmlFor="subscriptions-sort"
+            >
+              Sort by
+            </label>
+            <select
+              id="subscriptions-sort"
+              className="subscriptions-sort__select"
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value)}
+            >
+              <option value="recent">Newest</option>
+              <option value="renewal">Renewal date</option>
+              <option value="name">Name (A–Z)</option>
+            </select>
+          </div>
+
+          <section className="subscriptions-grid">
+            {sortedSubscriptions.map((subscription) => (
               <Card
                 key={subscription.id}
                 className="subscription-card"
@@ -261,9 +300,9 @@ function SubscriptionsPage() {
                   </button>
                 </div>
               </Card>
-            ),
-          )}
-        </section>
+            ))}
+          </section>
+        </>
       )}
     </AppShell>
   )
