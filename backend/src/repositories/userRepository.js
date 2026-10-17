@@ -27,6 +27,17 @@ const userRepository = {
         return preferredCurrency;
     },
 
+    async updatePreferredLanguage(userId, preferredLanguage) {
+        await usersCollection.doc(userId).set(
+            {
+                preferredLanguage,
+            },
+            { merge: true }
+        );
+
+        return preferredLanguage;
+    },
+
     async updateBudget(userId, budget) {
         await usersCollection.doc(userId).set(
             {
@@ -38,7 +49,7 @@ const userRepository = {
         return budget;
     },
 
-        async updateDarkMode(userId, darkMode) {
+    async updateDarkMode(userId, darkMode) {
         await usersCollection.doc(userId).set(
             {
                 darkMode,
@@ -49,4 +60,5 @@ const userRepository = {
         return darkMode;
     },
 };
+
 export default userRepository;

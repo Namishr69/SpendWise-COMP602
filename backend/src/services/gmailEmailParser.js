@@ -218,29 +218,73 @@ function merchantFromSubject(subject) {
 // ── Amount extraction ────────────────────────────────────────────────────────
 
 /**
- * Scans `text` for the first dollar/NZD/AUD amount that looks like a charge.
+ * Scans `text` for the money amount that was actually charged.
  * Returns a positive number or null.
  *
  * Accepted formats (case-insensitive):
  *   $12.99   NZ$12.99   NZD 12.99   AU$12.99   AUD 12.99   USD 12.99
+ *   $1,299.00                      (thousands separators)
+ *
+ * Picking the right amount matters as much as finding one. A receipt usually
+ * contains several: line items, GST, a discount, a loyalty balance. The
+ * selection rules below prefer a labelled total, then ignore anything that
+ * reads as marketing, and only then fall back to the largest figure.
  */
-const AMOUNT_RE = /(?:NZ\$|AU\$|US\$|NZD|AUD|USD|\$)\s*(\d{1,6}(?:\.\d{2})?)/gi;
+const AMOUNT_RE =
+  /(?:NZ\$|AU\$|US\$|NZD|AUD|USD|\$)\s*(\d{1,3}(?:,\d{3})+(?:\.\d{2})?|\d{1,6}(?:\.\d{2})?)/gi;
+
+// Marks an amount as the real charge. "subtotal" and "sub-total" are excluded
+// by the lookbehind, since the subtotal is not what left the account.
+const TOTAL_CONTEXT_RE =
+  /\b(?:(?<!sub[\s-]?)total|amount\s+(?:paid|due|charged)|you\s+paid|charged|payment\s+of)\b/i;
+
+// Marks an amount as a discount, credit or marketing figure rather than a charge.
+const PROMO_CONTEXT_RE =
+  /\b(?:save|saved|saving|savings|discount|coupon|voucher|credit|rrp|worth|earn|off|was|up\s+to)\b/i;
+
+// How much text before an amount counts as its label.
+const CONTEXT_WINDOW = 30;
 
 function extractAmount(text) {
-  let best = null;
+  const found = [];
   let match;
   AMOUNT_RE.lastIndex = 0;
 
   while ((match = AMOUNT_RE.exec(text)) !== null) {
-    const value = parseFloat(match[1]);
-    if (Number.isFinite(value) && value > 0) {
-      // Prefer the largest amount found — subscription totals are usually
-      // bigger than per-item line prices in itemised receipts.
-      if (best === null || value > best) best = value;
-    }
+    // Thousands separators have to come out before parsing, or "$1,299.00"
+    // would read as 1.
+    const value = parseFloat(match[1].replace(/,/g, ''));
+    if (!Number.isFinite(value) || value <= 0) continue;
+
+    const before = text.slice(
+      Math.max(0, match.index - CONTEXT_WINDOW),
+      match.index
+    );
+
+    found.push({
+      value,
+      isTotal: TOTAL_CONTEXT_RE.test(before),
+      isPromo: PROMO_CONTEXT_RE.test(before),
+    });
   }
 
-  return best;
+  if (found.length === 0) return null;
+
+  const largest = (list) =>
+    list.reduce((a, b) => (b.value > a.value ? b : a)).value;
+
+  // 1. A labelled total is the charge, whatever its size.
+  const totals = found.filter((a) => a.isTotal && !a.isPromo);
+  if (totals.length > 0) return largest(totals);
+
+  // 2. Otherwise ignore marketing figures, so "Save $500 on your next order!
+  //    Total: $49.99" cannot record $500.
+  const genuine = found.filter((a) => !a.isPromo);
+  if (genuine.length > 0) return largest(genuine);
+
+  // 3. Everything read as promotional — fall back rather than drop a receipt
+  //    we would previously have captured.
+  return largest(found);
 }
 
 // ── Date extraction ──────────────────────────────────────────────────────────

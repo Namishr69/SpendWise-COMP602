@@ -10,7 +10,7 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 
-import { CANCELLATION_MERCHANTS, getCancellationLink } from './cancellationLinks.js'
+import { CANCELLATION_MERCHANTS, getCancellationLink, resolveCancellation } from './cancellationLinks.js'
 
 // --- A known merchant returns a working cancellation link --------------------
 
@@ -69,4 +69,44 @@ test('returns null for missing or empty names without throwing', () => {
   assert.equal(getCancellationLink('   '), null)
   assert.equal(getCancellationLink(undefined), null)
   assert.equal(getCancellationLink(null), null)
+})
+
+// --- resolveCancellation: official link, else a search fallback -------------
+
+test('a curated merchant resolves to its official link', () => {
+  assert.deepEqual(resolveCancellation('Netflix'), {
+    kind: 'official',
+    url: 'https://www.netflix.com/cancelplan',
+  })
+})
+
+test('an uncurated merchant resolves to a search instead of a dead end', () => {
+  // The gyms that prompted this: not in the curated list, and most have no
+  // self-service cancel page to curate.
+  for (const name of ['Flex Fitness', 'City Fitness', 'CityFitness', 'Jetts']) {
+    const result = resolveCancellation(name)
+    assert.equal(result.kind, 'search', `${name} should fall back to a search`)
+    assert.match(result.url, /^https:\/\/www\.google\.com\/search\?q=/)
+    assert.doesNotThrow(() => new URL(result.url))
+  }
+})
+
+test('the search query carries the merchant name, url-encoded', () => {
+  const { url } = resolveCancellation('City Fitness')
+  assert.match(url, /City\+Fitness|City%20Fitness/)
+  assert.match(decodeURIComponent(url), /City Fitness cancel subscription/)
+})
+
+test('a search fallback never claims to be the official link', () => {
+  // The UI labels these differently, so the kinds must not be conflated.
+  assert.notEqual(resolveCancellation('Flex Fitness').kind, 'official')
+  // And the curated lookup itself is unchanged — still null for the unlisted.
+  assert.equal(getCancellationLink('Flex Fitness'), null)
+})
+
+test('resolveCancellation returns null when there is no usable name', () => {
+  assert.equal(resolveCancellation(''), null)
+  assert.equal(resolveCancellation('   '), null)
+  assert.equal(resolveCancellation(undefined), null)
+  assert.equal(resolveCancellation(null), null)
 })
