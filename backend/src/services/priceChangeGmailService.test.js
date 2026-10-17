@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import gmailService from './gmailService.js';
+import priceChangeGmailService from './priceChangeGmailService.js';
 
 function respondWith(status, body) {
     globalThis.fetch = vi.fn(async () => ({
@@ -9,7 +9,7 @@ function respondWith(status, body) {
     }));
 }
 
-describe('gmailService.fetchPriceChangeEmails errors', () => {
+describe('priceChangeGmailService.fetchPriceChangeEmails errors', () => {
     const realFetch = globalThis.fetch;
 
     afterEach(() => {
@@ -19,7 +19,7 @@ describe('gmailService.fetchPriceChangeEmails errors', () => {
     it('asks the user to connect again when the token has expired', async () => {
         respondWith(401, {});
 
-        await expect(gmailService.fetchPriceChangeEmails('token')).rejects.toMatchObject({
+        await expect(priceChangeGmailService.fetchPriceChangeEmails('token')).rejects.toMatchObject({
             status: 401,
             message: expect.stringMatching(/connect gmail again/i),
         });
@@ -30,7 +30,7 @@ describe('gmailService.fetchPriceChangeEmails errors', () => {
             error: { message: 'Request had insufficient authentication scopes.' },
         });
 
-        await expect(gmailService.fetchPriceChangeEmails('token')).rejects.toMatchObject({
+        await expect(priceChangeGmailService.fetchPriceChangeEmails('token')).rejects.toMatchObject({
             status: 403,
             message: expect.stringMatching(/tick the gmail permission/i),
         });
@@ -41,7 +41,7 @@ describe('gmailService.fetchPriceChangeEmails errors', () => {
             error: { message: 'Gmail API has not been used in project 123 before or it is disabled.' },
         });
 
-        await expect(gmailService.fetchPriceChangeEmails('token')).rejects.toMatchObject({
+        await expect(priceChangeGmailService.fetchPriceChangeEmails('token')).rejects.toMatchObject({
             status: 502,
             message: expect.stringMatching(/gmail api has not been used/i),
         });

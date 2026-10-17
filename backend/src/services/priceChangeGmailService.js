@@ -91,7 +91,7 @@ function header(payload, name) {
     return found ? found.value : '';
 }
 
-const gmailService = {
+const priceChangeGmailService = {
     /**
      * Returns recent candidate emails as { id, from, subject, body, receivedAt }.
      */
@@ -114,4 +114,4 @@ const gmailService = {
     },
 };
 
-export default gmailService;
+export default priceChangeGmailService;

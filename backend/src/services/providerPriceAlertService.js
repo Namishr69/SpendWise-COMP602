@@ -1,6 +1,6 @@
 import priceAlertRepo from '../repositories/priceAlertRepo.js';
 import subscriptionRepo from '../repositories/subscriptionRepo.js';
-import gmailService from './gmailService.js';
+import priceChangeGmailService from './priceChangeGmailService.js';
 import { parsePriceChangeEmail } from './priceChangeEmailParser.js';
 
 /**
@@ -135,7 +135,7 @@ const providerPriceAlertService = {
      * gmail.readonly OAuth token from the browser; it is not stored.
      */
     async scanGmail(userId, accessToken) {
-        const emails = await gmailService.fetchPriceChangeEmails(accessToken);
+        const emails = await priceChangeGmailService.fetchPriceChangeEmails(accessToken);
         const announcements = emails.map(parsePriceChangeEmail).filter(Boolean);
 
         const [subscriptions, existingAlerts] = await Promise.all([
