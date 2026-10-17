@@ -7,6 +7,8 @@ import { useSubscriptions } from '../context/subscriptionsContext'
 import { useCurrencyRate } from '../hooks/useCurrencyRate.js'
 import { useTranslations } from '../hooks/useTranslations.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
+import { buildSubscriptionsCsv } from '../utils/subscriptionsCsv.js'
+import { downloadCsv } from '../utils/downloadFile.js'
 
 import './SubscriptionsPage.css'
 
@@ -78,6 +80,18 @@ function SubscriptionsPage() {
       (Number(amount) || 0) * rate,
       preferredCurrency,
     )
+
+  function handleExport() {
+    if (subscriptions.length === 0) {
+      window.alert('No subscription data available to export.')
+      return
+    }
+
+    downloadCsv(
+      buildSubscriptionsCsv(subscriptions),
+      'spendwise-subscriptions.csv',
+    )
+  }
 
   function translateBillingCycle(
     billingCycle,
@@ -184,12 +198,22 @@ function SubscriptionsPage() {
           </p>
         </div>
 
-        <Link
-          className="subscriptions-add"
-          to="/subscriptions/new"
-        >
-          {addSubscriptionText}
-        </Link>
+        <div className="subscriptions-header__actions">
+          <button
+            className="subscriptions-export"
+            type="button"
+            onClick={handleExport}
+          >
+            Export CSV
+          </button>
+
+          <Link
+            className="subscriptions-add"
+            to="/subscriptions/new"
+          >
+            {addSubscriptionText}
+          </Link>
+        </div>
       </header>
 
       {subscriptions.length === 0 ? (
