@@ -1,33 +1,90 @@
 import { useContext, useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import {
+  Link,
+  useNavigate,
+  useParams,
+} from 'react-router-dom'
+
 import AppShell from '../layouts/AppShell'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import Input from '../components/ui/Input'
 import { AuthContext } from '../context/authContext.js'
+import { useTranslations } from '../hooks/useTranslations.js'
 import {
   deleteTransaction,
   getTransaction,
   updateTransaction,
 } from '../api/transactionApi'
+
 import './EditSubscriptionPage.css'
+
+const EDIT_TRANSACTION_PAGE_TEXT = [
+  'Loading transaction...',
+  'Could not load transaction:',
+  'Transaction not found',
+  'Return to transactions',
+]
+
+const EDIT_TRANSACTION_FORM_TEXT = [
+  'Cancel and return',
+  'Edit transaction',
+  'Update or delete this manual transaction.',
+  'Transaction name',
+  'Amount',
+  'Transaction date',
+  'Category',
+  'Select a category',
+  'Food',
+  'Transport',
+  'Shopping',
+  'Bills',
+  'Entertainment',
+  'Other',
+  'Deleting...',
+  'Delete transaction',
+  'Cancel',
+  'Save changes',
+  'Enter a transaction name.',
+  'Enter an amount greater than zero.',
+  'Select a transaction date.',
+  'Select a category.',
+  'Delete',
+]
 
 function EditTransactionPage() {
   const { transactionId } = useParams()
   const navigate = useNavigate()
-  const { currentUser } = useContext(AuthContext)
 
-  const [transaction, setTransaction] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState(null)
+  const { currentUser } =
+    useContext(AuthContext)
+
+  const [
+    loadingTransactionText,
+    couldNotLoadText,
+    transactionNotFoundText,
+    returnToTransactionsText,
+  ] = useTranslations(
+    EDIT_TRANSACTION_PAGE_TEXT,
+  )
+
+  const [transaction, setTransaction] =
+    useState(null)
+
+  const [loading, setLoading] =
+    useState(true)
+
+  const [loadError, setLoadError] =
+    useState(null)
 
   useEffect(() => {
     async function loadTransaction() {
       try {
-        const data = await getTransaction(
-          currentUser,
-          transactionId
-        )
+        const data =
+          await getTransaction(
+            currentUser,
+            transactionId,
+          )
 
         setTransaction(data)
       } catch (err) {
@@ -48,7 +105,9 @@ function EditTransactionPage() {
         activeNav="Transactions"
         hideTopbarTitle
       >
-        <p>Loading transaction...</p>
+        <p>
+          {loadingTransactionText}
+        </p>
       </AppShell>
     )
   }
@@ -60,12 +119,13 @@ function EditTransactionPage() {
         hideTopbarTitle
       >
         <p>
-          Could not load transaction:{' '}
-          {loadError || 'Transaction not found'}
+          {couldNotLoadText}{' '}
+          {loadError ||
+            transactionNotFoundText}
         </p>
 
         <Link to="/transactions">
-          ← Return to transactions
+          ← {returnToTransactionsText}
         </Link>
       </AppShell>
     )
@@ -75,8 +135,12 @@ function EditTransactionPage() {
     <EditTransactionForm
       transaction={transaction}
       currentUser={currentUser}
-      onSaved={() => navigate('/transactions')}
-      onDeleted={() => navigate('/transactions')}
+      onSaved={() =>
+        navigate('/transactions')
+      }
+      onDeleted={() =>
+        navigate('/transactions')
+      }
     />
   )
 }
@@ -87,24 +151,63 @@ function EditTransactionForm({
   onSaved,
   onDeleted,
 }) {
-  const [name, setName] = useState(transaction.name)
-  const [amount, setAmount] = useState(
-    String(transaction.amount)
-  )
-  const [date, setDate] = useState(transaction.date)
-  const [category, setCategory] = useState(
-    transaction.category
+  const [
+    cancelAndReturnText,
+    editTransactionText,
+    descriptionText,
+    transactionNameText,
+    amountText,
+    transactionDateText,
+    categoryText,
+    selectCategoryText,
+    foodText,
+    transportText,
+    shoppingText,
+    billsText,
+    entertainmentText,
+    otherText,
+    deletingText,
+    deleteTransactionText,
+    cancelText,
+    saveChangesText,
+    nameErrorText,
+    amountErrorText,
+    dateErrorText,
+    categoryErrorText,
+    deleteText,
+  ] = useTranslations(
+    EDIT_TRANSACTION_FORM_TEXT,
   )
 
-  const [errors, setErrors] = useState({})
-  const [deleting, setDeleting] = useState(false)
+  const [name, setName] = useState(
+    transaction.name,
+  )
+
+  const [amount, setAmount] =
+    useState(
+      String(transaction.amount),
+    )
+
+  const [date, setDate] = useState(
+    transaction.date,
+  )
+
+  const [category, setCategory] =
+    useState(transaction.category)
+
+  const [errors, setErrors] =
+    useState({})
+
+  const [deleting, setDeleting] =
+    useState(false)
 
   function validateForm() {
     const nextErrors = {}
     const numericAmount = Number(amount)
 
     if (!name.trim()) {
-      nextErrors.name = 'Enter a transaction name.'
+      nextErrors.name =
+        nameErrorText
     }
 
     if (
@@ -113,20 +216,24 @@ function EditTransactionForm({
       numericAmount <= 0
     ) {
       nextErrors.amount =
-        'Enter an amount greater than zero.'
+        amountErrorText
     }
 
     if (!date) {
-      nextErrors.date = 'Select a transaction date.'
+      nextErrors.date =
+        dateErrorText
     }
 
     if (!category.trim()) {
-      nextErrors.category = 'Select a category.'
+      nextErrors.category =
+        categoryErrorText
     }
 
     setErrors(nextErrors)
 
-    return Object.keys(nextErrors).length === 0
+    return (
+      Object.keys(nextErrors).length === 0
+    )
   }
 
   async function handleSubmit(event) {
@@ -145,7 +252,7 @@ function EditTransactionForm({
           amount: Number(amount),
           date,
           category,
-        }
+        },
       )
 
       onSaved()
@@ -157,9 +264,10 @@ function EditTransactionForm({
   }
 
   async function handleDelete() {
-    const confirmed = window.confirm(
-      `Delete "${transaction.name}"?`
-    )
+    const confirmed =
+      window.confirm(
+        `${deleteText} "${transaction.name}"?`,
+      )
 
     if (!confirmed) {
       return
@@ -170,7 +278,7 @@ function EditTransactionForm({
 
       await deleteTransaction(
         currentUser,
-        transaction.id
+        transaction.id,
       )
 
       onDeleted()
@@ -190,15 +298,15 @@ function EditTransactionForm({
     >
       <div className="edit-page">
         <Link to="/transactions">
-          ← Cancel and return
+          ← {cancelAndReturnText}
         </Link>
 
         <Card className="edit-form-card">
-          <h1>Edit transaction</h1>
+          <h1>
+            {editTransactionText}
+          </h1>
 
-          <p>
-            Update or delete this manual transaction.
-          </p>
+          <p>{descriptionText}</p>
 
           {errors.form && (
             <p className="edit-form-error">
@@ -212,34 +320,40 @@ function EditTransactionForm({
           >
             <Input
               id="transaction-name"
-              label="Transaction name"
+              label={transactionNameText}
               value={name}
               onChange={(event) =>
-                setName(event.target.value)
+                setName(
+                  event.target.value,
+                )
               }
               error={errors.name}
             />
 
             <Input
               id="transaction-amount"
-              label="Amount"
+              label={amountText}
               type="number"
               min="0.01"
               step="0.01"
               value={amount}
               onChange={(event) =>
-                setAmount(event.target.value)
+                setAmount(
+                  event.target.value,
+                )
               }
               error={errors.amount}
             />
 
             <Input
               id="transaction-date"
-              label="Transaction date"
+              label={transactionDateText}
               type="date"
               value={date}
               onChange={(event) =>
-                setDate(event.target.value)
+                setDate(
+                  event.target.value,
+                )
               }
               error={errors.date}
             />
@@ -249,7 +363,7 @@ function EditTransactionForm({
                 className="sw-field__label"
                 htmlFor="transaction-category"
               >
-                Category
+                {categoryText}
               </label>
 
               <select
@@ -257,35 +371,37 @@ function EditTransactionForm({
                 className="sw-field__input"
                 value={category}
                 onChange={(event) =>
-                  setCategory(event.target.value)
+                  setCategory(
+                    event.target.value,
+                  )
                 }
               >
                 <option value="">
-                  Select a category
+                  {selectCategoryText}
                 </option>
 
                 <option value="Food">
-                  Food
+                  {foodText}
                 </option>
 
                 <option value="Transport">
-                  Transport
+                  {transportText}
                 </option>
 
                 <option value="Shopping">
-                  Shopping
+                  {shoppingText}
                 </option>
 
                 <option value="Bills">
-                  Bills
+                  {billsText}
                 </option>
 
                 <option value="Entertainment">
-                  Entertainment
+                  {entertainmentText}
                 </option>
 
                 <option value="Other">
-                  Other
+                  {otherText}
                 </option>
               </select>
 
@@ -303,16 +419,16 @@ function EditTransactionForm({
                 disabled={deleting}
               >
                 {deleting
-                  ? 'Deleting...'
-                  : 'Delete transaction'}
+                  ? deletingText
+                  : deleteTransactionText}
               </button>
 
               <Link to="/transactions">
-                Cancel
+                {cancelText}
               </Link>
 
               <Button type="submit">
-                Save changes
+                {saveChangesText}
               </Button>
             </div>
           </form>

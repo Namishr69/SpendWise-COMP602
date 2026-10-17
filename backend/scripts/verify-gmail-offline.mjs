@@ -432,6 +432,44 @@ check('looksLikeReceiptEmail true for a receipt subject', looksLikeReceiptEmail(
 check('looksLikeReceiptEmail true for an order subject', looksLikeReceiptEmail('Your order from URBAN THREADS - Order Number: UT-36482') === true);
 check('looksLikeReceiptEmail false for an unrelated subject', looksLikeReceiptEmail('Weekly digest') === false);
 
+// ---- 6b. amount selection ------------------------------------------------
+// A receipt usually holds several figures (line items, GST, a discount, a
+// loyalty balance). These pin down which one is treated as the charge.
+console.log('\n[gmailEmailParser — which amount is the charge]');
+
+function amountFrom(bodyText) {
+  const parsed = parseReceiptEmail({
+    id: 'amt',
+    payload: {
+      mimeType: 'text/plain',
+      headers: [
+        { name: 'From', value: 'Shop <orders@shop.co.nz>' },
+        { name: 'Subject', value: 'Your receipt' },
+        { name: 'Date', value: 'Mon, 06 Oct 2026 10:00:00 +0000' },
+      ],
+      body: { data: b64(bodyText) },
+    },
+  });
+  return parsed ? parsed.amount : null;
+}
+
+for (const [name, bodyText, expected] of [
+  ['a single plain amount', 'Total: $89.00', 89],
+  ['thousands separators are not truncated to 1', 'Order total: $1,299.00', 1299],
+  ['millions with separators', 'Total $12,345,678.90', 12345678.9],
+  ['a labelled total beats a promotional figure', 'Save $500 on your next order! Total: $49.99', 49.99],
+  ['subtotal is not mistaken for the total', 'Subtotal $80.00, GST $12.00, Total $92.00', 92],
+  ['sub-total hyphenated is also excluded', 'Sub-total $80.00 Total $92.00', 92],
+  ['a zero balance does not beat the amount paid', 'Amount due: $0.00 Total paid: $150.00', 150],
+  ['"charged" counts as a total label', 'You were charged $42.50 today', 42.5],
+  ['a discount line is ignored', 'Discount $20.00 Amount paid $30.00', 30],
+  ['with no labels at all the largest still wins', 'Item $10.00 Item $25.00', 25],
+  ['an all-promotional body still yields an amount', 'Save $89 today on orders', 89],
+  ['a number with no currency marker is not an amount', 'Order total: 89.00', null],
+]) {
+  check(`${name} (${expected})`, amountFrom(bodyText) === expected);
+}
+
 // ---- 7. sync (scan inbox → persist to Firestore) --------------------------
 function makeInMemorySubscriptionRepo() {
   const subs = new Map();

@@ -1,28 +1,86 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+
 import AppShell from '../layouts/AppShell'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import Input from '../components/ui/Input'
 import { useSubscriptions } from '../context/subscriptionsContext'
+import { useTranslations } from '../hooks/useTranslations.js'
+
 import './AddSubscriptionPage.css'
+
+const ADD_SUBSCRIPTION_TEXT = [
+  'Cancel and return',
+  'Add subscription',
+  'Track a new recurring payment.',
+  'Subscription name',
+  'Payment amount',
+  'Billing cycle',
+  'Monthly',
+  'Yearly',
+  'Weekly',
+  'Quarterly',
+  'Subscription date',
+  'Next payment date',
+  'Cancel',
+  'Enter a subscription name.',
+  'Enter an amount greater than zero.',
+]
 
 function localToday() {
   const now = new Date()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
+  const month = String(
+    now.getMonth() + 1,
+  ).padStart(2, '0')
+
+  const day = String(
+    now.getDate(),
+  ).padStart(2, '0')
+
   return `${now.getFullYear()}-${month}-${day}`
 }
 
 function AddSubscriptionPage() {
   const navigate = useNavigate()
-  const { createSubscription } = useSubscriptions()
+
+  const { createSubscription } =
+    useSubscriptions()
+
+  const [
+    cancelAndReturnText,
+    addSubscriptionText,
+    descriptionText,
+    subscriptionNameText,
+    paymentAmountText,
+    billingCycleText,
+    monthlyText,
+    yearlyText,
+    weeklyText,
+    quarterlyText,
+    subscriptionDateText,
+    nextPaymentDateText,
+    cancelText,
+    nameErrorText,
+    amountErrorText,
+  ] = useTranslations(ADD_SUBSCRIPTION_TEXT)
 
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
-  const [billingCycle, setBillingCycle] = useState('Monthly')
-  const [subscriptionDate, setSubscriptionDate] = useState(localToday())
-  const [nextPaymentDate, setNextPaymentDate] = useState('')
+
+  const [billingCycle, setBillingCycle] =
+    useState('Monthly')
+
+  const [
+    subscriptionDate,
+    setSubscriptionDate,
+  ] = useState(localToday())
+
+  const [
+    nextPaymentDate,
+    setNextPaymentDate,
+  ] = useState('')
+
   const [errors, setErrors] = useState({})
 
   function validateForm() {
@@ -30,16 +88,22 @@ function AddSubscriptionPage() {
     const numericAmount = Number(amount)
 
     if (!name.trim()) {
-      nextErrors.name = 'Enter a subscription name.'
+      nextErrors.name = nameErrorText
     }
 
-    if (!amount || Number.isNaN(numericAmount) || numericAmount <= 0) {
-      nextErrors.amount = 'Enter an amount greater than zero.'
+    if (
+      !amount ||
+      Number.isNaN(numericAmount) ||
+      numericAmount <= 0
+    ) {
+      nextErrors.amount = amountErrorText
     }
 
     setErrors(nextErrors)
 
-    return Object.keys(nextErrors).length === 0
+    return (
+      Object.keys(nextErrors).length === 0
+    )
   }
 
   async function handleSubmit(event) {
@@ -50,86 +114,140 @@ function AddSubscriptionPage() {
     }
 
     try {
-      const created = await createSubscription({
-        name: name.trim(),
-        amount: Number(amount),
-        billingCycle,
-        subscriptionDate: subscriptionDate.trim(),
-        nextPaymentDate: nextPaymentDate.trim(),
-      })
-      navigate(`/subscriptions/${created.id}`)
+      const created =
+        await createSubscription({
+          name: name.trim(),
+          amount: Number(amount),
+          billingCycle,
+          subscriptionDate:
+            subscriptionDate.trim(),
+          nextPaymentDate:
+            nextPaymentDate.trim(),
+        })
+
+      navigate(
+        `/subscriptions/${created.id}`,
+      )
     } catch (err) {
-      setErrors({ form: err.message })
+      setErrors({
+        form: err.message,
+      })
     }
   }
 
   return (
     <AppShell activeNav="Subscriptions">
       <div className="add-page">
-        <Link to="/subscriptions">← Cancel and return</Link>
+        <Link to="/subscriptions">
+          ← {cancelAndReturnText}
+        </Link>
 
         <Card className="add-form-card">
-          <h1>Add subscription</h1>
-          <p>Track a new recurring payment.</p>
+          <h1>{addSubscriptionText}</h1>
 
-          {errors.form && <p className="add-form-error">{errors.form}</p>}
+          <p>{descriptionText}</p>
 
-          <form onSubmit={handleSubmit} noValidate>
+          {errors.form && (
+            <p className="add-form-error">
+              {errors.form}
+            </p>
+          )}
+
+          <form
+            onSubmit={handleSubmit}
+            noValidate
+          >
             <Input
               id="subscription-name"
-              label="Subscription name"
+              label={subscriptionNameText}
               value={name}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) =>
+                setName(event.target.value)
+              }
               error={errors.name}
             />
 
             <Input
               id="subscription-amount"
-              label="Payment amount"
+              label={paymentAmountText}
               type="number"
               min="0.01"
               step="0.01"
               value={amount}
-              onChange={(event) => setAmount(event.target.value)}
+              onChange={(event) =>
+                setAmount(event.target.value)
+              }
               error={errors.amount}
             />
 
             <div className="sw-field">
-              <label className="sw-field__label" htmlFor="subscription-cycle">
-                Billing cycle
+              <label
+                className="sw-field__label"
+                htmlFor="subscription-cycle"
+              >
+                {billingCycleText}
               </label>
+
               <select
                 id="subscription-cycle"
                 className="sw-field__input"
                 value={billingCycle}
-                onChange={(event) => setBillingCycle(event.target.value)}
+                onChange={(event) =>
+                  setBillingCycle(
+                    event.target.value,
+                  )
+                }
               >
-                <option value="Monthly">Monthly</option>
-                <option value="Yearly">Yearly</option>
-                <option value="Weekly">Weekly</option>
-                <option value="Quarterly">Quarterly</option>
+                <option value="Monthly">
+                  {monthlyText}
+                </option>
+
+                <option value="Yearly">
+                  {yearlyText}
+                </option>
+
+                <option value="Weekly">
+                  {weeklyText}
+                </option>
+
+                <option value="Quarterly">
+                  {quarterlyText}
+                </option>
               </select>
             </div>
 
             <Input
               id="subscription-date"
-              label="Subscription date"
+              label={subscriptionDateText}
               type="date"
               value={subscriptionDate}
-              onChange={(event) => setSubscriptionDate(event.target.value)}
+              onChange={(event) =>
+                setSubscriptionDate(
+                  event.target.value,
+                )
+              }
             />
 
             <Input
               id="subscription-next-date"
-              label="Next payment date"
+              label={nextPaymentDateText}
               type="date"
               value={nextPaymentDate}
-              onChange={(event) => setNextPaymentDate(event.target.value)}
+              onChange={(event) =>
+                setNextPaymentDate(
+                  event.target.value,
+                )
+              }
             />
 
             <div className="add-form-actions">
-              <Link to="/subscriptions">Cancel</Link>
-              <Button type="submit">Add subscription</Button>
+              <Link to="/subscriptions">
+                {cancelText}
+              </Link>
+
+              <Button type="submit">
+                {addSubscriptionText}
+              </Button>
             </div>
           </form>
         </Card>

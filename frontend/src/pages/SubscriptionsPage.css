@@ -172,6 +172,14 @@
   text-decoration: underline;
 }
 
+/* A web-search fallback, shown when no official link is curated. Deliberately
+   quieter than .subscription-cancel so it does not read as the merchant's own
+   cancellation page. */
+.subscription-cancel--search {
+  font-weight: 600;
+  color: var(--color-ink-soft);
+}
+
 .subscription-cancel-fallback {
   color: var(--color-ink-soft);
   font-style: italic;

@@ -1,5 +1,6 @@
 import { useContext, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+
 import AppShell from '../layouts/AppShell'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
@@ -7,13 +8,64 @@ import Input from '../components/ui/Input'
 import { AuthContext } from '../context/authContext.js'
 import { CurrencyContext } from '../context/currencyContext.js'
 import { createTransaction } from '../api/transactionApi'
+import { useTranslations } from '../hooks/useTranslations.js'
+
 import './AddTransactionPage.css'
+
+const ADD_TRANSACTION_TEXT = [
+  'Cancel and return',
+  'Add transaction',
+  'Add a transaction manually to track your spending.',
+  'Currency:',
+  'Transaction name',
+  'Amount',
+  'Transaction date',
+  'Category',
+  'Select a category',
+  'Food',
+  'Transport',
+  'Shopping',
+  'Bills',
+  'Entertainment',
+  'Other',
+  'Cancel',
+  'Enter a transaction name.',
+  'Enter an amount greater than zero.',
+  'Select a transaction date.',
+  'Select a category.',
+]
 
 function AddTransactionPage() {
   const navigate = useNavigate()
 
-  const { currentUser } = useContext(AuthContext)
-  const { preferredCurrency } = useContext(CurrencyContext)
+  const { currentUser } =
+    useContext(AuthContext)
+
+  const { preferredCurrency } =
+    useContext(CurrencyContext)
+
+  const [
+    cancelAndReturnText,
+    addTransactionText,
+    descriptionText,
+    currencyText,
+    transactionNameText,
+    amountText,
+    transactionDateText,
+    categoryText,
+    selectCategoryText,
+    foodText,
+    transportText,
+    shoppingText,
+    billsText,
+    entertainmentText,
+    otherText,
+    cancelText,
+    nameErrorText,
+    amountErrorText,
+    dateErrorText,
+    categoryErrorText,
+  ] = useTranslations(ADD_TRANSACTION_TEXT)
 
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
@@ -26,8 +78,7 @@ function AddTransactionPage() {
     const numericAmount = Number(amount)
 
     if (!name.trim()) {
-      nextErrors.name =
-        'Enter a transaction name.'
+      nextErrors.name = nameErrorText
     }
 
     if (
@@ -35,18 +86,15 @@ function AddTransactionPage() {
       Number.isNaN(numericAmount) ||
       numericAmount <= 0
     ) {
-      nextErrors.amount =
-        'Enter an amount greater than zero.'
+      nextErrors.amount = amountErrorText
     }
 
     if (!date) {
-      nextErrors.date =
-        'Select a transaction date.'
+      nextErrors.date = dateErrorText
     }
 
     if (!category.trim()) {
-      nextErrors.category =
-        'Select a category.'
+      nextErrors.category = categoryErrorText
     }
 
     setErrors(nextErrors)
@@ -85,19 +133,19 @@ function AddTransactionPage() {
     >
       <div className="add-transaction-page">
         <Link to="/transactions">
-          ← Cancel and return
+          ← {cancelAndReturnText}
         </Link>
 
         <Card className="add-transaction-form-card">
-          <h1>Add transaction</h1>
+          <h1>{addTransactionText}</h1>
+
+          <p>{descriptionText}</p>
 
           <p>
-            Add a transaction manually to track
-            your spending.
-          </p>
-
-          <p>
-            Currency: <strong>{preferredCurrency}</strong>
+            {currencyText}{' '}
+            <strong>
+              {preferredCurrency}
+            </strong>
           </p>
 
           {errors.form && (
@@ -112,7 +160,7 @@ function AddTransactionPage() {
           >
             <Input
               id="transaction-name"
-              label="Transaction name"
+              label={transactionNameText}
               value={name}
               onChange={(event) =>
                 setName(event.target.value)
@@ -122,7 +170,7 @@ function AddTransactionPage() {
 
             <Input
               id="transaction-amount"
-              label={`Amount (${preferredCurrency})`}
+              label={`${amountText} (${preferredCurrency})`}
               type="number"
               min="0.01"
               step="0.01"
@@ -135,7 +183,7 @@ function AddTransactionPage() {
 
             <Input
               id="transaction-date"
-              label="Transaction date"
+              label={transactionDateText}
               type="date"
               value={date}
               onChange={(event) =>
@@ -149,7 +197,7 @@ function AddTransactionPage() {
                 className="sw-field__label"
                 htmlFor="transaction-category"
               >
-                Category
+                {categoryText}
               </label>
 
               <select
@@ -161,31 +209,31 @@ function AddTransactionPage() {
                 }
               >
                 <option value="">
-                  Select a category
+                  {selectCategoryText}
                 </option>
 
                 <option value="Food">
-                  Food
+                  {foodText}
                 </option>
 
                 <option value="Transport">
-                  Transport
+                  {transportText}
                 </option>
 
                 <option value="Shopping">
-                  Shopping
+                  {shoppingText}
                 </option>
 
                 <option value="Bills">
-                  Bills
+                  {billsText}
                 </option>
 
                 <option value="Entertainment">
-                  Entertainment
+                  {entertainmentText}
                 </option>
 
                 <option value="Other">
-                  Other
+                  {otherText}
                 </option>
               </select>
 
@@ -198,11 +246,11 @@ function AddTransactionPage() {
 
             <div className="add-transaction-form-actions">
               <Link to="/transactions">
-                Cancel
+                {cancelText}
               </Link>
 
               <Button type="submit">
-                Add transaction
+                {addTransactionText}
               </Button>
             </div>
           </form>
