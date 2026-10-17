@@ -506,6 +506,28 @@ function SubscriptionsPage() {
     )
   }
 
+  const sortedSubscriptions =
+    sortBy === 'recent'
+      ? subscriptions
+      : [...subscriptions].sort((a, b) => {
+          if (sortBy === 'name') {
+            return (a.name || '').localeCompare(b.name || '')
+          }
+
+          // sortBy === 'renewal'
+          const dateA = a.nextPaymentDate
+            ? new Date(a.nextPaymentDate)
+            : null
+          const dateB = b.nextPaymentDate
+            ? new Date(b.nextPaymentDate)
+            : null
+
+          if (dateA && dateB) return dateA - dateB
+          if (dateA) return -1
+          if (dateB) return 1
+          return 0
+        })
+
   return (
     <AppShell activeNav="Subscriptions">
       <header className="subscriptions-header">
@@ -519,12 +541,22 @@ function SubscriptionsPage() {
           <p>{descriptionText}</p>
         </div>
 
-        <Link
-          className="subscriptions-add"
-          to="/subscriptions/new"
-        >
-          {addSubscriptionText}
-        </Link>
+        <div className="subscriptions-header__actions">
+          <button
+            className="subscriptions-export"
+            type="button"
+            onClick={handleExport}
+          >
+            Export CSV
+          </button>
+
+          <Link
+            className="subscriptions-add"
+            to="/subscriptions/new"
+          >
+            {addSubscriptionText}
+          </Link>
+        </div>
       </header>
 
       {subscriptions.length === 0 ? (
