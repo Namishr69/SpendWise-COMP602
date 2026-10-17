@@ -63,6 +63,7 @@ const DASHBOARD_TEXT = [
   'Yearly',
   'Active',
   'Cancelled',
+  'Paused',
 ]
 
 function formatDate(iso) {
@@ -123,6 +124,7 @@ function DashboardPage() {
     yearlyText,
     activeText,
     cancelledText,
+    pausedText,
   ] = useTranslations(DASHBOARD_TEXT)
 
   const showMoney = (amount) =>
@@ -158,11 +160,29 @@ function DashboardPage() {
       case 'canceled':
         return cancelledText
 
+      case 'paused':
+        return pausedText
+
       case 'active':
         return activeText
 
       default:
         return status || activeText
+    }
+  }
+
+  function getStatusClass(status) {
+    switch (status?.toLowerCase()) {
+      case 'cancelled':
+      case 'canceled':
+        return 'cancelled'
+
+      case 'paused':
+        return 'paused'
+
+      case 'active':
+      default:
+        return 'active'
     }
   }
 
@@ -656,14 +676,9 @@ function DashboardPage() {
                       </div>
 
                       <span
-                        className={`dashboard-subs__status dashboard-subs__status--${
-                          subscription.status?.toLowerCase() ===
-                            'cancelled' ||
-                          subscription.status?.toLowerCase() ===
-                            'canceled'
-                            ? 'cancelled'
-                            : 'active'
-                        }`}
+                        className={`dashboard-subs__status dashboard-subs__status--${getStatusClass(
+                          subscription.status,
+                        )}`}
                       >
                         {translateStatus(
                           subscription.status,

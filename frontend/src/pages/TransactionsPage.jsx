@@ -399,7 +399,7 @@ function TransactionsPage() {
         </Card>
       )}
 
-      {!connected && (
+      {!connected ? (
         <Card className="transactions-notice">
           <h3>
             {noBankConnectedText}
