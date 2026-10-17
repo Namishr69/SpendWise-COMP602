@@ -28,7 +28,10 @@
 
 .subscriptions-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(260px, 1fr)
+  );
   gap: 1.25rem;
 }
 
@@ -43,7 +46,6 @@
   margin-top: 0;
 }
 
-/* Name + source badge ("From email" / "From bank") sit on one row. */
 .subscription-card__heading {
   display: flex;
   align-items: center;
@@ -85,7 +87,9 @@
   padding: 6px 14px;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .subscription-delete:hover {
@@ -112,9 +116,6 @@
   text-decoration: underline;
 }
 
-/* A web-search fallback, shown when no official link is curated. Deliberately
-   quieter than .subscription-cancel so it does not read as the merchant's own
-   cancellation page. */
 .subscription-cancel--search {
   font-weight: 600;
   color: var(--color-ink-soft);
@@ -123,4 +124,153 @@
 .subscription-cancel-fallback {
   color: var(--color-ink-soft);
   font-style: italic;
+}
+
+/* Bulk subscription selection and actions */
+.subscriptions-bulk-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+  background: #f4f6f1;
+  border: 1px solid #dfe5d8;
+  border-radius: 10px;
+}
+
+.subscriptions-bulk-selection {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.subscriptions-select-all,
+.subscription-select {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+  color: #283618;
+  cursor: pointer;
+}
+
+.subscriptions-select-all input,
+.subscription-select input {
+  width: 17px;
+  height: 17px;
+  cursor: pointer;
+  accent-color: #283618;
+}
+
+.subscription-select {
+  margin-bottom: 0.75rem;
+}
+
+.subscriptions-selected-count {
+  color: #5f6f52;
+}
+
+.subscriptions-bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.subscriptions-bulk-actions button {
+  padding: 0.5rem 0.8rem;
+  border: 1px solid #5f6f52;
+  border-radius: 7px;
+  background: #fff;
+  color: #283618;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.subscriptions-bulk-actions button:hover:not(:disabled) {
+  background: #e8efe0;
+}
+
+.subscriptions-bulk-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.subscriptions-bulk-actions
+  .subscriptions-bulk-delete {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.subscriptions-bulk-actions
+  .subscriptions-bulk-delete:hover:not(:disabled) {
+  background: var(--color-danger);
+  color: var(--color-white);
+}
+
+.subscriptions-bulk-message {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.subscriptions-bulk-message--success {
+  background: #e8efe0;
+  color: #283618;
+  border: 1px solid #cbd8bf;
+}
+
+.subscriptions-bulk-message--error {
+  background: #fff1f1;
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+}
+
+@media (max-width: 700px) {
+  .subscriptions-bulk-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.subscription-card__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.subscription-card__heading h2 {
+  margin: 0;
+}
+
+.subscription-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.subscription-status--active {
+  background: #e7f4e4;
+  color: #2f6b2f;
+  border: 1px solid #b9d8b5;
+}
+
+.subscription-status--paused {
+  background: #fff4d6;
+  color: #8a6500;
+  border: 1px solid #e6ce86;
+}
+
+.subscription-status--cancelled {
+  background: #fde7e7;
+  color: #a12d2d;
+  border: 1px solid #e6b5b5;
 }
