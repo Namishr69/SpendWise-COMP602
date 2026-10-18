@@ -55,6 +55,8 @@ const TRANSACTIONS_TEXT = [
   'From email',
   'No email transactions yet. Connect Gmail in Settings, then use Scan inbox for subscriptions. A receipt needs a dollar amount in the email body to be recorded.',
   'Could not load your manual and email transactions:',
+  'Show more',
+  'Show less',
 ]
 
 function formatDate(iso) {
@@ -108,6 +110,8 @@ function TransactionsPage() {
     fromEmailText,
     noEmailTransactionsText,
     manualErrorMessageText,
+    showMoreText,
+    showLessText,
   ] = useTranslations(TRANSACTIONS_TEXT)
 
   const [status, setStatus] = useState(null)
@@ -120,6 +124,8 @@ function TransactionsPage() {
   const [rate, setRate] = useState(1)
   const [syncing, setSyncing] = useState(false)
   const [syncSummary, setSyncSummary] = useState(null)
+  const [showAllEmail, setShowAllEmail] = useState(false)
+  const [showAllBank, setShowAllBank] = useState(false)
 
   const load = useCallback(async (user) => {
     const [
@@ -270,6 +276,16 @@ function TransactionsPage() {
     (transaction) => transaction.source === 'gmail-detected',
   )
 
+  const EMAIL_TXNS_INITIAL_COUNT = 5
+  const visibleEmailTxns = showAllEmail
+    ? emailTxns
+    : emailTxns.slice(0, EMAIL_TXNS_INITIAL_COUNT)
+
+  const BANK_TXNS_INITIAL_COUNT = 5
+  const visibleTransactions = showAllBank
+    ? transactions
+    : transactions.slice(0, BANK_TXNS_INITIAL_COUNT)
+
   return (
     <AppShell activeNav="Transactions">
       <header className="transactions-header">
@@ -367,38 +383,54 @@ function TransactionsPage() {
               'No email transactions yet. Connect Gmail in Settings, then use Scan inbox for subscriptions. A receipt needs a dollar amount in the email body to be recorded.'}
           </p>
         ) : (
-          <ul className="transactions-list">
-            {emailTxns.map((transaction) => (
-              <li
-                key={transaction.id}
-                className="transactions-list__item"
-              >
-                <div className="transactions-list__email">
-                  <p className="transactions-list__name">
-                    {transaction.subject || transaction.name}
-                  </p>
+          <>
+            <ul className="transactions-list">
+              {visibleEmailTxns.map((transaction) => (
+                <li
+                  key={transaction.id}
+                  className="transactions-list__item"
+                >
+                  <div className="transactions-list__email">
+                    <p className="transactions-list__name">
+                      {transaction.subject || transaction.name}
+                    </p>
 
-                  <p className="transactions-list__date">
-                    {transaction.name}
-                    {transaction.sender
-                      ? ` · ${transaction.sender}`
-                      : ''}
-                  </p>
+                    <p className="transactions-list__date">
+                      {transaction.name}
+                      {transaction.sender
+                        ? ` · ${transaction.sender}`
+                        : ''}
+                    </p>
 
-                  <p className="transactions-list__date">
-                    {formatDate(transaction.date)}
-                    {transaction.category
-                      ? ` · ${translateCategory(transaction.category)}`
-                      : ''}
-                  </p>
-                </div>
+                    <p className="transactions-list__date">
+                      {formatDate(transaction.date)}
+                      {transaction.category
+                        ? ` · ${translateCategory(transaction.category)}`
+                        : ''}
+                    </p>
+                  </div>
 
-                <span className="money">
-                  {show(transaction.amount)}
-                </span>
-              </li>
-            ))}
-          </ul>
+                  <span className="money">
+                    {show(transaction.amount)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            {emailTxns.length > EMAIL_TXNS_INITIAL_COUNT && (
+              <div className="transactions-show-more-wrap">
+                <button
+                  type="button"
+                  className="transactions-show-more"
+                  onClick={() => setShowAllEmail((prev) => !prev)}
+                >
+                  {showAllEmail
+                    ? showLessText || 'Show less'
+                    : `${showMoreText || 'Show more'} (${emailTxns.length - EMAIL_TXNS_INITIAL_COUNT} more)`}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </Card>
 
@@ -411,35 +443,51 @@ function TransactionsPage() {
               {noTransactionsText}
             </p>
           ) : (
-            <ul className="transactions-list">
-              {transactions.map((txn) => (
-                <li
-                  key={txn.transactionId}
-                  className="transactions-list__item"
-                >
-                  <div>
-                    <p className="transactions-list__name">
-                      {txn.merchant || txn.description}
-                    </p>
-
-                    <p className="transactions-list__date">
-                      {formatDate(txn.bookedAt)}
-                    </p>
-                  </div>
-
-                  <span
-                    className={`money transactions-amount ${
-                      txn.direction === 'credit'
-                        ? 'transactions-amount--credit'
-                        : ''
-                    }`}
+            <>
+              <ul className="transactions-list">
+                {visibleTransactions.map((txn) => (
+                  <li
+                    key={txn.transactionId}
+                    className="transactions-list__item"
                   >
-                    {txn.direction === 'debit' ? '−' : '+'}
-                    {show(txn.amount)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+                    <div>
+                      <p className="transactions-list__name">
+                        {txn.merchant || txn.description}
+                      </p>
+
+                      <p className="transactions-list__date">
+                        {formatDate(txn.bookedAt)}
+                      </p>
+                    </div>
+
+                    <span
+                      className={`money transactions-amount ${
+                        txn.direction === 'credit'
+                          ? 'transactions-amount--credit'
+                          : ''
+                      }`}
+                    >
+                      {txn.direction === 'debit' ? '−' : '+'}
+                      {show(txn.amount)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              {transactions.length > BANK_TXNS_INITIAL_COUNT && (
+                <div className="transactions-show-more-wrap">
+                  <button
+                    type="button"
+                    className="transactions-show-more"
+                    onClick={() => setShowAllBank((prev) => !prev)}
+                  >
+                    {showAllBank
+                      ? showLessText || 'Show less'
+                      : `${showMoreText || 'Show more'} (${transactions.length - BANK_TXNS_INITIAL_COUNT} more)`}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </Card>
       )}
