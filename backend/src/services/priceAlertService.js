@@ -102,6 +102,19 @@ const priceAlertService = {
     async removeAlertsForSubscription(userId, subscriptionId) {
         await priceAlertRepo.removeBySubscription(userId, subscriptionId);
     },
+
+    /**
+     * Removes the alerts belonging to a batch of subscriptions. Called when
+     * auto-detected subscriptions are deleted (bank or Gmail disconnect) — the
+     * alerts would otherwise outlive the subscriptions they refer to.
+     */
+    async removeAlertsForSubscriptions(userId, subscriptionIds) {
+        if (!Array.isArray(subscriptionIds) || subscriptionIds.length === 0) {
+            return 0;
+        }
+
+        return await priceAlertRepo.removeBySubscriptions(userId, subscriptionIds);
+    },
 };
 
 export default priceAlertService;
