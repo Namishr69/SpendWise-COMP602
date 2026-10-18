@@ -17,7 +17,7 @@ vi.mock('../api/priceAlertApi', () => ({
 }))
 
 function clickScan() {
-  fireEvent.click(screen.getByRole('button', { name: /scan gmail/i }))
+  fireEvent.click(screen.getByRole('button', { name: /search for price change/i }))
 }
 
 describe('GmailPriceScanSection', () => {
@@ -76,7 +76,7 @@ describe('GmailPriceScanSection', () => {
     render(<GmailPriceScanSection />)
     clickScan()
 
-    expect(await screen.findByRole('button', { name: /scan gmail/i })).toBeEnabled()
+    expect(await screen.findByRole('button', { name: /search for price change/i })).toBeEnabled()
     expect(screen.queryByText(/popup closed/i)).not.toBeInTheDocument()
     expect(scanGmailForPriceChanges).not.toHaveBeenCalled()
   })

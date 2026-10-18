@@ -120,6 +120,52 @@ export function findProviderPriceAlerts(subscriptions, announcements, existingAl
 }
 
 /**
+ * Works out what announced price changes mean on `today` (YYYY-MM-DD). A
+ * change whose date has arrived becomes the subscription's price; the next
+ * change still to come is reported as upcoming. Dismissing an announcement
+ * only hides the notification, so dismissed ones still count. Pure.
+ *
+ * Returns { updates: [{ subscriptionId, amount }], appliedAlertIds,
+ * upcoming: { [subscriptionId]: { newAmount, effectiveDate } } }.
+ */
+export function planAnnouncedPrices(subscriptions, alerts, today) {
+    const byId = new Map(subscriptions.map((sub) => [sub.id, sub]));
+
+    const announcements = alerts
+        .filter((alert) => alert.type === 'announcement'
+            && alert.effectiveDate
+            && !alert.applied
+            && byId.has(alert.subscriptionId))
+        .sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate));
+
+    const appliedAlertIds = [];
+    const newAmounts = new Map();
+    const upcoming = {};
+
+    for (const alert of announcements) {
+        const subscription = byId.get(alert.subscriptionId);
+
+        if (alert.effectiveDate <= today) {
+            appliedAlertIds.push(alert.id);
+            if (!isCancelled(subscription)) {
+                newAmounts.set(subscription.id, Number(alert.newAmount));
+            }
+        } else if (!upcoming[subscription.id] && !isCancelled(subscription)) {
+            upcoming[subscription.id] = {
+                newAmount: Number(alert.newAmount),
+                effectiveDate: alert.effectiveDate,
+            };
+        }
+    }
+
+    const updates = [...newAmounts]
+        .filter(([id, amount]) => toCents(amount) !== toCents(byId.get(id).amount))
+        .map(([subscriptionId, amount]) => ({ subscriptionId, amount }));
+
+    return { updates, appliedAlertIds, upcoming };
+}
+
+/**
  * The alert's document id comes from the change itself, so the same change
  * can only ever be stored once — even if two scans race — and a dismissed
  * announcement is never re-opened by a later scan.
@@ -160,6 +206,31 @@ const providerPriceAlertService = {
             announcements: announcements.length,
             created,
         };
+    },
+
+    /**
+     * Saves the announced prices that take effect by today, then returns the
+     * subscriptions with those prices and any upcoming change attached as
+     * `upcomingPriceChange`. Each announcement is applied once.
+     */
+    async applyAnnouncedPrices(userId, subscriptions, today = new Date().toISOString().slice(0, 10)) {
+        const alerts = await priceAlertRepo.listByType(userId, 'announcement');
+        const { updates, appliedAlertIds, upcoming } = planAnnouncedPrices(subscriptions, alerts, today);
+
+        await Promise.all([
+            ...updates.map(({ subscriptionId, amount }) =>
+                subscriptionRepo.update(userId, subscriptionId, { amount })),
+            ...appliedAlertIds.map((alertId) =>
+                priceAlertRepo.update(userId, alertId, { applied: true })),
+        ]);
+
+        const newAmounts = new Map(updates.map(({ subscriptionId, amount }) => [subscriptionId, amount]));
+
+        return subscriptions.map((subscription) => ({
+            ...subscription,
+            ...(newAmounts.has(subscription.id) && { amount: newAmounts.get(subscription.id) }),
+            ...(upcoming[subscription.id] && { upcomingPriceChange: upcoming[subscription.id] }),
+        }));
     },
 };
 

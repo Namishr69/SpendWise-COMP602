@@ -4,7 +4,12 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('../repositories/priceAlertRepo.js', () => ({ default: {} }));
 vi.mock('../repositories/subscriptionRepo.js', () => ({ default: {} }));
 
-import { findProviderPriceAlerts } from './providerPriceAlertService.js';
+import priceAlertRepo from '../repositories/priceAlertRepo.js';
+import subscriptionRepo from '../repositories/subscriptionRepo.js';
+import providerPriceAlertService, {
+    findProviderPriceAlerts,
+    planAnnouncedPrices,
+} from './providerPriceAlertService.js';
 
 describe('findProviderPriceAlerts', () => {
     const netflix = { id: 'sub1', name: 'Netflix', amount: 15.99 };
@@ -160,5 +165,112 @@ describe('findProviderPriceAlerts', () => {
 
             expect(findProviderPriceAlerts([netflix], announcements, existingAlerts)).toHaveLength(1);
         });
+    });
+});
+
+describe('planAnnouncedPrices', () => {
+    const netflix = { id: 'sub1', name: 'Netflix', amount: 15.99, status: 'Active' };
+    const announcement = (overrides) => ({
+        id: 'alert1',
+        type: 'announcement',
+        subscriptionId: 'sub1',
+        previousAmount: 15.99,
+        newAmount: 17.99,
+        effectiveDate: '2026-10-20',
+        ...overrides,
+    });
+
+    it('reports a change that has not started yet as upcoming', () => {
+        expect(planAnnouncedPrices([netflix], [announcement()], '2026-10-18')).toEqual({
+            updates: [],
+            appliedAlertIds: [],
+            upcoming: { sub1: { newAmount: 17.99, effectiveDate: '2026-10-20' } },
+        });
+    });
+
+    it('applies the new price on the date it takes effect', () => {
+        expect(planAnnouncedPrices([netflix], [announcement()], '2026-10-20')).toEqual({
+            updates: [{ subscriptionId: 'sub1', amount: 17.99 }],
+            appliedAlertIds: ['alert1'],
+            upcoming: {},
+        });
+    });
+
+    it('still applies a change the user dismissed', () => {
+        const dismissed = announcement({ dismissed: true });
+
+        expect(planAnnouncedPrices([netflix], [dismissed], '2026-10-21').updates).toEqual([
+            { subscriptionId: 'sub1', amount: 17.99 },
+        ]);
+    });
+
+    it('applies each change only once', () => {
+        const applied = announcement({ applied: true });
+
+        expect(planAnnouncedPrices([netflix], [applied], '2026-10-21')).toEqual({
+            updates: [],
+            appliedAlertIds: [],
+            upcoming: {},
+        });
+    });
+
+    it('ignores announcements without a start date', () => {
+        const undated = announcement({ effectiveDate: null });
+
+        expect(planAnnouncedPrices([netflix], [undated], '2026-10-21')).toEqual({
+            updates: [],
+            appliedAlertIds: [],
+            upcoming: {},
+        });
+    });
+
+    it('does not change the price of a cancelled subscription', () => {
+        const cancelled = { ...netflix, status: 'Cancelled' };
+
+        expect(planAnnouncedPrices([cancelled], [announcement()], '2026-10-21')).toEqual({
+            updates: [],
+            appliedAlertIds: ['alert1'],
+            upcoming: {},
+        });
+    });
+
+    it('applies the change that has started and shows the next one as upcoming', () => {
+        const alerts = [
+            announcement({ id: 'later', newAmount: 19.99, effectiveDate: '2027-01-01' }),
+            announcement({ id: 'now' }),
+        ];
+
+        expect(planAnnouncedPrices([netflix], alerts, '2026-10-21')).toEqual({
+            updates: [{ subscriptionId: 'sub1', amount: 17.99 }],
+            appliedAlertIds: ['now'],
+            upcoming: { sub1: { newAmount: 19.99, effectiveDate: '2027-01-01' } },
+        });
+    });
+});
+
+describe('providerPriceAlertService.applyAnnouncedPrices', () => {
+    it('saves prices that take effect and returns subscriptions with the new and upcoming prices', async () => {
+        const netflix = { id: 'sub1', name: 'Netflix', amount: 15.99, status: 'Active' };
+        const spotify = { id: 'sub2', name: 'Spotify', amount: 12.99, status: 'Active' };
+
+        priceAlertRepo.listByType = vi.fn(async () => [
+            { id: 'a1', type: 'announcement', subscriptionId: 'sub1', newAmount: 17.99, effectiveDate: '2026-10-20' },
+            { id: 'a2', type: 'announcement', subscriptionId: 'sub2', newAmount: 14.99, effectiveDate: '2026-11-01' },
+        ]);
+        priceAlertRepo.update = vi.fn(async () => ({}));
+        subscriptionRepo.update = vi.fn(async () => ({}));
+
+        const result = await providerPriceAlertService.applyAnnouncedPrices(
+            'user1',
+            [netflix, spotify],
+            '2026-10-20',
+        );
+
+        expect(subscriptionRepo.update).toHaveBeenCalledWith('user1', 'sub1', { amount: 17.99 });
+        expect(priceAlertRepo.update).toHaveBeenCalledWith('user1', 'a1', { applied: true });
+        expect(result).toEqual([
+            { ...netflix, amount: 17.99 },
+            { ...spotify, upcomingPriceChange: { newAmount: 14.99, effectiveDate: '2026-11-01' } },
+        ]);
     });
 });

@@ -60,7 +60,7 @@ function GmailPriceScanSection() {
           onClick={handleScan}
           disabled={isScanning}
         >
-          {isScanning ? 'Scanning…' : 'Scan Gmail'}
+          {isScanning ? 'Searching…' : 'Search for price change'}
         </Button>
       </div>
 
