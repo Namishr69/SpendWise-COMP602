@@ -9,6 +9,8 @@ import { useTranslations } from '../hooks/useTranslations.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
 import { buildSubscriptionsCsv } from '../utils/subscriptionsCsv.js'
 import { downloadCsv } from '../utils/downloadFile.js'
+import { sourceLabel } from '../utils/subscriptionSource.js'
+import { resolveCancellation } from '../utils/cancellationLinks.js'
 
 import './SubscriptionsPage.css'
 
@@ -57,6 +59,9 @@ const SUBSCRIPTIONS_TEXT = [
   'Cannot cancel selected subscriptions',
   'Only active or paused subscriptions can be cancelled.',
   'from',
+  'Cancel subscription ↗',
+  'Find how to cancel ↗',
+  'No cancellation link available',
 ]
 
 // Effective dates are plain YYYY-MM-DD, so read them as local dates.
@@ -154,6 +159,9 @@ function SubscriptionsPage() {
     cannotCancelText,
     onlyActivePausedCanCancelText,
     fromText,
+    cancelSubscriptionText,
+    findHowToCancelText,
+    noCancellationLinkText,
   ] = useTranslations(SUBSCRIPTIONS_TEXT)
 
   const showMoney = (amount) =>
@@ -535,11 +543,35 @@ function SubscriptionsPage() {
     )
   }
 
+  const filteredSubscriptions = subscriptions.filter((sub) => {
+    if (sortBy === 'source-bank') {
+      return sub.source === 'anz-detected'
+    }
+    if (sortBy === 'source-email') {
+      return sub.source === 'gmail-detected'
+    }
+    if (sortBy === 'source-manual') {
+      return !sub.source || sub.source === 'manual'
+    }
+    return true
+  })
+
   const sortedSubscriptions =
-    sortBy === 'recent'
-      ? subscriptions
-      : [...subscriptions].sort((a, b) => {
+    sortBy === 'recent' ||
+    sortBy === 'source-bank' ||
+    sortBy === 'source-email' ||
+    sortBy === 'source-manual'
+      ? filteredSubscriptions
+      : [...filteredSubscriptions].sort((a, b) => {
           if (sortBy === 'name') {
+            return (a.name || '').localeCompare(b.name || '')
+          }
+
+          if (sortBy === 'source') {
+            const labelA = sourceLabel(a.source) || ''
+            const labelB = sourceLabel(b.source) || ''
+            const sourceComp = labelA.localeCompare(labelB)
+            if (sourceComp !== 0) return sourceComp
             return (a.name || '').localeCompare(b.name || '')
           }
 
@@ -720,12 +752,18 @@ function SubscriptionsPage() {
               <option value="recent">Newest</option>
               <option value="renewal">Renewal date</option>
               <option value="name">Name (A–Z)</option>
+              <option value="source-bank">From bank</option>
+              <option value="source-email">From email</option>
+              <option value="source-manual">Manually added</option>
+              <option value="source">Sort by source</option>
             </select>
           </div>
 
           <section className="subscriptions-grid">
-            {sortedSubscriptions.map(
-              (subscription) => (
+            {sortedSubscriptions.map((subscription) => {
+              const cancellation = resolveCancellation(subscription.name)
+
+              return (
                 <Card
                   key={subscription.id}
                   className="subscription-card"
@@ -756,6 +794,12 @@ function SubscriptionsPage() {
                       <h2>
                         {subscription.name}
                       </h2>
+
+                      {sourceLabel(subscription.source) && (
+                        <span className="subscription-source">
+                          {sourceLabel(subscription.source)}
+                        </span>
+                      )}
 
                       <span
                         className={`subscription-status ${getStatusClass(
@@ -813,6 +857,35 @@ function SubscriptionsPage() {
                         )}
                       </strong>
                     </p>
+
+                    <p className="subscription-cancel-row">
+                      {cancellation ? (
+                        <a
+                          className={
+                            cancellation.kind === 'official'
+                              ? 'subscription-cancel'
+                              : 'subscription-cancel subscription-cancel--search'
+                          }
+                          href={cancellation.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={
+                            cancellation.kind === 'official'
+                              ? 'Opens this merchant’s own cancellation page'
+                              : 'No official link on file — opens a web search'
+                          }
+                        >
+                          {cancellation.kind === 'official'
+                            ? cancelSubscriptionText || 'Cancel subscription ↗'
+                            : findHowToCancelText || 'Find how to cancel ↗'}
+                        </a>
+                      ) : (
+                        <span className="subscription-cancel-fallback">
+                          {noCancellationLinkText ||
+                            'No cancellation link available'}
+                        </span>
+                      )}
+                    </p>
                   </div>
 
                   <div className="subscription-card__actions">
@@ -843,8 +916,8 @@ function SubscriptionsPage() {
                     </button>
                   </div>
                 </Card>
-              ),
-            )}
+              )
+            })}
           </section>
         </>
       )}
