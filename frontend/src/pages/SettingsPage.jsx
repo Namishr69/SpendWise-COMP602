@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
 import ConnectBankSection from '../components/ConnectBankSection.jsx'
+import ConnectGmailSection from '../components/ConnectGmailSection.jsx'
 import Button from '../components/ui/Button.jsx'
 import Input from '../components/ui/Input.jsx'
 

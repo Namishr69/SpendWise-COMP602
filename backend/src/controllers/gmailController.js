@@ -1,6 +1,9 @@
 import gmailAuthService from '../services/gmailAuthService.js';
 import gmailService from '../services/gmailService.js';
 import gmailSyncService from '../services/gmailSyncService.js';
+import priceAlertService from '../services/priceAlertService.js';
+import subscriptionRepo from '../repositories/subscriptionRepo.js';
+import transactionRepo from '../repositories/transactionRepo.js';
 
 /**
  * Nothing here returns an access or refresh token. The browser only ever
@@ -83,6 +86,33 @@ const gmailController = {
   async disconnect(req, res) {
     try {
       const result = await gmailAuthService.disconnect(req.userId);
+
+      // Remove subscriptions that were auto-detected from Gmail.
+      // Manually-added subscriptions are never touched.
+      try {
+        const removedIds = await subscriptionRepo.deleteAllDetected(req.userId, 'gmail-detected');
+        console.log(`[gmail-disconnect] removed ${removedIds.length} gmail-detected subscription(s) for user ${req.userId}`);
+
+        // An alert whose subscription is gone has nothing left to display.
+        try {
+          const removedAlerts = await priceAlertService.removeAlertsForSubscriptions(req.userId, removedIds);
+          console.log(`[gmail-disconnect] removed ${removedAlerts} price alert(s) for user ${req.userId}`);
+        } catch (error) {
+          console.error('Price alert cleanup failed on disconnect:', error.message);
+        }
+      } catch (error) {
+        console.error('Gmail-detected subscription cleanup failed on disconnect:', error.message);
+      }
+
+      // Remove transactions extracted from Gmail receipts.
+      // Manual transactions are never touched.
+      try {
+        const removedTxns = await transactionRepo.deleteAllBySource(req.userId, 'gmail-detected');
+        console.log(`[gmail-disconnect] removed ${removedTxns} gmail-detected transaction(s) for user ${req.userId}`);
+      } catch (error) {
+        console.error('Gmail-detected transaction cleanup failed on disconnect:', error.message);
+      }
+
       res.json(result);
     } catch (error) {
       console.error('Gmail disconnect failed:', error.message);

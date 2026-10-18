@@ -499,8 +499,7 @@ function SubscriptionsPage() {
     return (
       <AppShell activeNav="Subscriptions">
         <p>
-          {loadErrorText}{' '}
-          {error.message}
+          {loadErrorText} {error.message}
         </p>
       </AppShell>
     )

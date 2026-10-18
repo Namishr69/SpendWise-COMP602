@@ -86,6 +86,25 @@ const transactionRepo = {
             .doc(transactionId)
             .delete();
     },
+
+    /**
+     * Deletes all transactions with the given source (e.g. 'gmail-detected').
+     * Batch-chunked to remain within Firestore's limits.
+     */
+    async deleteAllBySource(userId, source) {
+        const col = db.collection('users').doc(userId).collection('transactions');
+        const snapshot = await col.where('source', '==', source).get();
+
+        const BATCH_LIMIT = 450;
+        for (let i = 0; i < snapshot.docs.length; i += BATCH_LIMIT) {
+            const chunk = snapshot.docs.slice(i, i + BATCH_LIMIT);
+            const batch = db.batch();
+            chunk.forEach((d) => batch.delete(d.ref));
+            await batch.commit();
+        }
+
+        return snapshot.docs.length;
+    },
 };
 
 export default transactionRepo;

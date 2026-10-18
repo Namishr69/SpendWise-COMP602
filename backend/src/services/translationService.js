@@ -9,10 +9,110 @@ const SUPPORTED_LANGUAGES = [
     'fr',
 ];
 
+// Google Translate v2 accepts a batch in `q`, but not an unbounded one. The
+// UI translates whole pages, so a long page is split into a few requests.
+const MAX_SEGMENTS_PER_REQUEST = 100;
+const MAX_CHARS_PER_REQUEST = 20_000;
+
 const translationCache = new Map();
 
 function getCacheKey(text, targetLanguage) {
     return `${targetLanguage}:${text}`;
+}
+
+/**
+ * Google returns translated text with HTML entities escaped (it treats the
+ * input as HTML-flavoured text even with format=text). Decode the handful that
+ * show up in this UI so "Don't" is not rendered as "Don&#39;t".
+ *
+ * `&amp;` is decoded last, otherwise "&amp;#39;" would turn into an apostrophe.
+ */
+function decodeEntities(text) {
+    return text
+        .replace(/&#39;/g, "'")
+        .replace(/&#x27;/gi, "'")
+        .replace(/&quot;/g, '"')
+        .replace(/&#34;/g, '"')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&');
+}
+
+/**
+ * Splits the segments into request-sized batches, keeping the original order.
+ * Each batch is an array of { text, index } so a translation can be written
+ * back to the position it came from.
+ */
+function batchTexts(texts) {
+    const batches = [];
+    let current = [];
+    let currentChars = 0;
+
+    texts.forEach((text, index) => {
+        const wouldOverflow =
+            current.length >= MAX_SEGMENTS_PER_REQUEST ||
+            currentChars + text.length > MAX_CHARS_PER_REQUEST;
+
+        if (current.length > 0 && wouldOverflow) {
+            batches.push(current);
+            current = [];
+            currentChars = 0;
+        }
+
+        current.push({ text, index });
+        currentChars += text.length;
+    });
+
+    if (current.length > 0) {
+        batches.push(current);
+    }
+
+    return batches;
+}
+
+/** One HTTP call to Google Translate. Returns the translations, in order. */
+async function translateBatch(batch, targetLanguage, apiKey) {
+    const response = await fetch(
+        `${GOOGLE_TRANSLATE_URL}?key=${encodeURIComponent(apiKey)}`,
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                q: batch.map((item) => item.text),
+                source: 'en',
+                target: targetLanguage,
+                format: 'text',
+            }),
+        }
+    );
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        const detail = data.error?.message || `HTTP ${response.status}`;
+        console.error('Google Translation API error:', detail);
+
+        const error = new Error(`Failed to translate text: ${detail}`);
+        // A rejected API key is a server misconfiguration, not a bad request.
+        error.status =
+            response.status === 403 || response.status === 401
+                ? 503
+                : 400;
+
+        throw error;
+    }
+
+    const translations = data.data?.translations || [];
+
+    if (translations.length !== batch.length) {
+        throw new Error('Unexpected translation response');
+    }
+
+    return translations.map((translation) =>
+        decodeEntities(translation.translatedText || '')
+    );
 }
 
 const translationService = {
@@ -47,94 +147,46 @@ const translationService = {
             return texts;
         }
 
-        const apiKey = process.env.GOOGLE_TRANSLATE_API_KEY;
+        const apiKey = (process.env.GOOGLE_TRANSLATE_API_KEY || '').trim();
 
         if (!apiKey) {
-            throw new Error(
+            const error = new Error(
                 'Google Translate API key is not configured'
             );
+            error.status = 503;
+            throw error;
         }
 
         const results = new Array(texts.length);
-        const missingTexts = [];
-        const missingIndexes = [];
+        const missing = [];
 
         texts.forEach((text, index) => {
-            const cacheKey = getCacheKey(
-                text,
-                targetLanguage
-            );
+            const cacheKey = getCacheKey(text, targetLanguage);
 
             if (translationCache.has(cacheKey)) {
                 results[index] = translationCache.get(cacheKey);
             } else {
-                missingTexts.push(text);
-                missingIndexes.push(index);
+                missing.push({ text, index });
             }
         });
 
-        if (missingTexts.length > 0) {
-            const response = await fetch(
-                `${GOOGLE_TRANSLATE_URL}?key=${apiKey}`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        q: missingTexts,
-                        source: 'en',
-                        target: targetLanguage,
-                        format: 'text',
-                    }),
-                }
+        for (const batch of batchTexts(missing.map((item) => item.text))) {
+            const translated = await translateBatch(
+                batch,
+                targetLanguage,
+                apiKey
             );
 
-            const data = await response.json();
+            translated.forEach((translatedText, position) => {
+                const { text, index } = missing[batch[position].index];
 
-            if (!response.ok) {
-                console.error(
-                    'Google Translation API error:',
-                    data.error
+                translationCache.set(
+                    getCacheKey(text, targetLanguage),
+                    translatedText
                 );
 
-                throw new Error('Failed to translate text');
-            }
-
-            const translations =
-                data.data?.translations || [];
-
-            if (
-                translations.length !==
-                missingTexts.length
-            ) {
-                throw new Error(
-                    'Unexpected translation response'
-                );
-            }
-
-            translations.forEach(
-                (translation, translationIndex) => {
-                    const originalText =
-                        missingTexts[translationIndex];
-
-                    const resultIndex =
-                        missingIndexes[translationIndex];
-
-                    const translatedText =
-                        translation.translatedText;
-
-                    translationCache.set(
-                        getCacheKey(
-                            originalText,
-                            targetLanguage
-                        ),
-                        translatedText
-                    );
-
-                    results[resultIndex] = translatedText;
-                }
-            );
+                results[index] = translatedText;
+            });
         }
 
         return results;

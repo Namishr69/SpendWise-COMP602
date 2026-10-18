@@ -1,3 +1,4 @@
+
 import {
   useCallback,
   useContext,
@@ -5,36 +6,23 @@ import {
   useState,
 } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  onAuthStateChanged,
-} from 'firebase/auth'
+import { onAuthStateChanged } from 'firebase/auth'
 
 import { auth } from '../firebase'
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
-import {
-  CurrencyContext,
-} from '../context/currencyContext.js'
-import {
-  convertCurrency,
-} from '../api/exchangeRateApi.js'
-import {
-  formatCurrency,
-} from '../utils/formatCurrency.js'
-import {
-  getAnzStatus,
-} from '../api/anzApi.js'
-import {
-  getTransactions,
-} from '../api/transactionApi.js'
+import { CurrencyContext } from '../context/currencyContext.js'
+import { useSubscriptions } from '../context/subscriptionsContext'
+import { convertCurrency } from '../api/exchangeRateApi.js'
+import { formatCurrency } from '../utils/formatCurrency.js'
+import { getAnzStatus } from '../api/anzApi.js'
+import { getTransactions } from '../api/transactionApi.js'
 import {
   getBankAccounts,
   getBankTransactions,
   syncBankData,
 } from '../api/bankDataApi.js'
-import {
-  useTranslations,
-} from '../hooks/useTranslations.js'
+import { useTranslations } from '../hooks/useTranslations.js'
 
 import './TransactionsPage.css'
 
@@ -63,6 +51,10 @@ const TRANSACTIONS_TEXT = [
   'Bills',
   'Entertainment',
   'Other',
+  'Activity from your bank, your inbox, and anything you add.',
+  'From email',
+  'No email transactions yet. Connect Gmail in Settings, then use Scan inbox for subscriptions. A receipt needs a dollar amount in the email body to be recorded.',
+  'Could not load your manual and email transactions:',
 ]
 
 function formatDate(iso) {
@@ -74,19 +66,18 @@ function formatDate(iso) {
     return ''
   }
 
-  return date.toLocaleDateString(
-    'en-NZ',
-    {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    },
-  )
+  return date.toLocaleDateString('en-NZ', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
 }
 
 function TransactionsPage() {
-  const { preferredCurrency } =
-    useContext(CurrencyContext)
+  const { preferredCurrency } = useContext(CurrencyContext)
+
+  // Refresh subscriptions after a bank sync detects new subscriptions.
+  const { refresh: refreshSubscriptions } = useSubscriptions()
 
   const [
     loadingTransactionsText,
@@ -113,113 +104,81 @@ function TransactionsPage() {
     billsText,
     entertainmentText,
     otherText,
-  ] = useTranslations(
-    TRANSACTIONS_TEXT,
-  )
+    headerSubtitleText,
+    fromEmailText,
+    noEmailTransactionsText,
+    manualErrorMessageText,
+  ] = useTranslations(TRANSACTIONS_TEXT)
 
-  const [status, setStatus] =
-    useState(null)
+  const [status, setStatus] = useState(null)
+  const [accounts, setAccounts] = useState([])
+  const [transactions, setTransactions] = useState([])
+  const [manual, setManual] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [manualError, setManualError] = useState(null)
+  const [rate, setRate] = useState(1)
+  const [syncing, setSyncing] = useState(false)
+  const [syncSummary, setSyncSummary] = useState(null)
 
-  const [accounts, setAccounts] =
-    useState([])
+  const load = useCallback(async (user) => {
+    const [
+      statusData,
+      accountsData,
+      txnsData,
+      manualResult,
+    ] = await Promise.all([
+      getAnzStatus(),
+      getBankAccounts(),
+      getBankTransactions({
+        limit: 100,
+      }),
+      getTransactions(user).then(
+        (data) => ({ data }),
+        (err) => ({ data: [], error: err }),
+      ),
+    ])
 
-  const [
-    transactions,
-    setTransactions,
-  ] = useState([])
-
-  // Manually added transactions live
-  // alongside bank-synced transactions.
-  const [manual, setManual] =
-    useState([])
-
-  const [loading, setLoading] =
-    useState(true)
-
-  const [error, setError] =
-    useState(null)
-
-  // One NZD -> preferred currency factor
-  // is reused for every displayed amount.
-  const [rate, setRate] =
-    useState(1)
-
-  const [syncing, setSyncing] =
-    useState(false)
-
-  const [
-    syncSummary,
-    setSyncSummary,
-  ] = useState(null)
-
-  const load = useCallback(
-    async (user) => {
-      const [
-        statusData,
-        accountsData,
-        txnsData,
-        manualData,
-      ] = await Promise.all([
-        getAnzStatus(),
-        getBankAccounts(),
-        getBankTransactions({
-          limit: 100,
-        }),
-
-        // Manual transactions are a
-        // separate feature. A failure
-        // here should not blank the
-        // bank-synced transaction list.
-        getTransactions(user).catch(
-          () => [],
-        ),
-      ])
-
-      setStatus(statusData)
-      setAccounts(accountsData)
-      setTransactions(txnsData)
-      setManual(manualData)
-    },
-    [],
-  )
+    setStatus(statusData)
+    setAccounts(accountsData)
+    setTransactions(txnsData)
+    setManual(manualResult.data)
+    setManualError(manualResult.error || null)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
 
-    const unsubscribe =
-      onAuthStateChanged(
-        auth,
-        async (user) => {
-          if (!user) {
-            if (!cancelled) {
-              setStatus(null)
-              setAccounts([])
-              setTransactions([])
-              setManual([])
-              setError(null)
-              setLoading(false)
-            }
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        if (!cancelled) {
+          setStatus(null)
+          setAccounts([])
+          setTransactions([])
+          setManual([])
+          setError(null)
+          setManualError(null)
+          setLoading(false)
+        }
+        return
+      }
 
-            return
-          }
+      try {
+        await load(user)
 
-          try {
-            await load(user)
-
-            if (!cancelled) {
-              setError(null)
-            }
-          } catch (err) {
-            if (!cancelled) {
-              setError(err)
-            }
-          } finally {
-            if (!cancelled) {
-              setLoading(false)
-            }
-          }
-        },
-      )
+        if (!cancelled) {
+          setError(null)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err)
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    })
 
     return () => {
       cancelled = true
@@ -230,11 +189,7 @@ function TransactionsPage() {
   useEffect(() => {
     let cancelled = false
 
-    convertCurrency(
-      1,
-      'NZD',
-      preferredCurrency,
-    )
+    convertCurrency(1, 'NZD', preferredCurrency)
       .then((result) => {
         if (!cancelled) {
           setRate(result)
@@ -257,10 +212,11 @@ function TransactionsPage() {
     setError(null)
 
     try {
-      const summary =
-        await syncBankData()
-
+      const summary = await syncBankData()
       await load(auth.currentUser)
+
+      // Refresh detected subscriptions without reloading the page.
+      await refreshSubscriptions({ silent: true }).catch(() => {})
 
       setSyncSummary(summary)
     } catch (err) {
@@ -276,28 +232,20 @@ function TransactionsPage() {
       preferredCurrency,
     )
 
-  function translateCategory(
-    category,
-  ) {
+  function translateCategory(category) {
     switch (category?.toLowerCase()) {
       case 'food':
         return foodText
-
       case 'transport':
         return transportText
-
       case 'shopping':
         return shoppingText
-
       case 'bills':
         return billsText
-
       case 'entertainment':
         return entertainmentText
-
       case 'other':
         return otherText
-
       default:
         return category || ''
     }
@@ -306,36 +254,29 @@ function TransactionsPage() {
   if (loading) {
     return (
       <AppShell activeNav="Transactions">
-        <p>
-          {loadingTransactionsText}
-        </p>
+        <p>{loadingTransactionsText}</p>
       </AppShell>
     )
   }
 
-  const connected =
-    Boolean(status?.connected)
+  const connected = Boolean(status?.connected)
 
-  // The transactions collection holds both manually-added rows and the ones the
-  // Gmail scan detected; split them so each gets its own clearly-labelled card.
-  const manualTxns = manual.filter((t) => t.source !== 'gmail-detected')
-  const emailTxns = manual.filter((t) => t.source === 'gmail-detected')
+  // Separate manually-added and email-detected transactions.
+  const manualTxns = manual.filter(
+    (transaction) => transaction.source !== 'gmail-detected',
+  )
+
+  const emailTxns = manual.filter(
+    (transaction) => transaction.source === 'gmail-detected',
+  )
 
   return (
     <AppShell activeNav="Transactions">
       <header className="transactions-header">
         <div>
-          <p className="transactions-eyebrow">
-            SpendWise
-          </p>
-
-          <h1>
-            {transactionsText}
-          </h1>
-
-          <p>
-            {descriptionText}
-          </p>
+          <p className="transactions-eyebrow">SpendWise</p>
+          <h1>{transactionsText}</h1>
+          <p>{headerSubtitleText || descriptionText}</p>
         </div>
 
         <div className="transactions-actions">
@@ -346,16 +287,11 @@ function TransactionsPage() {
               onClick={handleRefresh}
               disabled={syncing}
             >
-              {syncing
-                ? syncingText
-                : `↻ ${refreshText}`}
+              {syncing ? syncingText : `↻ ${refreshText}`}
             </button>
           )}
 
-          <Link
-            className="transactions-add"
-            to="/transactions/new"
-          >
+          <Link className="transactions-add" to="/transactions/new">
             {addTransactionText}
           </Link>
         </div>
@@ -364,19 +300,9 @@ function TransactionsPage() {
       {syncSummary && (
         <Card className="transactions-notice">
           <p>
-            {syncedText}{' '}
-            {
-              syncSummary
-                .transactionsSynced
-            }{' '}
-            {transactionsAcrossText}{' '}
-            {syncSummary.accounts}{' '}
-            {accountsText}{' '}
-            {
-              syncSummary
-                .subscriptionsCreated
-            }{' '}
-            {subscriptionsDetectedText}
+            {syncedText} {syncSummary.transactionsSynced}{' '}
+            {transactionsAcrossText} {syncSummary.accounts} {accountsText}{' '}
+            {syncSummary.subscriptionsCreated} {subscriptionsDetectedText}
           </p>
         </Card>
       )}
@@ -384,8 +310,7 @@ function TransactionsPage() {
       {error && (
         <Card className="transactions-notice">
           <p>
-            {errorText}{' '}
-            {error.message}
+            {errorText} {error.message}
           </p>
         </Card>
       )}
@@ -393,167 +318,169 @@ function TransactionsPage() {
       {manualError && (
         <Card className="transactions-notice">
           <p>
-            Could not load your manual and email transactions:{' '}
+            {manualErrorMessageText ||
+              'Could not load your manual and email transactions:'}{' '}
             {manualError.message}
           </p>
         </Card>
       )}
 
-      {!connected ? (
+      {/* FIX: Show this card only when the bank is not connected. */}
+      {!connected && (
         <Card className="transactions-notice">
-          <h3>
-            {noBankConnectedText}
-          </h3>
-
-          <p>
-            {connectBankText}
-          </p>
+          <h3>{noBankConnectedText}</h3>
+          <p>{connectBankText}</p>
         </Card>
-      ) : (
-        <>
-          <section className="transactions-accounts">
-            {accounts.map(
-              (account) => (
-                <Card
-                  key={
-                    account.accountId
-                  }
-                  tone="forest"
-                  className="transactions-account"
-                >
-                  <p>
-                    {account.nickname ||
-                      accountText}
-                  </p>
-
-                  <h2 className="money">
-                    {account.balance !=
-                    null
-                      ? show(
-                          account.balance,
-                        )
-                      : '—'}
-                  </h2>
-
-                  <p className="transactions-account__meta">
-                    {account.accountSubType ||
-                      account.accountType ||
-                      ''}
-
-                    {account.identification
-                      ? ` · ${account.identification}`
-                      : ''}
-                  </p>
-                </Card>
-              ),
-            )}
-          </section>
-
-          <Card>
-            <h3>
-              {recentTransactionsText}
-            </h3>
-
-            {transactions.length ===
-            0 ? (
-              <p className="transactions-empty">
-                {noTransactionsText}
-              </p>
-            ) : (
-              <ul className="transactions-list">
-                {transactions.map(
-                  (txn) => (
-                    <li
-                      key={
-                        txn.transactionId
-                      }
-                      className="transactions-list__item"
-                    >
-                      <div>
-                        <p className="transactions-list__name">
-                          {txn.merchant ||
-                            txn.description}
-                        </p>
-
-                        <p className="transactions-list__date">
-                          {formatDate(
-                            txn.bookedAt,
-                          )}
-                        </p>
-                      </div>
-
-                      <span
-                        className={`money transactions-amount ${
-                          txn.direction ===
-                          'credit'
-                            ? 'transactions-amount--credit'
-                            : ''
-                        }`}
-                      >
-                        {txn.direction ===
-                        'debit'
-                          ? '−'
-                          : '+'}
-
-                        {show(
-                          txn.amount,
-                        )}
-                      </span>
-                    </li>
-                  ),
-                )}
-              </ul>
-            )}
-          </Card>
-        </>
       )}
 
-      {manual.length > 0 && (
-        <Card>
-          <h3>
-            {addedManuallyText}
-          </h3>
+      {connected && (
+        <section className="transactions-accounts">
+          {accounts.map((account) => (
+            <Card
+              key={account.accountId}
+              tone="forest"
+              className="transactions-account"
+            >
+              <p>{account.nickname || accountText}</p>
+              <h2 className="money">
+                {account.balance != null
+                  ? show(account.balance)
+                  : '—'}
+              </h2>
+              <p className="transactions-account__meta">
+                {account.accountSubType || account.accountType || ''}
+                {account.identification
+                  ? ` · ${account.identification}`
+                  : ''}
+              </p>
+            </Card>
+          ))}
+        </section>
+      )}
 
+      <Card className="transactions-section">
+        <h3>{fromEmailText || 'From email'}</h3>
+
+        {emailTxns.length === 0 ? (
+          <p className="transactions-empty">
+            {noEmailTransactionsText ||
+              'No email transactions yet. Connect Gmail in Settings, then use Scan inbox for subscriptions. A receipt needs a dollar amount in the email body to be recorded.'}
+          </p>
+        ) : (
           <ul className="transactions-list">
-            {manual.map(
-              (transaction) => (
+            {emailTxns.map((transaction) => (
+              <li
+                key={transaction.id}
+                className="transactions-list__item"
+              >
+                <div className="transactions-list__email">
+                  <p className="transactions-list__name">
+                    {transaction.subject || transaction.name}
+                  </p>
+
+                  <p className="transactions-list__date">
+                    {transaction.name}
+                    {transaction.sender
+                      ? ` · ${transaction.sender}`
+                      : ''}
+                  </p>
+
+                  <p className="transactions-list__date">
+                    {formatDate(transaction.date)}
+                    {transaction.category
+                      ? ` · ${translateCategory(transaction.category)}`
+                      : ''}
+                  </p>
+                </div>
+
+                <span className="money">
+                  {show(transaction.amount)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      {connected && (
+        <Card className="transactions-section">
+          <h3>{recentTransactionsText}</h3>
+
+          {transactions.length === 0 ? (
+            <p className="transactions-empty">
+              {noTransactionsText}
+            </p>
+          ) : (
+            <ul className="transactions-list">
+              {transactions.map((txn) => (
                 <li
-                  key={transaction.id}
+                  key={txn.transactionId}
                   className="transactions-list__item"
                 >
                   <div>
                     <p className="transactions-list__name">
-                      {transaction.name}
+                      {txn.merchant || txn.description}
                     </p>
 
                     <p className="transactions-list__date">
-                      {transaction.date}
-
-                      {transaction.category
-                        ? ` · ${translateCategory(
-                            transaction.category,
-                          )}`
-                        : ''}
+                      {formatDate(txn.bookedAt)}
                     </p>
                   </div>
 
-                  <span className="transactions-list__manual">
-                    <span className="money">
-                      {show(
-                        transaction.amount,
-                      )}
-                    </span>
-
-                    <Link
-                      className="transactions-list__edit"
-                      to={`/transactions/${transaction.id}/edit`}
-                    >
-                      {editText}
-                    </Link>
+                  <span
+                    className={`money transactions-amount ${
+                      txn.direction === 'credit'
+                        ? 'transactions-amount--credit'
+                        : ''
+                    }`}
+                  >
+                    {txn.direction === 'debit' ? '−' : '+'}
+                    {show(txn.amount)}
                   </span>
                 </li>
-              ),
-            )}
+              ))}
+            </ul>
+          )}
+        </Card>
+      )}
+
+      {manualTxns.length > 0 && (
+        <Card className="transactions-section">
+          <h3>{addedManuallyText}</h3>
+
+          <ul className="transactions-list">
+            {manualTxns.map((transaction) => (
+              <li
+                key={transaction.id}
+                className="transactions-list__item"
+              >
+                <div>
+                  <p className="transactions-list__name">
+                    {transaction.name}
+                  </p>
+
+                  <p className="transactions-list__date">
+                    {transaction.date}
+                    {transaction.category
+                      ? ` · ${translateCategory(transaction.category)}`
+                      : ''}
+                  </p>
+                </div>
+
+                <span className="transactions-list__manual">
+                  <span className="money">
+                    {show(transaction.amount)}
+                  </span>
+
+                  <Link
+                    className="transactions-list__edit"
+                    to={`/transactions/${transaction.id}/edit`}
+                  >
+                    {editText}
+                  </Link>
+                </span>
+              </li>
+            ))}
           </ul>
         </Card>
       )}

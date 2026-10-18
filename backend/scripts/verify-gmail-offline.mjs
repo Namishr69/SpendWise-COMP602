@@ -42,6 +42,8 @@ const mod = (p) => import(new URL(p, SRC).href).then((m) => m.default);
 // ---- 2. fetch stub --------------------------------------------------------
 let fetchCalls = [];
 let tokenResponseOverride = null; // lets a test force "no refresh token"
+let translationCalls = [];
+let translationErrorOverride = null; // { status, body } to simulate a Google error
 
 function jsonResponse(obj, ok = true, status = 200) {
   const text = JSON.stringify(obj);
@@ -132,6 +134,30 @@ global.fetch = async (url, options = {}) => {
 
   if (url === 'https://oauth2.googleapis.com/revoke') return jsonResponse({});
 
+  // Google Translate v2. Mirrors the real API in the two ways the service
+  // depends on: a `{ data: { translations: [{ translatedText }] } }` response,
+  // and HTML entities escaped in the output.
+  if (url.startsWith('https://translation.googleapis.com/language/translate/v2')) {
+    translationCalls.push({ url, body });
+    if (translationErrorOverride) {
+      return jsonResponse(
+        translationErrorOverride.body,
+        false,
+        translationErrorOverride.status
+      );
+    }
+    const payload = JSON.parse(body);
+    return jsonResponse({
+      data: {
+        translations: payload.q.map((text) => ({
+          translatedText: `[${payload.target}] ${text}`
+            .replace(/&/g, '&amp;')
+            .replace(/'/g, '&#39;'),
+        })),
+      },
+    });
+  }
+
   if (url.endsWith('/users/me/profile')) {
     return jsonResponse({ emailAddress: 'tester@gmail.com', messagesTotal: 4321 });
   }
@@ -214,6 +240,7 @@ const gmailController = await mod('controllers/gmailController.js');
 const gmailSyncService = await mod('services/gmailSyncService.js');
 const subscriptionRepo = await mod('repositories/subscriptionRepo.js');
 const transactionRepo = await mod('repositories/transactionRepo.js');
+const priceAlertRepo = await mod('repositories/priceAlertRepo.js');
 const { parseReceiptEmail, looksLikeReceiptEmail } = await import(
   new URL('services/gmailEmailParser.js', SRC).href
 );
@@ -480,6 +507,16 @@ function makeInMemorySubscriptionRepo() {
     async create(uid, data) { const id = `sub-${(seq += 1)}`; const rec = { id, ...data }; subs.set(id, rec); return { ...rec }; },
     async update(uid, id, changes) { const next = { ...subs.get(id), ...changes }; subs.set(id, next); return { ...next }; },
     async upsertPayment(uid, subId, paymentId, data) { payments.set(`${subId}:${paymentId}`, { id: paymentId, ...data }); return { id: paymentId, ...data }; },
+    async deleteAllDetected(uid, source = 'anz-detected') {
+      const removed = [];
+      for (const [id, s] of subs.entries()) {
+        if (s.source === source) {
+          subs.delete(id);
+          removed.push(id);
+        }
+      }
+      return removed;
+    },
     _subs: subs,
     _payments: payments,
   };
@@ -490,7 +527,37 @@ function makeInMemoryTransactionRepo() {
   return {
     async upsertById(uid, id, data) { txns.set(id, { id, ...data }); return { id, ...data }; },
     async getAll() { return [...txns.values()].map((t) => ({ ...t })); },
+    async deleteAllBySource(uid, source) {
+      let count = 0;
+      for (const [id, t] of txns.entries()) {
+        if (t.source === source) {
+          txns.delete(id);
+          count += 1;
+        }
+      }
+      return count;
+    },
     _txns: txns,
+  };
+}
+
+// Only the batch cleanup is needed here: recordPriceChanges is not on the
+// disconnect path.
+function makeInMemoryPriceAlertRepo() {
+  const alerts = new Map();
+  return {
+    async removeBySubscriptions(uid, subscriptionIds) {
+      const wanted = new Set(subscriptionIds);
+      let removed = 0;
+      for (const [id, alert] of alerts.entries()) {
+        if (wanted.has(alert.subscriptionId)) {
+          alerts.delete(id);
+          removed += 1;
+        }
+      }
+      return removed;
+    },
+    _alerts: alerts,
   };
 }
 
@@ -580,6 +647,199 @@ await expectThrows(
   () => gmailSyncService.syncSubscriptions('nobody'),
   'No Gmail connection'
 );
+
+console.log('\n[controller — disconnect cleans up gmail subscriptions, alerts and transactions]');
+// Ensure manual data is untouched when deleting gmail-detected items
+subRepo._subs.set('manual-1', { id: 'manual-1', name: 'Manual Rent', source: undefined });
+txnRepo._txns.set('manual-txn-1', { id: 'manual-txn-1', name: 'Manual Coffee', source: undefined });
+
+// One alert per gmail-detected subscription, plus one for the manual one.
+const alertRepo = makeInMemoryPriceAlertRepo();
+Object.assign(priceAlertRepo, alertRepo);
+for (const [id, s] of subRepo._subs) {
+  if (s.source === 'gmail-detected') {
+    alertRepo._alerts.set(`${id}_p`, { id: `${id}_p`, subscriptionId: id, dismissed: false });
+  }
+}
+alertRepo._alerts.set('manual-1_p', { id: 'manual-1_p', subscriptionId: 'manual-1', dismissed: false });
+
+check('subscriptions exist before disconnect', subRepo._subs.size === 4);
+check('transactions exist before disconnect', txnRepo._txns.size === 6);
+check('alerts exist before disconnect', alertRepo._alerts.size === 4);
+
+res = fakeRes();
+await gmailController.disconnect({ userId: SYNC_UID }, res);
+check('disconnect returns 200', res.statusCode === 200);
+check('disconnect removes gmail-detected subscriptions', subRepo._subs.size === 1 && subRepo._subs.has('manual-1'));
+check('disconnect removes gmail-detected transactions', txnRepo._txns.size === 1 && txnRepo._txns.has('manual-txn-1'));
+check('disconnect removes the alerts of the deleted subscriptions', alertRepo._alerts.size === 1 && alertRepo._alerts.has('manual-1_p'));
+check('connection removed on disconnect', (await repo.getConnection(SYNC_UID)) === null);
+
+// ---- 8. real repos against a fake Firestore -------------------------------
+// The disconnect path above used in-memory swaps. These exercise the actual
+// Firestore queries (source filter, nested payments, batching) on a stand-in
+// for the Firestore instance, so a broken query shape is caught offline.
+console.log('\n[repositories — real deletes against a fake Firestore]');
+
+/** Just enough of the Firestore API for the two delete helpers. */
+function makeFakeFirestore(seed = {}) {
+  const docs = new Map(Object.entries(seed));
+
+  function ref(path) {
+    return {
+      id: path.split('/').pop(),
+      path,
+      async get() {
+        return {
+          id: this.id,
+          exists: docs.has(path),
+          data: () => ({ ...(docs.get(path) || {}) }),
+        };
+      },
+      async set(data, options = {}) {
+        docs.set(path, options.merge ? { ...(docs.get(path) || {}), ...data } : { ...data });
+      },
+      async delete() { docs.delete(path); },
+      collection: (name) => collection(`${path}/${name}`),
+    };
+  }
+
+  function collection(base) {
+    const self = {
+      doc: (id) => ref(`${base}/${id}`),
+      async get() {
+        const prefix = `${base}/`;
+        const paths = [...docs.keys()].filter(
+          (p) => p.startsWith(prefix) && !p.slice(prefix.length).includes('/')
+        );
+        return {
+          docs: paths.map((p) => ({
+            id: p.split('/').pop(),
+            ref: ref(p),
+            data: () => ({ ...(docs.get(p) || {}) }),
+          })),
+        };
+      },
+      where(field, op, value) {
+        return {
+          async get() {
+            const all = await self.get();
+            const matching = all.docs.filter((d) => {
+              const data = d.data();
+              if (op === '==') return data[field] === value;
+              if (op === 'in') return value.includes(data[field]);
+              throw new Error(`fake firestore: unsupported operator ${op}`);
+            });
+            return { docs: matching };
+          },
+        };
+      },
+    };
+    return self;
+  }
+
+  return {
+    collection,
+    batch() {
+      const ops = [];
+      return {
+        delete: (r) => ops.push(() => docs.delete(r.path)),
+        set: (r, data, options) => ops.push(() =>
+          docs.set(r.path, options?.merge ? { ...(docs.get(r.path) || {}), ...data } : { ...data })
+        ),
+        async commit() { ops.forEach((op) => op()); },
+      };
+    },
+    _docs: docs,
+  };
+}
+
+const { db } = (await import(new URL('config/firebase.js', SRC).href));
+const fake = makeFakeFirestore({
+  'users/u1/subscriptions/sub-a': { source: 'gmail-detected', name: 'Netflix' },
+  'users/u1/subscriptions/sub-a/payments/p1': { date: '2026-10-06', amount: 15.99 },
+  'users/u1/subscriptions/manual-1': { name: 'Rent' },
+  'users/u1/transactions/t1': { source: 'gmail-detected', name: 'Netflix' },
+  'users/u1/transactions/t2': { name: 'Coffee' },
+});
+Object.assign(db, fake);
+
+// Fresh module instances so the real implementations run (the singletons above
+// were replaced with in-memory stores earlier in this file).
+const realSubRepo = (await import(new URL('repositories/subscriptionRepo.js?real', SRC).href)).default;
+const realTxnRepo = (await import(new URL('repositories/transactionRepo.js?real', SRC).href)).default;
+
+const removedSubIds = await realSubRepo.deleteAllDetected('u1', 'gmail-detected');
+check('deleteAllDetected returns the deleted ids', Array.isArray(removedSubIds) && removedSubIds.join() === 'sub-a');
+check('deleteAllDetected removed the subscription', !fake._docs.has('users/u1/subscriptions/sub-a'));
+check('its payments sub-collection went too', !fake._docs.has('users/u1/subscriptions/sub-a/payments/p1'));
+check('a manual subscription is untouched', fake._docs.has('users/u1/subscriptions/manual-1'));
+
+const removedTxnCount = await realTxnRepo.deleteAllBySource('u1', 'gmail-detected');
+check('deleteAllBySource returns the count', removedTxnCount === 1);
+check('deleteAllBySource removed the gmail transaction', !fake._docs.has('users/u1/transactions/t1'));
+check('a manual transaction is untouched', fake._docs.has('users/u1/transactions/t2'));
+
+// ---- 9. translation service ----------------------------------------------
+console.log('\n[translationService — Google Translate v2]');
+const translationService = await mod('services/translationService.js');
+const translationController = await mod('controllers/translationController.js');
+
+delete process.env.GOOGLE_TRANSLATE_API_KEY;
+try {
+  await translationService.translateTexts(['Hello'], 'es');
+  check('a missing API key is reported', false);
+} catch (error) {
+  check('a missing API key is reported', error.message.includes('not configured'));
+  check('a missing API key maps to 503', error.status === 503);
+}
+
+process.env.GOOGLE_TRANSLATE_API_KEY = 'test-translate-key';
+
+translationCalls = [];
+check('English is passed through untouched', JSON.stringify(await translationService.translateTexts(['Hello', "Don't"], 'en')) === JSON.stringify(['Hello', "Don't"]));
+check('English makes no request', translationCalls.length === 0);
+
+await expectThrows('unsupported language rejected', () => translationService.translateTexts(['Hello'], 'de'), 'Unsupported language');
+
+const translated = await translationService.translateTexts(['Sign up', "Don't have an account?", 'AT&T'], 'es');
+check('translates every segment in order', translated.length === 3 && translated[0] === '[es] Sign up');
+check('decodes &#39; back to an apostrophe', translated[1] === "[es] Don't have an account?");
+check('decodes &amp; back to & (after the other entities)', translated[2] === '[es] AT&T');
+
+translationCalls = [];
+await translationService.translateTexts(['Sign up'], 'es');
+check('already-translated text makes no new request', translationCalls.length === 0);
+
+translationCalls = [];
+const many = Array.from({ length: 101 }, (_, i) => `Line ${i}`);
+const manyResult = await translationService.translateTexts(many, 'fr');
+check('101 segments are split into 2 requests', translationCalls.length === 2);
+check('a split batch keeps its order', manyResult[0] === '[fr] Line 0' && manyResult[100] === '[fr] Line 100');
+check('no segment is lost or duplicated', new Set(manyResult).size === 101);
+
+translationErrorOverride = {
+  status: 403,
+  body: { error: { message: 'API key not valid. Please pass a valid API key.' } },
+};
+try {
+  await translationService.translateTexts(['A brand new string'], 'mi');
+  check('a rejected API key is reported', false);
+} catch (error) {
+  check('a rejected API key surfaces the Google detail', error.message.includes('API key not valid'));
+  check('a rejected API key maps to 503', error.status === 503);
+}
+translationErrorOverride = null;
+
+res = fakeRes();
+await translationController.translate({ body: { texts: ['Sign up'], targetLanguage: 'es' } }, res);
+check('controller returns translatedTexts', res.body.translatedTexts?.[0] === '[es] Sign up');
+
+delete process.env.GOOGLE_TRANSLATE_API_KEY;
+res = fakeRes();
+await translationController.translate({ body: { texts: ['Never translated'], targetLanguage: 'es' } }, res);
+check('controller returns 503 when the key is missing', res.statusCode === 503);
+process.env.GOOGLE_TRANSLATE_API_KEY = 'test-translate-key';
 
 console.log(`\n==== ${passed} passed, ${failed} failed ====`);
 process.exit(failed === 0 ? 0 : 1);

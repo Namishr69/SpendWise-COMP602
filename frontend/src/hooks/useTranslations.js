@@ -525,6 +525,15 @@ function getPublicTranslations(
   )
 }
 
+// Resolved translations, keyed by language + the exact list of strings. A page
+// visited once comes back instantly when the user switches languages again,
+// and two components asking for the same strings share one backend request.
+const translationCache = new Map()
+
+function cacheKeyFor(language, textsKey) {
+  return `${language}|${textsKey}`
+}
+
 export function useTranslations(
   texts,
 ) {
@@ -534,68 +543,80 @@ export function useTranslations(
   const { preferredLanguage } =
     useContext(LanguageContext)
 
-  const stableTexts = useMemo(
-    () => texts,
-    [JSON.stringify(texts)],
+  // Most callers pass a fresh array literal on every render. The memo has to
+  // key on the contents, AND it has to return the same array while the
+  // contents are unchanged: the effect below depends on it, so handing back
+  // the caller's new array each render would re-run the effect on every render.
+  const textsKey = JSON.stringify(texts)
+
+  const baseTexts = useMemo(
+    () => JSON.parse(textsKey),
+    [textsKey],
   )
 
-  const [
-    translatedTexts,
-    setTranslatedTexts,
-  ] = useState(stableTexts)
+  // The last translation that arrived asynchronously. Kept in state only so a
+  // late response re-renders the hook; the value that is actually shown is
+  // derived below, which is what makes it safe to read the shared cache
+  // during render.
+  const [loaded, setLoaded] = useState(null)
 
   useEffect(() => {
+    if (
+      preferredLanguage === 'en' ||
+      baseTexts.length === 0
+    ) {
+      return undefined
+    }
+
+    const cacheKey = cacheKeyFor(
+      preferredLanguage,
+      textsKey,
+    )
+
+    // Already translated — switching back is instant.
+    if (translationCache.has(cacheKey)) {
+      return undefined
+    }
+
+    // Logged-out pages cannot use the
+    // authenticated translation API.
+    // Use local translations for public
+    // pages instead.
+    if (!currentUser) {
+      return undefined
+    }
+
     let cancelled = false
 
     async function loadTranslations() {
-      if (
-        preferredLanguage === 'en' ||
-        stableTexts.length === 0
-      ) {
-        setTranslatedTexts(
-          stableTexts,
-        )
-        return
-      }
-
-      // Logged-out pages cannot use the
-      // authenticated translation API.
-      // Use local translations for public
-      // pages instead.
-      if (!currentUser) {
-        setTranslatedTexts(
-          getPublicTranslations(
-            stableTexts,
-            preferredLanguage,
-          ),
-        )
-        return
-      }
-
       try {
         const results =
           await translateTexts(
             currentUser,
-            stableTexts,
+            baseTexts,
             preferredLanguage,
           )
 
-        if (!cancelled) {
-          setTranslatedTexts(
-            results,
-          )
-        }
+        if (cancelled) return
+
+        translationCache.set(
+          cacheKey,
+          results,
+        )
+
+        setLoaded({
+          language: preferredLanguage,
+          key: textsKey,
+          value: results,
+        })
       } catch (error) {
+        // The original English is always a correct fallback — the app stays
+        // usable even when the translation service is unavailable or the API
+        // key is missing. The next render shows it without any state write.
         console.error(
           'Failed to translate texts:',
           error,
         )
-
-        if (!cancelled) {
-          setTranslatedTexts(
-            stableTexts,
-          )
-        }
       }
     }
 
@@ -607,8 +628,44 @@ export function useTranslations(
   }, [
     currentUser,
     preferredLanguage,
-    stableTexts,
+    baseTexts,
+    textsKey,
   ])
 
-  return translatedTexts
+  return useMemo(() => {
+    if (preferredLanguage === 'en') {
+      return baseTexts
+    }
+
+    const cached = translationCache.get(
+      cacheKeyFor(preferredLanguage, textsKey),
+    )
+
+    if (cached) {
+      return cached
+    }
+
+    if (
+      loaded &&
+      loaded.key === textsKey &&
+      loaded.language === preferredLanguage
+    ) {
+      return loaded.value
+    }
+
+    if (!currentUser) {
+      return getPublicTranslations(
+        baseTexts,
+        preferredLanguage,
+      )
+    }
+
+    return baseTexts
+  }, [
+    baseTexts,
+    currentUser,
+    loaded,
+    preferredLanguage,
+    textsKey,
+  ])
 }
