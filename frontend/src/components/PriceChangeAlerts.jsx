@@ -13,7 +13,8 @@ import './PriceChangeAlerts.css'
 function formatDate(isoDate) {
   if (!isoDate) return ''
 
-  // Payment dates are plain YYYY-MM-DD, so read them as local dates.
+  // Payment and effective dates are plain YYYY-MM-DD, so read them as local
+  // dates.
   const date = new Date(`${isoDate}T00:00:00`)
 
   if (Number.isNaN(date.getTime())) return isoDate
@@ -107,6 +108,9 @@ function PriceChangeAlerts({ subscriptionId, refreshKey = 0 }) {
           const difference =
             alert.newAmount - alert.previousAmount
           const increased = difference > 0
+          // Announced by the provider ahead of time, rather than spotted in
+          // a charge that already happened.
+          const announced = alert.type === 'announcement'
 
           return (
             <li
@@ -126,13 +130,14 @@ function PriceChangeAlerts({ subscriptionId, refreshKey = 0 }) {
                       {name}
                     </Link>
                   )}{' '}
-                  charged {increased ? 'more' : 'less'} than
-                  usual
+                  {announced
+                    ? 'is changing its price'
+                    : `charged ${increased ? 'more' : 'less'} than usual`}
                 </p>
 
                 <p className="price-alerts__amounts">
                   <span>
-                    Previous{' '}
+                    {announced ? 'Current' : 'Previous'}{' '}
                     <strong>
                       {showMoney(alert.previousAmount)}
                     </strong>
@@ -153,12 +158,21 @@ function PriceChangeAlerts({ subscriptionId, refreshKey = 0 }) {
                   </span>
                 </p>
 
-                <p className="price-alerts__meta">
-                  Charged {formatDate(alert.paymentDate)}
-                  {alert.source === 'anz-detected'
-                    ? ' · from your bank'
-                    : ''}
-                </p>
+                {announced ? (
+                  <p className="price-alerts__meta">
+                    {alert.effectiveDate
+                      ? `Takes effect ${formatDate(alert.effectiveDate)}`
+                      : 'Start date not given'}
+                    {' · from your email'}
+                  </p>
+                ) : (
+                  <p className="price-alerts__meta">
+                    Charged {formatDate(alert.paymentDate)}
+                    {alert.source === 'anz-detected'
+                      ? ' · from your bank'
+                      : ''}
+                  </p>
+                )}
               </div>
 
               <Button

@@ -51,16 +51,51 @@ export function findPriceChanges(charges, newChargeIds) {
     return changes;
 }
 
+// A provider may bill the new price a few days before the date it announced,
+// e.g. when the billing date falls just before it.
+const ANNOUNCED_GRACE_DAYS = 7;
+
+function daysBefore(isoDate, days) {
+    const date = new Date(`${isoDate}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() - days);
+    return date.toISOString().slice(0, 10);
+}
+
+/**
+ * Pure. Drops charge-based changes the provider already announced: a charge
+ * at the announced new price, on or shortly before the announced date. The
+ * user was told about these ahead of time, so they are not unexpected.
+ * Dismissed announcements still count — acknowledging one is not a reason
+ * to be alerted again when the charge arrives.
+ */
+export function filterAnnouncedChanges(subscriptionId, changes, alerts) {
+    const announcements = alerts.filter(
+        (alert) => alert.type === 'announcement' && alert.subscriptionId === subscriptionId
+    );
+
+    return changes.filter((change) => !announcements.some((announcement) => {
+        if (toCents(announcement.newAmount) !== toCents(change.newAmount)) return false;
+        if (!announcement.effectiveDate) return true;
+        return change.paymentDate >= daysBefore(announcement.effectiveDate, ANNOUNCED_GRACE_DAYS);
+    }));
+}
+
 const priceAlertService = {
     /**
      * Persists one alert per detected change. Alerts are keyed by the charge
      * they were raised for, so running detection over the same charge again
-     * (e.g. a bank re-sync) never duplicates or re-opens an alert.
+     * (e.g. a bank re-sync) never duplicates or re-opens an alert. Changes the
+     * provider announced in advance are skipped.
      */
     async recordPriceChanges(userId, subscription, changes) {
+        if (changes.length === 0) return [];
+
+        const existing = await priceAlertRepo.listBySubscription(userId, subscription.id);
+        const unexpected = filterAnnouncedChanges(subscription.id, changes, existing);
+
         const created = [];
 
-        for (const change of changes) {
+        for (const change of unexpected) {
             const alert = await priceAlertRepo.createIfAbsent(
                 userId,
                 `${subscription.id}_${change.paymentId}`,
@@ -83,9 +118,12 @@ const priceAlertService = {
 
     async listActiveAlerts(userId, subscriptionId) {
         const alerts = await priceAlertRepo.listActive(userId);
+        // Charge alerts are dated by the charge, announcements by the date
+        // the new price takes effect.
+        const dateOf = (alert) => alert.paymentDate || alert.effectiveDate || '';
         return alerts
             .filter((alert) => !subscriptionId || alert.subscriptionId === subscriptionId)
-            .sort((a, b) => (a.paymentDate < b.paymentDate ? 1 : -1));
+            .sort((a, b) => (dateOf(a) < dateOf(b) ? 1 : -1));
     },
 
     async dismissAlert(userId, alertId) {

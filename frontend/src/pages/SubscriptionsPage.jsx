@@ -56,7 +56,21 @@ const SUBSCRIPTIONS_TEXT = [
   'Only paused subscriptions can be unpaused.',
   'Cannot cancel selected subscriptions',
   'Only active or paused subscriptions can be cancelled.',
+  'from',
 ]
+
+// Effective dates are plain YYYY-MM-DD, so read them as local dates.
+function formatDate(isoDate) {
+  const date = new Date(`${isoDate}T00:00:00`)
+
+  if (Number.isNaN(date.getTime())) return isoDate
+
+  return date.toLocaleDateString('en-NZ', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
 
 function SubscriptionsPage() {
   const {
@@ -139,6 +153,7 @@ function SubscriptionsPage() {
     onlyPausedCanUnpauseText,
     cannotCancelText,
     onlyActivePausedCanCancelText,
+    fromText,
   ] = useTranslations(SUBSCRIPTIONS_TEXT)
 
   const showMoney = (amount) =>
@@ -762,6 +777,26 @@ function SubscriptionsPage() {
                         subscription.billingCycle,
                       )}
                     </p>
+
+                    {subscription.upcomingPriceChange && (
+                      <p
+                        className={`subscription-card__price-change subscription-card__price-change--${
+                          subscription.upcomingPriceChange.newAmount >
+                          subscription.amount
+                            ? 'up'
+                            : 'down'
+                        }`}
+                      >
+                        →{' '}
+                        {showMoney(
+                          subscription.upcomingPriceChange.newAmount,
+                        )}{' '}
+                        {fromText}{' '}
+                        {formatDate(
+                          subscription.upcomingPriceChange.effectiveDate,
+                        )}
+                      </p>
+                    )}
 
                     <p>
                       {nextPaymentText}{' '}

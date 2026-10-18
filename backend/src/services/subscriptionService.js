@@ -1,9 +1,19 @@
 import subscriptionRepo from '../repositories/subscriptionRepo.js';
 import priceAlertService, { findPriceChanges } from './priceAlertService.js';
+import providerPriceAlertService from './providerPriceAlertService.js';
 
 const subscriptionService = {
     async listSubscriptions(userId) {
-        return await subscriptionRepo.getAll(userId);
+        const subscriptions = await subscriptionRepo.getAll(userId);
+
+        // Announced price changes take effect on their date. A failure here
+        // still lists the subscriptions at their saved prices.
+        try {
+            return await providerPriceAlertService.applyAnnouncedPrices(userId, subscriptions);
+        } catch (error) {
+            console.error('Applying announced prices failed:', error.message);
+            return subscriptions;
+        }
     },
 
     async getSubscription(userId, subscriptionId) {

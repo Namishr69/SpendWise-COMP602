@@ -9,7 +9,9 @@
     "anz:jwks": "node scripts/print-anz-jwks.js",
     "anz:test": "node scripts/test-anz-connection.js",
     "anz:probe": "node scripts/probe-anz-paths.js",
-    "test": "node --test \"src/**/*.test.js\""
+    "test": "npm run test:vitest && npm run test:node",
+    "test:vitest": "vitest run --exclude src/services/anzTransactionMapper.test.js --exclude src/services/subscriptionDetection.test.js",
+    "test:node": "node --test src/services/anzTransactionMapper.test.js src/services/subscriptionDetection.test.js"
   },
   "keywords": [],
   "author": "",
@@ -20,5 +22,8 @@
     "express": "^5.2.1",
     "firebase-admin": "^14.2.0",
     "jose": "^6.2.9"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.3"
   }
 }

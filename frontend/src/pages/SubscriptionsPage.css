@@ -106,6 +106,18 @@
   margin-top: 0;
 }
 
+.subscription-card__price-change {
+  font-weight: 600;
+}
+
+.subscription-card__price-change--up {
+  color: var(--color-danger);
+}
+
+.subscription-card__price-change--down {
+  color: var(--color-success);
+}
+
 .subscription-card__heading {
   display: flex;
   align-items: center;

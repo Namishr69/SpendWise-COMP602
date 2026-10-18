@@ -21,6 +21,22 @@ const priceAlertRepo = {
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     },
 
+    // Every alert for one subscription, dismissed or not.
+    async listBySubscription(userId, subscriptionId) {
+        const snapshot = await alertsCollection(userId)
+            .where('subscriptionId', '==', subscriptionId)
+            .get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    },
+
+    // Every alert of one type (e.g. 'announcement'), dismissed or not.
+    async listByType(userId, type) {
+        const snapshot = await alertsCollection(userId)
+            .where('type', '==', type)
+            .get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    },
+
     async getById(userId, alertId) {
         const doc = await alertsCollection(userId).doc(alertId).get();
         if (!doc.exists) return null;
