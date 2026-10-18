@@ -200,6 +200,51 @@ function SubscriptionDetailPage() {
   const [adding, setAdding] =
     useState(false)
 
+  // Bumped after a payment is saved so PriceChangeAlerts re-fetches: a payment
+  // that differs from the previous one is exactly what raises a price alert.
+  const [
+    alertsVersion,
+    setAlertsVersion,
+  ] = useState(0)
+
+  const [
+    managingDevices,
+    setManagingDevices,
+  ] = useState(false)
+
+  const [
+    deviceName,
+    setDeviceName,
+  ] = useState('')
+
+  const [
+    editingDeviceIndex,
+    setEditingDeviceIndex,
+  ] = useState(null)
+
+  const [
+    editingDeviceName,
+    setEditingDeviceName,
+  ] = useState('')
+
+  const [
+    savingDevice,
+    setSavingDevice,
+  ] = useState(false)
+
+  const [
+    deviceError,
+    setDeviceError,
+  ] = useState('')
+
+  // Devices live on the subscription record; the manager edits that list and
+  // the context refresh re-renders from the updated subscription.
+  const devices = Array.isArray(
+    subscription?.devices,
+  )
+    ? subscription.devices
+    : []
+
   useEffect(() => {
     if (!subscription) return
 

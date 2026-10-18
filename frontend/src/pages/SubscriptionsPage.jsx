@@ -32,6 +32,9 @@ const SUBSCRIPTIONS_TEXT = [
   'Yearly',
   'Active',
   'Cancelled',
+  'Cancel subscription ↗',
+  'Find how to cancel ↗',
+  'No cancellation link available',
 ]
 
 function SubscriptionsPage() {
@@ -43,8 +46,14 @@ function SubscriptionsPage() {
     deleteSubscription,
   } = useSubscriptions()
 
-  const [deleting, setDeleting] =
-    useState(null)
+  const [deleting, setDeleting] = useState(null)
+
+  // The OAuth callback runs a bank sync server-side, so by the time the user
+  // lands here new subscriptions may already exist. Re-read on mount rather
+  // than trusting whatever the provider loaded at sign-in.
+  useEffect(() => {
+    refresh({ silent: true }).catch(() => {})
+  }, [refresh])
 
   const {
     preferredCurrency,
@@ -71,9 +80,10 @@ function SubscriptionsPage() {
     yearlyText,
     activeText,
     cancelledText,
-  ] = useTranslations(
-    SUBSCRIPTIONS_TEXT,
-  )
+    cancelSubscriptionText,
+    findHowToCancelText,
+    noCancellationLinkText,
+  ] = useTranslations(SUBSCRIPTIONS_TEXT)
 
   const showMoney = (amount) =>
     formatCurrency(
@@ -81,12 +91,8 @@ function SubscriptionsPage() {
       preferredCurrency,
     )
 
-  function translateBillingCycle(
-    billingCycle,
-  ) {
-    switch (
-      billingCycle?.toLowerCase()
-    ) {
+  function translateBillingCycle(billingCycle) {
+    switch (billingCycle?.toLowerCase()) {
       case 'monthly':
         return monthlyText
 
@@ -106,12 +112,8 @@ function SubscriptionsPage() {
     }
   }
 
-  function translateStatus(
-    subscriptionStatus,
-  ) {
-    switch (
-      subscriptionStatus?.toLowerCase()
-    ) {
+  function translateStatus(subscriptionStatus) {
+    switch (subscriptionStatus?.toLowerCase()) {
       case 'active':
         return activeText
 
@@ -120,18 +122,14 @@ function SubscriptionsPage() {
         return cancelledText
 
       default:
-        return (
-          subscriptionStatus || ''
-        )
+        return subscriptionStatus || ''
     }
   }
 
   if (loading) {
     return (
       <AppShell activeNav="Subscriptions">
-        <p>
-          {loadingSubscriptionsText}
-        </p>
+        <p>{loadingSubscriptionsText}</p>
       </AppShell>
     )
   }
@@ -140,8 +138,7 @@ function SubscriptionsPage() {
     return (
       <AppShell activeNav="Subscriptions">
         <p>
-          {loadErrorText}{' '}
-          {error.message}
+          {loadErrorText} {error.message}
         </p>
       </AppShell>
     )
@@ -151,65 +148,73 @@ function SubscriptionsPage() {
     <AppShell activeNav="Subscriptions">
       <header className="subscriptions-header">
         <div>
-          <p className="subscriptions-eyebrow">
-            SpendWise
-          </p>
-
-          <h1>
-            {subscriptionsText}
-          </h1>
-
-          <p>
-            {descriptionText}
-          </p>
+          <p className="subscriptions-eyebrow">SpendWise</p>
+          <h1>{subscriptionsText}</h1>
+          <p>{descriptionText}</p>
         </div>
 
-        <Link
-          className="subscriptions-add"
-          to="/subscriptions/new"
-        >
+        <Link className="subscriptions-add" to="/subscriptions/new">
           {addSubscriptionText}
         </Link>
       </header>
 
       {subscriptions.length === 0 ? (
-        <p>
-          {noSubscriptionsText}
-        </p>
+        <p>{noSubscriptionsText}</p>
       ) : (
         <section className="subscriptions-grid">
-          {subscriptions.map(
-            (subscription) => (
-              <Card
-                key={subscription.id}
-                className="subscription-card"
-              >
+          {subscriptions.map((subscription) => {
+            const cancellation = resolveCancellation(subscription.name)
+
+            return (
+              <Card key={subscription.id} className="subscription-card">
                 <div>
-                  <h2>
-                    {subscription.name}
-                  </h2>
-
-                  <p>
-                    {showMoney(
-                      subscription.amount,
-                    )}{' '}
-                    /{' '}
-                    {translateBillingCycle(
-                      subscription.billingCycle,
+                  <div className="subscription-card__heading">
+                    <h2>{subscription.name}</h2>
+                    {sourceLabel(subscription.source) && (
+                      <span className="subscription-source">
+                        {sourceLabel(subscription.source)}
+                      </span>
                     )}
+                  </div>
+
+                  <p>
+                    {showMoney(subscription.amount)} /{' '}
+                    {translateBillingCycle(subscription.billingCycle)}
                   </p>
 
                   <p>
-                    {nextPaymentText}{' '}
-                    {
-                      subscription.nextPaymentDate
-                    }
+                    {nextPaymentText} {subscription.nextPaymentDate}
                   </p>
 
                   <p>
-                    {statusText}{' '}
-                    {translateStatus(
-                      subscription.status,
+                    {statusText} {translateStatus(subscription.status)}
+                  </p>
+
+                  <p className="subscription-cancel-row">
+                    {cancellation ? (
+                      <a
+                        className={
+                          cancellation.kind === 'official'
+                            ? 'subscription-cancel'
+                            : 'subscription-cancel subscription-cancel--search'
+                        }
+                        href={cancellation.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={
+                          cancellation.kind === 'official'
+                            ? 'Opens this merchant’s own cancellation page'
+                            : 'No official link on file — opens a web search'
+                        }
+                      >
+                        {cancellation.kind === 'official'
+                          ? (cancelSubscriptionText || 'Cancel subscription ↗')
+                          : (findHowToCancelText || 'Find how to cancel ↗')}
+                      </a>
+                    ) : (
+                      <span className="subscription-cancel-fallback">
+                        {noCancellationLinkText || 'No cancellation link available'}
+                      </span>
                     )}
                   </p>
                 </div>
@@ -224,10 +229,7 @@ function SubscriptionsPage() {
 
                   <button
                     className="subscription-delete"
-                    disabled={
-                      deleting ===
-                      subscription.id
-                    }
+                    disabled={deleting === subscription.id}
                     onClick={async () => {
                       if (
                         !window.confirm(
@@ -237,32 +239,23 @@ function SubscriptionsPage() {
                         return
                       }
 
-                      setDeleting(
-                        subscription.id,
-                      )
+                      setDeleting(subscription.id)
 
                       try {
-                        await deleteSubscription(
-                          subscription.id,
-                        )
+                        await deleteSubscription(subscription.id)
                       } catch {
-                        alert(
-                          deleteFailedText,
-                        )
+                        alert(deleteFailedText)
                       } finally {
                         setDeleting(null)
                       }
                     }}
                   >
-                    {deleting ===
-                    subscription.id
-                      ? deletingText
-                      : deleteText}
+                    {deleting === subscription.id ? deletingText : deleteText}
                   </button>
                 </div>
               </Card>
-            ),
-          )}
+            )
+          })}
         </section>
       )}
     </AppShell>
