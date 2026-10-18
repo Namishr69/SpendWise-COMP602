@@ -7,6 +7,8 @@ import { useSubscriptions } from '../context/subscriptionsContext'
 import { useCurrencyRate } from '../hooks/useCurrencyRate.js'
 import { useTranslations } from '../hooks/useTranslations.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
+import { buildSubscriptionsCsv } from '../utils/subscriptionsCsv.js'
+import { downloadCsv } from '../utils/downloadFile.js'
 
 import './SubscriptionsPage.css'
 
@@ -66,6 +68,7 @@ function SubscriptionsPage() {
   } = useSubscriptions()
 
   const [deleting, setDeleting] = useState(null)
+  const [sortBy, setSortBy] = useState('recent')
 
   const [
     selectedSubscriptions,
@@ -143,6 +146,18 @@ function SubscriptionsPage() {
       (Number(amount) || 0) * rate,
       preferredCurrency,
     )
+
+  function handleExport() {
+    if (subscriptions.length === 0) {
+      window.alert('No subscription data available to export.')
+      return
+    }
+
+    downloadCsv(
+      buildSubscriptionsCsv(subscriptions),
+      'spendwise-subscriptions.csv',
+    )
+  }
 
   function translateBillingCycle(billingCycle) {
     switch (billingCycle?.toLowerCase()) {
@@ -674,8 +689,27 @@ function SubscriptionsPage() {
             </p>
           )}
 
+          <div className="subscriptions-sort">
+            <label
+              className="subscriptions-sort__label"
+              htmlFor="subscriptions-sort"
+            >
+              Sort by
+            </label>
+            <select
+              id="subscriptions-sort"
+              className="subscriptions-sort__select"
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value)}
+            >
+              <option value="recent">Newest</option>
+              <option value="renewal">Renewal date</option>
+              <option value="name">Name (A–Z)</option>
+            </select>
+          </div>
+
           <section className="subscriptions-grid">
-            {subscriptions.map(
+            {sortedSubscriptions.map(
               (subscription) => (
                 <Card
                   key={subscription.id}
