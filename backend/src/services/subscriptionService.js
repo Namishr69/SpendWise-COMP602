@@ -8,9 +8,11 @@ const subscriptionService = {
 
     async getSubscription(userId, subscriptionId) {
         const subscription = await subscriptionRepo.getById(userId, subscriptionId);
+
         if (!subscription) {
             throw new Error('Subscription not found');
         }
+
         return subscription;
     },
 
@@ -21,6 +23,7 @@ const subscriptionService = {
         if (!name) {
             throw new Error('Name is required');
         }
+
         if (!Number.isFinite(amount) || amount < 0) {
             throw new Error('Amount must be zero or greater');
         }
@@ -53,6 +56,7 @@ const subscriptionService = {
 
     async updateSubscription(userId, subscriptionId, changes) {
         const existing = await subscriptionRepo.getById(userId, subscriptionId);
+
         if (!existing) {
             throw new Error('Subscription not found');
         }
@@ -61,17 +65,21 @@ const subscriptionService = {
 
         if (changes.name !== undefined) {
             const name = (changes.name || '').trim();
+
             if (!name) {
                 throw new Error('Name is required');
             }
+
             update.name = name;
         }
 
         if (changes.amount !== undefined) {
             const amount = Number(changes.amount);
+
             if (!Number.isFinite(amount) || amount < 0) {
                 throw new Error('Amount must be zero or greater');
             }
+
             update.amount = amount;
         }
 
@@ -84,7 +92,19 @@ const subscriptionService = {
         }
 
         if (changes.status !== undefined) {
-            update.status = String(changes.status).trim();
+            const status = String(changes.status).trim();
+
+            const allowedStatuses = [
+                'Active',
+                'Paused',
+                'Cancelled',
+            ];
+
+            if (!allowedStatuses.includes(status)) {
+                throw new Error('Invalid subscription status');
+            }
+
+            update.status = status;
         }
 
         if (changes.notes !== undefined) {
@@ -105,31 +125,69 @@ const subscriptionService = {
             return existing;
         }
 
-        return await subscriptionRepo.update(userId, subscriptionId, update);
+        return await subscriptionRepo.update(
+            userId,
+            subscriptionId,
+            update,
+        );
     },
 
     async deleteSubscription(userId, subscriptionId) {
-        const existing = await subscriptionRepo.getById(userId, subscriptionId);
+        const existing = await subscriptionRepo.getById(
+            userId,
+            subscriptionId,
+        );
+
         if (!existing) {
             throw new Error('Subscription not found');
         }
 
-        await subscriptionRepo.remove(userId, subscriptionId);
-        await priceAlertService.removeAlertsForSubscription(userId, subscriptionId);
+        /*
+         * A subscription must be cancelled before it can be removed
+         * from SpendWise. This prevents users from accidentally deleting
+         * a subscription that is still considered active or paused.
+         */
+        if (
+            String(existing.status || '').toLowerCase() !==
+            'cancelled'
+        ) {
+            throw new Error(
+                'Subscription must be cancelled before it can be deleted',
+            );
+        }
+
+        await subscriptionRepo.remove(
+            userId,
+            subscriptionId,
+        );
+
+        await priceAlertService.removeAlertsForSubscription(
+            userId,
+            subscriptionId,
+        );
     },
 
     async listPayments(userId, subscriptionId) {
-        const subscription = await subscriptionRepo.getById(userId, subscriptionId);
+        const subscription = await subscriptionRepo.getById(
+            userId,
+            subscriptionId,
+        );
 
         if (!subscription) {
             throw new Error('Subscription not found');
         }
 
-        return await subscriptionRepo.listPayments(userId, subscriptionId);
+        return await subscriptionRepo.listPayments(
+            userId,
+            subscriptionId,
+        );
     },
 
     async createPayment(userId, subscriptionId, data) {
-        const subscription = await subscriptionRepo.getById(userId, subscriptionId);
+        const subscription = await subscriptionRepo.getById(
+            userId,
+            subscriptionId,
+        );
 
         if (!subscription) {
             throw new Error('Subscription not found');
@@ -146,20 +204,39 @@ const subscriptionService = {
             throw new Error('Amount must be greater than zero');
         }
 
-        const payment = await subscriptionRepo.createPayment(userId, subscriptionId, {
-            date,
-            amount,
-        });
+        const payment = await subscriptionRepo.createPayment(
+            userId,
+            subscriptionId,
+            {
+                date,
+                amount,
+            },
+        );
 
         // Compare the new payment against the one before it. The payment is
         // already saved, so a failure here is logged rather than reported as
         // a failed payment.
         try {
-            const payments = await subscriptionRepo.listPayments(userId, subscriptionId);
-            const changes = findPriceChanges(payments, [payment.id]);
-            await priceAlertService.recordPriceChanges(userId, subscription, changes);
+            const payments = await subscriptionRepo.listPayments(
+                userId,
+                subscriptionId,
+            );
+
+            const changes = findPriceChanges(
+                payments,
+                [payment.id],
+            );
+
+            await priceAlertService.recordPriceChanges(
+                userId,
+                subscription,
+                changes,
+            );
         } catch (error) {
-            console.error(`Price change check failed for ${subscriptionId}:`, error.message);
+            console.error(
+                `Price change check failed for ${subscriptionId}:`,
+                error.message,
+            );
         }
 
         return payment;

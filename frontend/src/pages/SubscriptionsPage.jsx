@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import AppShell from '../layouts/AppShell'
@@ -7,8 +7,6 @@ import { useSubscriptions } from '../context/subscriptionsContext'
 import { useCurrencyRate } from '../hooks/useCurrencyRate.js'
 import { useTranslations } from '../hooks/useTranslations.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
-import { sourceLabel } from '../utils/subscriptionSource.js'
-import { resolveCancellation } from '../utils/cancellationLinks.js'
 
 import './SubscriptionsPage.css'
 
@@ -32,9 +30,30 @@ const SUBSCRIPTIONS_TEXT = [
   'Yearly',
   'Active',
   'Cancelled',
-  'Cancel subscription ↗',
-  'Find how to cancel ↗',
-  'No cancellation link available',
+  'Paused',
+  'Select',
+  'Select all',
+  'selected',
+  'Pause',
+  'Unpause',
+  'Cancel',
+  'Applying...',
+  'Bulk action completed successfully.',
+  'Some subscriptions could not be updated.',
+  'Pause selected subscriptions?',
+  'Unpause selected subscriptions?',
+  'Cancel selected subscriptions?',
+  'Delete selected subscriptions? This cannot be undone.',
+  'Cannot delete subscription',
+  'This subscription must be cancelled before it can be deleted.',
+  'Cannot delete selected subscriptions',
+  'All selected subscriptions must be cancelled before they can be deleted.',
+  'Cannot pause selected subscriptions',
+  'Only active subscriptions can be paused.',
+  'Cannot unpause selected subscriptions',
+  'Only paused subscriptions can be unpaused.',
+  'Cannot cancel selected subscriptions',
+  'Only active or paused subscriptions can be cancelled.',
 ]
 
 function SubscriptionsPage() {
@@ -42,18 +61,31 @@ function SubscriptionsPage() {
     subscriptions,
     loading,
     error,
-    refresh,
+    updateSubscription,
     deleteSubscription,
   } = useSubscriptions()
 
   const [deleting, setDeleting] = useState(null)
 
-  // The OAuth callback runs a bank sync server-side, so by the time the user
-  // lands here new subscriptions may already exist. Re-read on mount rather
-  // than trusting whatever the provider loaded at sign-in.
-  useEffect(() => {
-    refresh({ silent: true }).catch(() => {})
-  }, [refresh])
+  const [
+    selectedSubscriptions,
+    setSelectedSubscriptions,
+  ] = useState([])
+
+  const [
+    bulkActionLoading,
+    setBulkActionLoading,
+  ] = useState(false)
+
+  const [
+    bulkMessage,
+    setBulkMessage,
+  ] = useState('')
+
+  const [
+    bulkError,
+    setBulkError,
+  ] = useState('')
 
   const {
     preferredCurrency,
@@ -80,9 +112,30 @@ function SubscriptionsPage() {
     yearlyText,
     activeText,
     cancelledText,
-    cancelSubscriptionText,
-    findHowToCancelText,
-    noCancellationLinkText,
+    pausedText,
+    selectText,
+    selectAllText,
+    selectedText,
+    pauseText,
+    unpauseText,
+    cancelText,
+    applyingText,
+    bulkSuccessText,
+    bulkErrorText,
+    pauseConfirmationText,
+    unpauseConfirmationText,
+    cancelConfirmationText,
+    bulkDeleteConfirmationText,
+    cannotDeleteText,
+    mustCancelBeforeDeleteText,
+    cannotBulkDeleteText,
+    allMustCancelBeforeDeleteText,
+    cannotPauseText,
+    onlyActiveCanPauseText,
+    cannotUnpauseText,
+    onlyPausedCanUnpauseText,
+    cannotCancelText,
+    onlyActivePausedCanCancelText,
   ] = useTranslations(SUBSCRIPTIONS_TEXT)
 
   const showMoney = (amount) =>
@@ -117,6 +170,9 @@ function SubscriptionsPage() {
       case 'active':
         return activeText
 
+      case 'paused':
+        return pausedText
+
       case 'cancelled':
       case 'canceled':
         return cancelledText
@@ -125,6 +181,311 @@ function SubscriptionsPage() {
         return subscriptionStatus || ''
     }
   }
+
+  function getStatusClass(subscriptionStatus) {
+    switch (subscriptionStatus?.toLowerCase()) {
+      case 'active':
+        return 'subscription-status--active'
+
+      case 'paused':
+        return 'subscription-status--paused'
+
+      case 'cancelled':
+      case 'canceled':
+        return 'subscription-status--cancelled'
+
+      default:
+        return ''
+    }
+  }
+
+  function getSelectedSubscriptionObjects() {
+    return subscriptions.filter((subscription) =>
+      selectedSubscriptions.includes(subscription.id),
+    )
+  }
+
+  function handleSubscriptionSelection(subscriptionId) {
+    setBulkMessage('')
+    setBulkError('')
+
+    setSelectedSubscriptions((currentSelection) => {
+      if (currentSelection.includes(subscriptionId)) {
+        return currentSelection.filter(
+          (id) => id !== subscriptionId,
+        )
+      }
+
+      return [
+        ...currentSelection,
+        subscriptionId,
+      ]
+    })
+  }
+
+  function handleSelectAll() {
+    setBulkMessage('')
+    setBulkError('')
+
+    if (
+      selectedSubscriptions.length ===
+      subscriptions.length
+    ) {
+      setSelectedSubscriptions([])
+      return
+    }
+
+    setSelectedSubscriptions(
+      subscriptions.map(
+        (subscription) => subscription.id,
+      ),
+    )
+  }
+
+  function validateBulkStatusAction(status) {
+    const selected =
+      getSelectedSubscriptionObjects()
+
+    if (status === 'Paused') {
+      const invalid = selected.some(
+        (subscription) =>
+          subscription.status?.toLowerCase() !==
+          'active',
+      )
+
+      if (invalid) {
+        window.alert(
+          `${cannotPauseText}\n\n${onlyActiveCanPauseText}`,
+        )
+        return false
+      }
+    }
+
+    if (status === 'Active') {
+      const invalid = selected.some(
+        (subscription) =>
+          subscription.status?.toLowerCase() !==
+          'paused',
+      )
+
+      if (invalid) {
+        window.alert(
+          `${cannotUnpauseText}\n\n${onlyPausedCanUnpauseText}`,
+        )
+        return false
+      }
+    }
+
+    if (status === 'Cancelled') {
+      const invalid = selected.some(
+        (subscription) => {
+          const currentStatus =
+            subscription.status?.toLowerCase()
+
+          return (
+            currentStatus !== 'active' &&
+            currentStatus !== 'paused'
+          )
+        },
+      )
+
+      if (invalid) {
+        window.alert(
+          `${cannotCancelText}\n\n${onlyActivePausedCanCancelText}`,
+        )
+        return false
+      }
+    }
+
+    return true
+  }
+
+  async function handleBulkStatus(
+    status,
+    confirmationMessage,
+  ) {
+    if (selectedSubscriptions.length === 0) {
+      return
+    }
+
+    if (!validateBulkStatusAction(status)) {
+      return
+    }
+
+    if (!window.confirm(confirmationMessage)) {
+      return
+    }
+
+    setBulkActionLoading(true)
+    setBulkMessage('')
+    setBulkError('')
+
+    const selectedIds = [
+      ...selectedSubscriptions,
+    ]
+
+    try {
+      const results =
+        await Promise.allSettled(
+          selectedIds.map(
+            (subscriptionId) =>
+              updateSubscription(
+                subscriptionId,
+                {
+                  status,
+                },
+              ),
+          ),
+        )
+
+      const failedIds = results
+        .map((result, index) => ({
+          result,
+          id: selectedIds[index],
+        }))
+        .filter(
+          ({ result }) =>
+            result.status === 'rejected',
+        )
+        .map(({ id }) => id)
+
+      if (failedIds.length === 0) {
+        setSelectedSubscriptions([])
+        setBulkMessage(bulkSuccessText)
+      } else {
+        setSelectedSubscriptions(failedIds)
+        setBulkError(bulkErrorText)
+      }
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }
+
+  async function handleBulkDelete() {
+    if (selectedSubscriptions.length === 0) {
+      return
+    }
+
+    const selected =
+      getSelectedSubscriptionObjects()
+
+    const containsNonCancelled =
+      selected.some(
+        (subscription) =>
+          subscription.status?.toLowerCase() !==
+            'cancelled' &&
+          subscription.status?.toLowerCase() !==
+            'canceled',
+      )
+
+    if (containsNonCancelled) {
+      window.alert(
+        `${cannotBulkDeleteText}\n\n${allMustCancelBeforeDeleteText}`,
+      )
+      return
+    }
+
+    if (
+      !window.confirm(
+        bulkDeleteConfirmationText,
+      )
+    ) {
+      return
+    }
+
+    setBulkActionLoading(true)
+    setBulkMessage('')
+    setBulkError('')
+
+    const selectedIds = [
+      ...selectedSubscriptions,
+    ]
+
+    try {
+      const results =
+        await Promise.allSettled(
+          selectedIds.map(
+            (subscriptionId) =>
+              deleteSubscription(
+                subscriptionId,
+              ),
+          ),
+        )
+
+      const failedIds = results
+        .map((result, index) => ({
+          result,
+          id: selectedIds[index],
+        }))
+        .filter(
+          ({ result }) =>
+            result.status === 'rejected',
+        )
+        .map(({ id }) => id)
+
+      if (failedIds.length === 0) {
+        setSelectedSubscriptions([])
+        setBulkMessage(bulkSuccessText)
+      } else {
+        setSelectedSubscriptions(failedIds)
+        setBulkError(bulkErrorText)
+      }
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }
+
+  async function handleIndividualDelete(
+    subscription,
+  ) {
+    const currentStatus =
+      subscription.status?.toLowerCase()
+
+    if (
+      currentStatus !== 'cancelled' &&
+      currentStatus !== 'canceled'
+    ) {
+      window.alert(
+        `${cannotDeleteText}\n\n${mustCancelBeforeDeleteText}`,
+      )
+      return
+    }
+
+    if (
+      !window.confirm(
+        `"${subscription.name}"\n\n${deleteConfirmationText}`,
+      )
+    ) {
+      return
+    }
+
+    setDeleting(subscription.id)
+    setBulkMessage('')
+    setBulkError('')
+
+    try {
+      await deleteSubscription(
+        subscription.id,
+      )
+
+      setSelectedSubscriptions(
+        (currentSelection) =>
+          currentSelection.filter(
+            (id) =>
+              id !== subscription.id,
+          ),
+      )
+    } catch {
+      window.alert(deleteFailedText)
+    } finally {
+      setDeleting(null)
+    }
+  }
+
+  const allSelected =
+    subscriptions.length > 0 &&
+    selectedSubscriptions.length ===
+      subscriptions.length
 
   if (loading) {
     return (
@@ -144,119 +505,279 @@ function SubscriptionsPage() {
     )
   }
 
+  const sortedSubscriptions =
+    sortBy === 'recent'
+      ? subscriptions
+      : [...subscriptions].sort((a, b) => {
+          if (sortBy === 'name') {
+            return (a.name || '').localeCompare(b.name || '')
+          }
+
+          // sortBy === 'renewal'
+          const dateA = a.nextPaymentDate
+            ? new Date(a.nextPaymentDate)
+            : null
+          const dateB = b.nextPaymentDate
+            ? new Date(b.nextPaymentDate)
+            : null
+
+          if (dateA && dateB) return dateA - dateB
+          if (dateA) return -1
+          if (dateB) return 1
+          return 0
+        })
+
   return (
     <AppShell activeNav="Subscriptions">
       <header className="subscriptions-header">
         <div>
-          <p className="subscriptions-eyebrow">SpendWise</p>
+          <p className="subscriptions-eyebrow">
+            SpendWise
+          </p>
+
           <h1>{subscriptionsText}</h1>
+
           <p>{descriptionText}</p>
         </div>
 
-        <Link className="subscriptions-add" to="/subscriptions/new">
-          {addSubscriptionText}
-        </Link>
+        <div className="subscriptions-header__actions">
+          <button
+            className="subscriptions-export"
+            type="button"
+            onClick={handleExport}
+          >
+            Export CSV
+          </button>
+
+          <Link
+            className="subscriptions-add"
+            to="/subscriptions/new"
+          >
+            {addSubscriptionText}
+          </Link>
+        </div>
       </header>
 
       {subscriptions.length === 0 ? (
         <p>{noSubscriptionsText}</p>
       ) : (
-        <section className="subscriptions-grid">
-          {subscriptions.map((subscription) => {
-            const cancellation = resolveCancellation(subscription.name)
+        <>
+          <div className="subscriptions-bulk-bar">
+            <div className="subscriptions-bulk-selection">
+              <label className="subscriptions-select-all">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  disabled={
+                    bulkActionLoading
+                  }
+                  onChange={
+                    handleSelectAll
+                  }
+                />
 
-            return (
-              <Card key={subscription.id} className="subscription-card">
-                <div>
-                  <div className="subscription-card__heading">
-                    <h2>{subscription.name}</h2>
-                    {sourceLabel(subscription.source) && (
-                      <span className="subscription-source">
-                        {sourceLabel(subscription.source)}
+                <span>
+                  {selectAllText}
+                </span>
+              </label>
+
+              <span className="subscriptions-selected-count">
+                <strong>
+                  {
+                    selectedSubscriptions.length
+                  }
+                </strong>{' '}
+                {selectedText}
+              </span>
+            </div>
+
+            <div className="subscriptions-bulk-actions">
+              <button
+                type="button"
+                disabled={
+                  selectedSubscriptions.length ===
+                    0 ||
+                  bulkActionLoading
+                }
+                onClick={() =>
+                  handleBulkStatus(
+                    'Paused',
+                    pauseConfirmationText,
+                  )
+                }
+              >
+                {bulkActionLoading
+                  ? applyingText
+                  : pauseText}
+              </button>
+
+              <button
+                type="button"
+                disabled={
+                  selectedSubscriptions.length ===
+                    0 ||
+                  bulkActionLoading
+                }
+                onClick={() =>
+                  handleBulkStatus(
+                    'Active',
+                    unpauseConfirmationText,
+                  )
+                }
+              >
+                {unpauseText}
+              </button>
+
+              <button
+                type="button"
+                disabled={
+                  selectedSubscriptions.length ===
+                    0 ||
+                  bulkActionLoading
+                }
+                onClick={() =>
+                  handleBulkStatus(
+                    'Cancelled',
+                    cancelConfirmationText,
+                  )
+                }
+              >
+                {cancelText}
+              </button>
+
+              <button
+                type="button"
+                className="subscriptions-bulk-delete"
+                disabled={
+                  selectedSubscriptions.length ===
+                    0 ||
+                  bulkActionLoading
+                }
+                onClick={
+                  handleBulkDelete
+                }
+              >
+                {deleteText}
+              </button>
+            </div>
+          </div>
+
+          {bulkMessage && (
+            <p className="subscriptions-bulk-message subscriptions-bulk-message--success">
+              {bulkMessage}
+            </p>
+          )}
+
+          {bulkError && (
+            <p className="subscriptions-bulk-message subscriptions-bulk-message--error">
+              {bulkError}
+            </p>
+          )}
+
+          <section className="subscriptions-grid">
+            {subscriptions.map(
+              (subscription) => (
+                <Card
+                  key={subscription.id}
+                  className="subscription-card"
+                >
+                  <div>
+                    <label className="subscription-select">
+                      <input
+                        type="checkbox"
+                        checked={selectedSubscriptions.includes(
+                          subscription.id,
+                        )}
+                        disabled={
+                          bulkActionLoading
+                        }
+                        onChange={() =>
+                          handleSubscriptionSelection(
+                            subscription.id,
+                          )
+                        }
+                      />
+
+                      <span>
+                        {selectText}
                       </span>
-                    )}
+                    </label>
+
+                    <div className="subscription-card__heading">
+                      <h2>
+                        {subscription.name}
+                      </h2>
+
+                      <span
+                        className={`subscription-status ${getStatusClass(
+                          subscription.status,
+                        )}`}
+                      >
+                        {translateStatus(
+                          subscription.status,
+                        )}
+                      </span>
+                    </div>
+
+                    <p>
+                      {showMoney(
+                        subscription.amount,
+                      )}{' '}
+                      /{' '}
+                      {translateBillingCycle(
+                        subscription.billingCycle,
+                      )}
+                    </p>
+
+                    <p>
+                      {nextPaymentText}{' '}
+                      {
+                        subscription.nextPaymentDate
+                      }
+                    </p>
+
+                    <p>
+                      {statusText}{' '}
+                      <strong>
+                        {translateStatus(
+                          subscription.status,
+                        )}
+                      </strong>
+                    </p>
                   </div>
 
-                  <p>
-                    {showMoney(subscription.amount)} /{' '}
-                    {translateBillingCycle(subscription.billingCycle)}
-                  </p>
+                  <div className="subscription-card__actions">
+                    <Link
+                      className="subscription-link"
+                      to={`/subscriptions/${subscription.id}`}
+                    >
+                      {viewDetailsText}
+                    </Link>
 
-                  <p>
-                    {nextPaymentText} {subscription.nextPaymentDate}
-                  </p>
-
-                  <p>
-                    {statusText} {translateStatus(subscription.status)}
-                  </p>
-
-                  <p className="subscription-cancel-row">
-                    {cancellation ? (
-                      <a
-                        className={
-                          cancellation.kind === 'official'
-                            ? 'subscription-cancel'
-                            : 'subscription-cancel subscription-cancel--search'
-                        }
-                        href={cancellation.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title={
-                          cancellation.kind === 'official'
-                            ? 'Opens this merchant’s own cancellation page'
-                            : 'No official link on file — opens a web search'
-                        }
-                      >
-                        {cancellation.kind === 'official'
-                          ? (cancelSubscriptionText || 'Cancel subscription ↗')
-                          : (findHowToCancelText || 'Find how to cancel ↗')}
-                      </a>
-                    ) : (
-                      <span className="subscription-cancel-fallback">
-                        {noCancellationLinkText || 'No cancellation link available'}
-                      </span>
-                    )}
-                  </p>
-                </div>
-
-                <div className="subscription-card__actions">
-                  <Link
-                    className="subscription-link"
-                    to={`/subscriptions/${subscription.id}`}
-                  >
-                    {viewDetailsText}
-                  </Link>
-
-                  <button
-                    className="subscription-delete"
-                    disabled={deleting === subscription.id}
-                    onClick={async () => {
-                      if (
-                        !window.confirm(
-                          `"${subscription.name}"\n\n${deleteConfirmationText}`,
+                    <button
+                      className="subscription-delete"
+                      disabled={
+                        deleting ===
+                          subscription.id ||
+                        bulkActionLoading
+                      }
+                      onClick={() =>
+                        handleIndividualDelete(
+                          subscription,
                         )
-                      ) {
-                        return
                       }
-
-                      setDeleting(subscription.id)
-
-                      try {
-                        await deleteSubscription(subscription.id)
-                      } catch {
-                        alert(deleteFailedText)
-                      } finally {
-                        setDeleting(null)
-                      }
-                    }}
-                  >
-                    {deleting === subscription.id ? deletingText : deleteText}
-                  </button>
-                </div>
-              </Card>
-            )
-          })}
-        </section>
+                    >
+                      {deleting ===
+                      subscription.id
+                        ? deletingText
+                        : deleteText}
+                    </button>
+                  </div>
+                </Card>
+              ),
+            )}
+          </section>
+        </>
       )}
     </AppShell>
   )
