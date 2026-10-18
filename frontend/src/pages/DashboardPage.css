@@ -101,6 +101,12 @@
   background: #eaf5ed;
 }
 
+.dashboard-subs__status--paused {
+  background: #fff4d6;
+  color: #8a6500;
+  border: 1px solid #e6ce86;
+}
+
 .dashboard-subs__status--cancelled {
   color: var(--color-danger);
   background: var(--color-danger-bg);
@@ -149,8 +155,15 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .dashboard-chips {
@@ -260,6 +273,7 @@
   .dashboard-stats {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .dashboard-grid {
     grid-template-columns: 1fr;
   }

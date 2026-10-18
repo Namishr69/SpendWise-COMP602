@@ -88,6 +88,11 @@ function ConnectGmailSection() {
       setStatus({ connected: false })
       setPreview(null)
       setSyncResult(null)
+      try {
+        await refreshSubscriptions()
+      } catch {
+        // Refresh failure only means the list updates on next load
+      }
     } catch (disconnectError) {
       setError(disconnectError.message)
     } finally {

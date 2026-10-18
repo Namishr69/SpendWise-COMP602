@@ -3,6 +3,12 @@ import { db } from '../config/firebase.js';
 // Firestore's gRPC status for a create() that hits an existing document.
 const ALREADY_EXISTS = 6;
 
+// Firestore allows at most 30 values in an `in` filter.
+const IN_FILTER_LIMIT = 30;
+
+// Firestore caps a batch at 500 operations; stay comfortably under it.
+const BATCH_LIMIT = 450;
+
 function alertsCollection(userId) {
     return db.collection('users').doc(userId).collection('priceAlerts');
 }
@@ -62,6 +68,38 @@ const priceAlertRepo = {
             .where('subscriptionId', '==', subscriptionId)
             .get();
         await Promise.all(snapshot.docs.map(doc => doc.ref.delete()));
+    },
+
+    /**
+     * Deletes the alerts for many subscriptions at once. Used by the ANZ and
+     * Gmail disconnect paths: both delete auto-detected subscriptions, and an
+     * alert whose subscription is gone has nothing left to describe.
+     *
+     * The ids are chunked because Firestore caps an `in` filter at 30 values.
+     */
+    async removeBySubscriptions(userId, subscriptionIds) {
+        if (!Array.isArray(subscriptionIds) || subscriptionIds.length === 0) {
+            return 0;
+        }
+
+        let removed = 0;
+
+        for (let i = 0; i < subscriptionIds.length; i += IN_FILTER_LIMIT) {
+            const chunk = subscriptionIds.slice(i, i + IN_FILTER_LIMIT);
+            const snapshot = await alertsCollection(userId)
+                .where('subscriptionId', 'in', chunk)
+                .get();
+
+            for (let j = 0; j < snapshot.docs.length; j += BATCH_LIMIT) {
+                const docs = snapshot.docs.slice(j, j + BATCH_LIMIT);
+                const batch = db.batch();
+                docs.forEach((doc) => batch.delete(doc.ref));
+                await batch.commit();
+                removed += docs.length;
+            }
+        }
+
+        return removed;
     },
 };
 

@@ -200,6 +200,47 @@ function SubscriptionDetailPage() {
   const [adding, setAdding] =
     useState(false)
 
+  const [
+    alertsVersion,
+    setAlertsVersion,
+  ] = useState(0)
+
+  const [
+    managingDevices,
+    setManagingDevices,
+  ] = useState(false)
+
+  const [
+    deviceName,
+    setDeviceName,
+  ] = useState('')
+
+  const [
+    editingDeviceIndex,
+    setEditingDeviceIndex,
+  ] = useState(null)
+
+  const [
+    editingDeviceName,
+    setEditingDeviceName,
+  ] = useState('')
+
+  const [
+    savingDevice,
+    setSavingDevice,
+  ] = useState(false)
+
+  const [
+    deviceError,
+    setDeviceError,
+  ] = useState('')
+
+  const devices = Array.isArray(
+    subscription?.devices,
+  )
+    ? subscription.devices
+    : []
+
   useEffect(() => {
     if (!subscription) return
 
@@ -277,6 +318,7 @@ function SubscriptionDetailPage() {
       setPaymentError(
         paymentDateErrorText,
       )
+
       return
     }
 
@@ -287,6 +329,7 @@ function SubscriptionDetailPage() {
       setPaymentError(
         amountErrorText,
       )
+
       return
     }
 
@@ -310,7 +353,10 @@ function SubscriptionDetailPage() {
 
       setPaymentDate(localToday())
       setPaymentAmount('')
-      setAlertsVersion((version) => version + 1)
+
+      setAlertsVersion(
+        (version) => version + 1,
+      )
     } catch (err) {
       setPaymentError(err.message)
     } finally {
@@ -331,13 +377,18 @@ function SubscriptionDetailPage() {
     setDeviceError('')
   }
 
-  async function handleAddDevice(event) {
+  async function handleAddDevice(
+    event,
+  ) {
     event.preventDefault()
 
-    const trimmedName = deviceName.trim()
+    const trimmedName =
+      deviceName.trim()
 
     if (!trimmedName) {
-      setDeviceError('Enter a device name.')
+      setDeviceError(
+        'Enter a device name.',
+      )
       return
     }
 
@@ -354,22 +405,27 @@ function SubscriptionDetailPage() {
         subscription.id,
         {
           devices: updatedDevices,
-        }
+        },
       )
 
       setDeviceName('')
     } catch (err) {
       setDeviceError(
-        err.message || 'Failed to add device.'
+        err.message ||
+          'Failed to add device.',
       )
     } finally {
       setSavingDevice(false)
     }
   }
 
-  function handleStartEditDevice(index) {
+  function handleStartEditDevice(
+    index,
+  ) {
     setEditingDeviceIndex(index)
-    setEditingDeviceName(devices[index])
+    setEditingDeviceName(
+      devices[index],
+    )
     setDeviceError('')
   }
 
@@ -379,11 +435,16 @@ function SubscriptionDetailPage() {
     setDeviceError('')
   }
 
-  async function handleSaveDevice(index) {
-    const trimmedName = editingDeviceName.trim()
+  async function handleSaveDevice(
+    index,
+  ) {
+    const trimmedName =
+      editingDeviceName.trim()
 
     if (!trimmedName) {
-      setDeviceError('Enter a device name.')
+      setDeviceError(
+        'Enter a device name.',
+      )
       return
     }
 
@@ -391,51 +452,62 @@ function SubscriptionDetailPage() {
     setDeviceError('')
 
     try {
-      const updatedDevices = [...devices]
-      updatedDevices[index] = trimmedName
+      const updatedDevices = [
+        ...devices,
+      ]
+
+      updatedDevices[index] =
+        trimmedName
 
       await updateSubscription(
         subscription.id,
         {
           devices: updatedDevices,
-        }
+        },
       )
 
       setEditingDeviceIndex(null)
       setEditingDeviceName('')
     } catch (err) {
       setDeviceError(
-        err.message || 'Failed to update device.'
+        err.message ||
+          'Failed to update device.',
       )
     } finally {
       setSavingDevice(false)
     }
   }
 
-  async function handleDeleteDevice(index) {
+  async function handleDeleteDevice(
+    index,
+  ) {
     setSavingDevice(true)
     setDeviceError('')
 
     try {
-      const updatedDevices = devices.filter(
-        (_, deviceIndex) =>
-          deviceIndex !== index
-      )
+      const updatedDevices =
+        devices.filter(
+          (_, deviceIndex) =>
+            deviceIndex !== index,
+        )
 
       await updateSubscription(
         subscription.id,
         {
           devices: updatedDevices,
-        }
+        },
       )
 
-      if (editingDeviceIndex === index) {
+      if (
+        editingDeviceIndex === index
+      ) {
         setEditingDeviceIndex(null)
         setEditingDeviceName('')
       }
     } catch (err) {
       setDeviceError(
-        err.message || 'Failed to delete device.'
+        err.message ||
+          'Failed to delete device.',
       )
     } finally {
       setSavingDevice(false)
@@ -474,7 +546,9 @@ function SubscriptionDetailPage() {
       </header>
 
       <PriceChangeAlerts
-        subscriptionId={subscription.id}
+        subscriptionId={
+          subscription.id
+        }
         refreshKey={alertsVersion}
       />
 
@@ -535,7 +609,9 @@ function SubscriptionDetailPage() {
             <Button
               type="button"
               variant="secondary"
-              onClick={handleManageDevices}
+              onClick={
+                handleManageDevices
+              }
             >
               Manage
             </Button>
@@ -544,7 +620,9 @@ function SubscriptionDetailPage() {
               type="button"
               variant="secondary"
               disabled={savingDevice}
-              onClick={handleDoneManagingDevices}
+              onClick={
+                handleDoneManagingDevices
+              }
             >
               Done
             </Button>
@@ -561,18 +639,21 @@ function SubscriptionDetailPage() {
           <>
             {devices.length === 0 ? (
               <p className="device-empty">
-                No devices are currently connected.
+                No devices are currently
+                connected.
               </p>
             ) : (
               <div className="device-tags">
-                {devices.map((device, index) => (
-                  <span
-                    className="device-tag"
-                    key={`${device}-${index}`}
-                  >
-                    {device}
-                  </span>
-                ))}
+                {devices.map(
+                  (device, index) => (
+                    <span
+                      className="device-tag"
+                      key={`${device}-${index}`}
+                    >
+                      {device}
+                    </span>
+                  ),
+                )}
               </div>
             )}
           </>
@@ -580,94 +661,122 @@ function SubscriptionDetailPage() {
           <div className="device-manager">
             {devices.length === 0 ? (
               <p className="device-empty">
-                No devices are currently connected.
+                No devices are currently
+                connected.
               </p>
             ) : (
               <div className="device-manage-list">
-                {devices.map((device, index) => (
-                  <div
-                    className="device-manage-item"
-                    key={`${device}-${index}`}
-                  >
-                    {editingDeviceIndex === index ? (
-                      <div className="device-edit-row">
-                        <div className="device-edit-input">
-                          <Input
-                            id={`edit-device-${index}`}
-                            label="Device name"
-                            type="text"
-                            value={editingDeviceName}
-                            onChange={(event) =>
-                              setEditingDeviceName(
-                                event.target.value
-                              )
-                            }
-                          />
+                {devices.map(
+                  (device, index) => (
+                    <div
+                      className="device-manage-item"
+                      key={`${device}-${index}`}
+                    >
+                      {editingDeviceIndex ===
+                      index ? (
+                        <div className="device-edit-row">
+                          <div className="device-edit-input">
+                            <Input
+                              id={`edit-device-${index}`}
+                              label="Device name"
+                              type="text"
+                              value={
+                                editingDeviceName
+                              }
+                              onChange={(
+                                event,
+                              ) =>
+                                setEditingDeviceName(
+                                  event
+                                    .target
+                                    .value,
+                                )
+                              }
+                            />
+                          </div>
+
+                          <div className="device-item-actions">
+                            <Button
+                              type="button"
+                              variant="primary"
+                              disabled={
+                                savingDevice
+                              }
+                              onClick={() =>
+                                handleSaveDevice(
+                                  index,
+                                )
+                              }
+                            >
+                              {savingDevice
+                                ? 'Saving…'
+                                : 'Save'}
+                            </Button>
+
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              disabled={
+                                savingDevice
+                              }
+                              onClick={
+                                handleCancelEditDevice
+                              }
+                            >
+                              Cancel
+                            </Button>
+                          </div>
                         </div>
+                      ) : (
+                        <>
+                          <span className="device-manage-name">
+                            {device}
+                          </span>
 
-                        <div className="device-item-actions">
-                          <Button
-                            type="button"
-                            variant="primary"
-                            disabled={savingDevice}
-                            onClick={() =>
-                              handleSaveDevice(index)
-                            }
-                          >
-                            {savingDevice
-                              ? 'Saving…'
-                              : 'Save'}
-                          </Button>
+                          <div className="device-item-actions">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              disabled={
+                                savingDevice
+                              }
+                              onClick={() =>
+                                handleStartEditDevice(
+                                  index,
+                                )
+                              }
+                            >
+                              Edit
+                            </Button>
 
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            disabled={savingDevice}
-                            onClick={handleCancelEditDevice}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <span className="device-manage-name">
-                          {device}
-                        </span>
-
-                        <div className="device-item-actions">
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            disabled={savingDevice}
-                            onClick={() =>
-                              handleStartEditDevice(index)
-                            }
-                          >
-                            Edit
-                          </Button>
-
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            disabled={savingDevice}
-                            onClick={() =>
-                              handleDeleteDevice(index)
-                            }
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              disabled={
+                                savingDevice
+                              }
+                              onClick={() =>
+                                handleDeleteDevice(
+                                  index,
+                                )
+                              }
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ),
+                )}
               </div>
             )}
 
             <form
               className="add-device-form"
-              onSubmit={handleAddDevice}
+              onSubmit={
+                handleAddDevice
+              }
               noValidate
             >
               <h3>Add device</h3>
@@ -680,7 +789,10 @@ function SubscriptionDetailPage() {
                     type="text"
                     value={deviceName}
                     onChange={(event) =>
-                      setDeviceName(event.target.value)
+                      setDeviceName(
+                        event.target
+                          .value,
+                      )
                     }
                   />
                 </div>
@@ -688,7 +800,9 @@ function SubscriptionDetailPage() {
                 <Button
                   type="submit"
                   variant="secondary"
-                  disabled={savingDevice}
+                  disabled={
+                    savingDevice
+                  }
                 >
                   {savingDevice
                     ? 'Saving…'

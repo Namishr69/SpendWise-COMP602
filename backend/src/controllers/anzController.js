@@ -4,6 +4,7 @@ import anzSyncService from '../services/anzSyncService.js';
 import dashboardService from '../services/dashboardService.js';
 import bankDataRepo from '../repositories/bankDataRepo.js';
 import subscriptionRepo from '../repositories/subscriptionRepo.js';
+import priceAlertService from '../services/priceAlertService.js';
 
 /**
  * Nothing here returns an ANZ access or refresh token. The browser only ever
@@ -149,8 +150,17 @@ const anzController = {
             // Remove subscriptions that were auto-detected from ANZ data.
             // Manually-added subscriptions (no source field) are never touched.
             try {
-                const removed = await subscriptionRepo.deleteAllDetected(req.userId);
-                console.log(`[anz-disconnect] removed ${removed} anz-detected subscription(s) for user ${req.userId}`);
+                const removedIds = await subscriptionRepo.deleteAllDetected(req.userId);
+                console.log(`[anz-disconnect] removed ${removedIds.length} anz-detected subscription(s) for user ${req.userId}`);
+
+                // An alert whose subscription is gone has nothing left to
+                // display, so it goes too.
+                try {
+                    const removedAlerts = await priceAlertService.removeAlertsForSubscriptions(req.userId, removedIds);
+                    console.log(`[anz-disconnect] removed ${removedAlerts} price alert(s) for user ${req.userId}`);
+                } catch (error) {
+                    console.error('Price alert cleanup failed on disconnect:', error.message);
+                }
             } catch (error) {
                 console.error('Detected subscription cleanup failed on disconnect:', error.message);
             }

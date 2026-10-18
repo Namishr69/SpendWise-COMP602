@@ -33,7 +33,9 @@ const translationController = {
                 translatedText,
             });
         } catch (error) {
-            return res.status(400).json({
+            // 503 when the server itself cannot translate (missing or rejected
+            // API key); 400 for a bad request from the client.
+            return res.status(error.status || 400).json({
                 error: error.message,
             });
         }
