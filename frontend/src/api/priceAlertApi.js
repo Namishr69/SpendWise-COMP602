@@ -13,10 +13,3 @@ export function dismissPriceAlert(id) {
     method: 'PATCH',
   })
 }
-
-export function scanGmailForPriceChanges(accessToken) {
-  return apiRequest('/price-alerts/gmail-scan', {
-    method: 'POST',
-    body: JSON.stringify({ accessToken }),
-  })
-}

@@ -177,8 +177,8 @@ function announcementAlertId(alert) {
 const providerPriceAlertService = {
     /**
      * Scans the user's Gmail for price change announcements and stores an
-     * alert for each one that matches a subscription. accessToken is a
-     * gmail.readonly OAuth token from the browser; it is not stored.
+     * alert for each one that matches a subscription. accessToken is the
+     * gmail.readonly token of the user's Connect Gmail connection.
      */
     async scanGmail(userId, accessToken) {
         const emails = await priceChangeGmailService.fetchPriceChangeEmails(accessToken);

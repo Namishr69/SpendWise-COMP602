@@ -5,7 +5,6 @@ import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
 import ConnectBankSection from '../components/ConnectBankSection.jsx'
 import ConnectGmailSection from '../components/ConnectGmailSection.jsx'
-import GmailPriceScanSection from '../components/GmailPriceScanSection.jsx'
 import Button from '../components/ui/Button.jsx'
 import Input from '../components/ui/Input.jsx'
 
@@ -682,7 +681,6 @@ function SettingsPage() {
           <div className="settings-section-content">
             <ConnectBankSection />
             <ConnectGmailSection />
-            <GmailPriceScanSection />
           </div>
         )}
       </Card>

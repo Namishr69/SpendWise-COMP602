@@ -1,7 +1,6 @@
 /**
- * Reads likely price change emails from the user's Gmail with a short-lived
- * OAuth access token (gmail.readonly) obtained in the browser. The token is
- * used for this one request and never stored.
+ * Reads likely price change emails from the user's Gmail with the access
+ * token (gmail.readonly) of their Connect Gmail connection.
  */
 
 const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users/me';
@@ -31,12 +30,12 @@ async function gmailGet(accessToken, path) {
     const data = await res.json().catch(() => null);
     const googleMessage = data?.error?.message || '';
 
-    // Google's consent popup lists Gmail as a checkbox; leaving it unticked
+    // Google's consent screen lists Gmail as a checkbox; leaving it unticked
     // still returns a token, just one that cannot read mail.
     if (res.status === 403 && /insufficient authentication scopes/i.test(googleMessage)) {
         throw gmailError(
             403,
-            'SpendWise was not allowed to read your Gmail. Scan again and tick the Gmail permission in the Google popup.'
+            'SpendWise was not allowed to read your Gmail. Disconnect Gmail, connect it again and tick the Gmail permission.'
         );
     }
 

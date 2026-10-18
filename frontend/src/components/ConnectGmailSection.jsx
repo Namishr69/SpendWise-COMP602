@@ -175,7 +175,9 @@ function ConnectGmailSection() {
             onClick={handleSync}
             disabled={isSyncing || isBusy}
           >
-            {isSyncing ? 'Scanning inbox…' : 'Scan inbox for subscriptions'}
+            {isSyncing
+              ? 'Scanning inbox…'
+              : 'Scan inbox for subscriptions and price changes'}
           </Button>
 
           {syncResult && (
@@ -187,6 +189,18 @@ function ConnectGmailSection() {
                     syncResult.created + syncResult.updated === 1 ? '' : 's'
                   }.`
                 : `No subscription emails found in ${syncResult.scanned} recent emails.`}
+            </p>
+          )}
+
+          {syncResult && (
+            <p className="bank-meta">
+              {syncResult.priceChangeError
+                ? `Price change search failed: ${syncResult.priceChangeError}`
+                : syncResult.priceChanges > 0
+                  ? `${syncResult.priceChanges} new price change${
+                      syncResult.priceChanges === 1 ? '' : 's'
+                    } found. See your dashboard.`
+                  : 'No new price changes found.'}
             </p>
           )}
         </div>

@@ -2,6 +2,7 @@ import gmailAuthService from '../services/gmailAuthService.js';
 import gmailService from '../services/gmailService.js';
 import gmailSyncService from '../services/gmailSyncService.js';
 import priceAlertService from '../services/priceAlertService.js';
+import providerPriceAlertService from '../services/providerPriceAlertService.js';
 import subscriptionRepo from '../repositories/subscriptionRepo.js';
 import transactionRepo from '../repositories/transactionRepo.js';
 
@@ -120,10 +121,23 @@ const gmailController = {
     }
   },
 
-  // POST /api/gmail/sync — scan the inbox and save subscription data to Firestore
+  // POST /api/gmail/sync — scan the inbox and save subscription data to
+  // Firestore, then look for provider price change emails
   async sync(req, res) {
     try {
       const summary = await gmailSyncService.syncSubscriptions(req.userId);
+
+      // Runs after the subscription sync so newly saved subscriptions can be
+      // matched. A failure here still reports the subscriptions saved.
+      try {
+        const accessToken = await gmailAuthService.getValidAccessToken(req.userId);
+        const { created } = await providerPriceAlertService.scanGmail(req.userId, accessToken);
+        summary.priceChanges = created.length;
+      } catch (error) {
+        console.error('Gmail price change search failed:', error.message);
+        summary.priceChangeError = error.message;
+      }
+
       res.json(summary);
     } catch (error) {
       console.error('Gmail sync failed:', error.message);
