@@ -1,3 +1,4 @@
+
 import {
   useCallback,
   useContext,
@@ -75,9 +76,7 @@ function formatDate(iso) {
 function TransactionsPage() {
   const { preferredCurrency } = useContext(CurrencyContext)
 
-  // A sync detects subscriptions server-side, so the list has to be re-read
-  // afterwards — otherwise a detected subscription stays invisible until the
-  // user reloads the whole app.
+  // Refresh subscriptions after a bank sync detects new subscriptions.
   const { refresh: refreshSubscriptions } = useSubscriptions()
 
   const [
@@ -114,19 +113,11 @@ function TransactionsPage() {
   const [status, setStatus] = useState(null)
   const [accounts, setAccounts] = useState([])
   const [transactions, setTransactions] = useState([])
-
-  // Manually added transactions live alongside bank-synced transactions.
   const [manual, setManual] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-
-  // Reading the manual/email collection is allowed to fail without blanking the
-  // bank list, but the failure must still be visible.
   const [manualError, setManualError] = useState(null)
-
-  // One NZD -> preferred currency factor is reused for every displayed amount.
   const [rate, setRate] = useState(1)
-
   const [syncing, setSyncing] = useState(false)
   const [syncSummary, setSyncSummary] = useState(null)
 
@@ -142,10 +133,6 @@ function TransactionsPage() {
       getBankTransactions({
         limit: 100,
       }),
-
-      // Manual + email-detected transactions share one collection. A failure
-      // here must not blank out the bank-synced list, so it resolves to an
-      // empty list — but the error is kept and surfaced below.
       getTransactions(user).then(
         (data) => ({ data }),
         (err) => ({ data: [], error: err }),
@@ -228,8 +215,7 @@ function TransactionsPage() {
       const summary = await syncBankData()
       await load(auth.currentUser)
 
-      // Pick up anything the sync just detected, without a page reload. Silent
-      // so the transactions already on screen don't blank out mid-refresh.
+      // Refresh detected subscriptions without reloading the page.
       await refreshSubscriptions({ silent: true }).catch(() => {})
 
       setSyncSummary(summary)
@@ -250,22 +236,16 @@ function TransactionsPage() {
     switch (category?.toLowerCase()) {
       case 'food':
         return foodText
-
       case 'transport':
         return transportText
-
       case 'shopping':
         return shoppingText
-
       case 'bills':
         return billsText
-
       case 'entertainment':
         return entertainmentText
-
       case 'other':
         return otherText
-
       default:
         return category || ''
     }
@@ -281,10 +261,14 @@ function TransactionsPage() {
 
   const connected = Boolean(status?.connected)
 
-  // The transactions collection holds both manually-added rows and the ones the
-  // Gmail scan detected; split them so each gets its own clearly-labelled card.
-  const manualTxns = manual.filter((t) => t.source !== 'gmail-detected')
-  const emailTxns = manual.filter((t) => t.source === 'gmail-detected')
+  // Separate manually-added and email-detected transactions.
+  const manualTxns = manual.filter(
+    (transaction) => transaction.source !== 'gmail-detected',
+  )
+
+  const emailTxns = manual.filter(
+    (transaction) => transaction.source === 'gmail-detected',
+  )
 
   return (
     <AppShell activeNav="Transactions">
@@ -316,8 +300,8 @@ function TransactionsPage() {
       {syncSummary && (
         <Card className="transactions-notice">
           <p>
-            {syncedText} {syncSummary.transactionsSynced} {transactionsAcrossText}{' '}
-            {syncSummary.accounts} {accountsText}{' '}
+            {syncedText} {syncSummary.transactionsSynced}{' '}
+            {transactionsAcrossText} {syncSummary.accounts} {accountsText}{' '}
             {syncSummary.subscriptionsCreated} {subscriptionsDetectedText}
           </p>
         </Card>
@@ -334,13 +318,15 @@ function TransactionsPage() {
       {manualError && (
         <Card className="transactions-notice">
           <p>
-            {manualErrorMessageText || 'Could not load your manual and email transactions:'}{' '}
+            {manualErrorMessageText ||
+              'Could not load your manual and email transactions:'}{' '}
             {manualError.message}
           </p>
         </Card>
       )}
 
-      {!connected ? (
+      {/* FIX: Show this card only when the bank is not connected. */}
+      {!connected && (
         <Card className="transactions-notice">
           <h3>{noBankConnectedText}</h3>
           <p>{connectBankText}</p>
@@ -357,22 +343,21 @@ function TransactionsPage() {
             >
               <p>{account.nickname || accountText}</p>
               <h2 className="money">
-                {account.balance != null ? show(account.balance) : '—'}
+                {account.balance != null
+                  ? show(account.balance)
+                  : '—'}
               </h2>
               <p className="transactions-account__meta">
                 {account.accountSubType || account.accountType || ''}
-                {account.identification ? ` · ${account.identification}` : ''}
+                {account.identification
+                  ? ` · ${account.identification}`
+                  : ''}
               </p>
             </Card>
           ))}
         </section>
       )}
 
-      {/*
-        Email-detected spending. Rendered above the bank list so it is never
-        buried under 100 bank rows, and rendered even when empty so "nothing
-        was detected yet" is distinguishable from "the section isn't there".
-      */}
       <Card className="transactions-section">
         <h3>{fromEmailText || 'From email'}</h3>
 
@@ -384,15 +369,22 @@ function TransactionsPage() {
         ) : (
           <ul className="transactions-list">
             {emailTxns.map((transaction) => (
-              <li key={transaction.id} className="transactions-list__item">
+              <li
+                key={transaction.id}
+                className="transactions-list__item"
+              >
                 <div className="transactions-list__email">
                   <p className="transactions-list__name">
                     {transaction.subject || transaction.name}
                   </p>
+
                   <p className="transactions-list__date">
                     {transaction.name}
-                    {transaction.sender ? ` · ${transaction.sender}` : ''}
+                    {transaction.sender
+                      ? ` · ${transaction.sender}`
+                      : ''}
                   </p>
+
                   <p className="transactions-list__date">
                     {formatDate(transaction.date)}
                     {transaction.category
@@ -401,7 +393,9 @@ function TransactionsPage() {
                   </p>
                 </div>
 
-                <span className="money">{show(transaction.amount)}</span>
+                <span className="money">
+                  {show(transaction.amount)}
+                </span>
               </li>
             ))}
           </ul>
@@ -413,7 +407,9 @@ function TransactionsPage() {
           <h3>{recentTransactionsText}</h3>
 
           {transactions.length === 0 ? (
-            <p className="transactions-empty">{noTransactionsText}</p>
+            <p className="transactions-empty">
+              {noTransactionsText}
+            </p>
           ) : (
             <ul className="transactions-list">
               {transactions.map((txn) => (
@@ -425,6 +421,7 @@ function TransactionsPage() {
                     <p className="transactions-list__name">
                       {txn.merchant || txn.description}
                     </p>
+
                     <p className="transactions-list__date">
                       {formatDate(txn.bookedAt)}
                     </p>
@@ -453,9 +450,15 @@ function TransactionsPage() {
 
           <ul className="transactions-list">
             {manualTxns.map((transaction) => (
-              <li key={transaction.id} className="transactions-list__item">
+              <li
+                key={transaction.id}
+                className="transactions-list__item"
+              >
                 <div>
-                  <p className="transactions-list__name">{transaction.name}</p>
+                  <p className="transactions-list__name">
+                    {transaction.name}
+                  </p>
+
                   <p className="transactions-list__date">
                     {transaction.date}
                     {transaction.category
@@ -465,7 +468,10 @@ function TransactionsPage() {
                 </div>
 
                 <span className="transactions-list__manual">
-                  <span className="money">{show(transaction.amount)}</span>
+                  <span className="money">
+                    {show(transaction.amount)}
+                  </span>
+
                   <Link
                     className="transactions-list__edit"
                     to={`/transactions/${transaction.id}/edit`}
