@@ -1,10 +1,28 @@
 import './LandingPage.css'
 
 import { Link } from 'react-router-dom'
+import { motion } from 'motion/react'
 
 import {
   useTranslations,
 } from '../hooks/useTranslations.js'
+import {
+  EASE_OUT,
+  SPRING,
+  fadeUp,
+  hoverLift,
+  stagger,
+} from '../components/ui/motionPresets.js'
+
+const MotionLink = motion.create(Link)
+
+// Abstract subscription cards for the sage panel. Shapes only, so there is
+// no copy to translate. Each one bobs on its own rhythm.
+const PREVIEW_CARDS = [
+  { dot: 'var(--color-gold)', width: '62%', offset: 0, duration: 6 },
+  { dot: 'var(--color-forest)', width: '48%', offset: 48, duration: 7 },
+  { dot: 'var(--color-cream)', width: '70%', offset: 12, duration: 6.5 },
+]
 
 // Small inline logo mark, matching the
 // sprout used elsewhere in the app.
@@ -130,57 +148,105 @@ function LandingPage() {
 
   return (
     <div className="landing-page">
-      <div className="landing-left">
-        <header className="landing-header">
+      <motion.div
+        className="landing-left"
+        variants={stagger(0.05, 0.08)}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.header
+          className="landing-header"
+          variants={fadeUp}
+        >
           <div className="landing-logo">
             <LogoMark />
             <span>SpendWise</span>
           </div>
 
           <div className="landing-nav">
-            <Link
+            <MotionLink
               to="/signup"
               className="landing-cta"
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.96 }}
+              transition={SPRING}
             >
               {signupText}
-            </Link>
+            </MotionLink>
 
-            <Link
+            <MotionLink
               to="/login"
               className="landing-cta landing-cta--ghost"
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.96 }}
+              transition={SPRING}
             >
               {loginText}
-            </Link>
+            </MotionLink>
           </div>
-        </header>
+        </motion.header>
 
-        <section className="landing-hero">
-          <h1>
+        <motion.section
+          className="landing-hero"
+          variants={stagger(0, 0.1)}
+        >
+          <motion.h1 variants={fadeUp}>
             {trackingText}
             <br />
 
             {madeText}{' '}
-            <span>
+            <span className="landing-hero__accent">
               {simpleText}
+
+              {/* Hand-drawn underline that draws itself in. */}
+              <svg
+                className="landing-hero__underline"
+                viewBox="0 0 200 16"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <motion.path
+                  d="M3 11C40 4 120 2 197 8"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{
+                    duration: 0.8,
+                    delay: 0.6,
+                    ease: EASE_OUT,
+                  }}
+                />
+              </svg>
             </span>
-          </h1>
+          </motion.h1>
 
-          <p>
+          <motion.p variants={fadeUp}>
             {descriptionText}
-          </p>
-        </section>
+          </motion.p>
+        </motion.section>
 
-        <section className="landing-features">
-          <h2 className="landing-features__title">
+        <motion.section
+          className="landing-features"
+          variants={stagger(0.1, 0.08)}
+        >
+          <motion.h2
+            className="landing-features__title"
+            variants={fadeUp}
+          >
             {featuresTitleText}
-          </h2>
+          </motion.h2>
 
           <div className="landing-features-cards">
             {features.map(
               (feature) => (
-                <div
+                <motion.div
                   key={feature.label}
                   className="landing-feature-card"
+                  variants={fadeUp}
+                  whileHover={hoverLift}
                 >
                   <span className="landing-feature-card__icon">
                     {feature.icon}
@@ -189,23 +255,73 @@ function LandingPage() {
                   <p>
                     {feature.label}
                   </p>
-                </div>
+                </motion.div>
               ),
             )}
           </div>
-        </section>
+        </motion.section>
 
-        <footer className="landing-footer">
+        <motion.footer
+          className="landing-footer"
+          variants={fadeUp}
+        >
           <p>
             © 2026 SpendWise
           </p>
-        </footer>
-      </div>
+        </motion.footer>
+      </motion.div>
 
       <div className="landing-right">
-        <p className="landing-right__tagline">
+        <motion.p
+          className="landing-right__tagline"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{
+            duration: 0.6,
+            delay: 0.3,
+            ease: EASE_OUT,
+          }}
+        >
           {taglineText}
-        </p>
+        </motion.p>
+
+        <motion.div
+          className="landing-preview"
+          aria-hidden="true"
+          variants={stagger(0.5, 0.15)}
+          initial="hidden"
+          animate="show"
+        >
+          {PREVIEW_CARDS.map((card) => (
+            <motion.div
+              key={card.offset}
+              variants={fadeUp}
+              style={{ marginLeft: card.offset }}
+            >
+              <motion.div
+                className="landing-preview__card"
+                animate={{ y: [0, -8, 0] }}
+                transition={{
+                  duration: card.duration,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
+              >
+                <span
+                  className="landing-preview__dot"
+                  style={{ background: card.dot }}
+                />
+
+                <span className="landing-preview__lines">
+                  <span style={{ width: card.width }} />
+                  <span />
+                </span>
+
+                <span className="landing-preview__amount" />
+              </motion.div>
+            </motion.div>
+          ))}
+        </motion.div>
       </div>
     </div>
   )

@@ -6,7 +6,8 @@
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: filter 0.15s ease, background-color 0.15s ease;
+  transition: filter 0.15s ease, background-color 0.15s ease, box-shadow 0.2s var(--ease-out),
+    border-color 0.15s ease;
 }
 
 .sw-button:disabled {
@@ -21,10 +22,17 @@
 .sw-button--primary {
   background: var(--color-gold);
   color: var(--color-ink);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.45) inset, 0 2px 6px rgba(217, 182, 91, 0.35);
 }
 
 .sw-button--primary:hover:not(:disabled) {
   background: var(--color-gold-dark);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.45) inset, 0 6px 16px rgba(217, 182, 91, 0.45);
+}
+
+/* Gold stays gold in dark mode, so its label keeps dark ink for contrast. */
+:root[data-theme="dark"] .sw-button--primary {
+  color: var(--color-forest-dark);
 }
 
 .sw-button--secondary {
@@ -35,6 +43,7 @@
 
 .sw-button--secondary:hover:not(:disabled) {
   background: var(--color-cream);
+  border-color: var(--color-sage);
 }
 
 .sw-button:focus-visible {

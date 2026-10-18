@@ -5,14 +5,36 @@
   margin-bottom: var(--space-lg);
 }
 
+.dashboard-stat {
+  transition: box-shadow 0.25s var(--ease-out);
+}
+
+.dashboard-stat:hover {
+  box-shadow: var(--shadow-hover);
+}
+
 .dashboard-stat p {
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   margin-bottom: var(--space-sm);
 }
 
 .dashboard-stat h2 {
   color: var(--color-white);
-  font-size: 28px;
+  font-size: 30px;
+}
+
+/* Thin gold accent along the top of each stat tile. */
+.dashboard-stat::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto auto var(--space-lg);
+  width: 28px;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--color-gold);
 }
 
 .dashboard-grid {
@@ -51,13 +73,14 @@
   width: 100%;
   text-decoration: none;
   color: inherit;
-  padding: var(--space-sm) var(--space-md);
+  padding: 12px var(--space-md);
   border-radius: var(--radius-sm);
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, transform 0.2s var(--ease-out);
 }
 
 .dashboard-subs__link:hover {
   background: var(--color-cream);
+  transform: translateX(4px);
 }
 
 .dashboard-subs__name {
@@ -180,6 +203,7 @@
   font-weight: 500;
   padding: 10px 14px;
   border-radius: var(--radius-sm);
+  border-left: 3px solid var(--color-gold);
 }
 
 .dashboard-categories {
@@ -214,17 +238,18 @@
 }
 
 .dashboard-budget-bar {
-  height: 8px;
-  border-radius: 4px;
+  height: 10px;
+  border-radius: 999px;
   background: var(--color-border);
   overflow: hidden;
   margin-top: 12px;
 }
 
+/* Width is animated by Motion in DashboardPage. */
 .dashboard-budget-bar__fill {
   height: 100%;
-  background: var(--color-success);
-  transition: width 0.3s ease;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--color-sage), var(--color-success));
 }
 
 .dashboard-budget-bar__fill--warning {

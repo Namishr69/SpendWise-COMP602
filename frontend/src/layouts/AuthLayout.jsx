@@ -1,9 +1,17 @@
+import { motion } from 'motion/react'
+
+import { EASE_OUT } from '../components/ui/motionPresets.js'
 import './AuthLayout.css'
 
 function AuthLayout({ children, variant = 'dark' }) {
   return (
     <div className={`auth-shell auth-shell--${variant}`}>
-      <div className="auth-shell__logo">
+      <motion.div
+        className="auth-shell__logo"
+        initial={{ opacity: 0, x: -8 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5, ease: EASE_OUT }}
+      >
         <svg className="auth-shell__logo-mark" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
           <path
             fill="currentColor"
@@ -11,9 +19,16 @@ function AuthLayout({ children, variant = 'dark' }) {
           />
         </svg>
         SpendWise
-      </div>
+      </motion.div>
       <div className="auth-shell__panel">
-        <main className="auth-shell__content">{children}</main>
+        <motion.main
+          className="auth-shell__content"
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.1, ease: EASE_OUT }}
+        >
+          {children}
+        </motion.main>
       </div>
     </div>
   )

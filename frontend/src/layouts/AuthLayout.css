@@ -60,6 +60,20 @@
     linear-gradient(to right, transparent, #000 22%, #000 78%, transparent),
     linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent);
   mask-composite: intersect;
+  animation: auth-plant-in 1.2s var(--ease-out) both;
+}
+
+/* The plant settles in slightly as the page loads. */
+@keyframes auth-plant-in {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .auth-shell__content {

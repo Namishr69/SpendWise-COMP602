@@ -37,7 +37,9 @@
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 20px;
-  --shadow-card: 0 4px 12px rgba(31, 59, 44, 0.08);
+  --shadow-card: 0 1px 2px rgba(31, 59, 44, 0.04), 0 8px 24px rgba(31, 59, 44, 0.07);
+  --shadow-hover: 0 2px 4px rgba(31, 59, 44, 0.06), 0 16px 32px rgba(31, 59, 44, 0.12);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
   font: 16px/150% var(--font-body);
   color: var(--color-ink);
@@ -57,7 +59,8 @@
   --color-danger: #e07a7a;
   --color-danger-bg: #3a2222;
   --color-success: #6fcf8e;
-  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.35), 0 16px 32px rgba(0, 0, 0, 0.45);
   color-scheme: dark;
 }
 
@@ -96,4 +99,21 @@ p {
 
 a {
   color: inherit;
+}
+
+::selection {
+  background: var(--color-gold);
+  color: var(--color-forest-dark);
+}
+
+/* CSS transitions and keyframes follow the same reduced-motion preference
+   that MotionConfig applies to Motion animations. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

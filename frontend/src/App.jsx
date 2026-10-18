@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { MotionConfig } from 'motion/react'
 import PrivateRoute from './context/PrivateRoute.jsx'
 import PublicRoute from './context/PublicRoute.jsx'
 import LoginPage from './pages/LoginPage.jsx'
@@ -22,6 +23,8 @@ import LandingPage from './pages/LandingPage.jsx'
 
 function App() {
   return (
+    // "user" turns transform animations off for people who ask their OS for reduced motion.
+    <MotionConfig reducedMotion="user">
     <BrowserRouter>
       <Routes>
         <Route
@@ -181,6 +184,7 @@ function App() {
       </Routes>
 
     </BrowserRouter>
+    </MotionConfig>
   )
 }
 
