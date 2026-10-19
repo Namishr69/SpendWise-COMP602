@@ -192,6 +192,13 @@ function ConnectGmailSection() {
             </p>
           )}
 
+          {syncResult?.rateLimited && (
+            <p className="bank-meta">
+              Gmail asked SpendWise to slow down, so the scan stopped early. What it
+              found is saved. Scan again in a minute to check the rest.
+            </p>
+          )}
+
           {syncResult && (
             <p className="bank-meta">
               {syncResult.priceChangeError

@@ -7,6 +7,7 @@ import {
   looksLikeReceiptEmail,
   parseReceiptEmail,
 } from './gmailEmailParser.js';
+import { isRateLimitResponse, mapWithConcurrency, retryOnRateLimit } from './gmailRateLimit.js';
 
 /**
  * Gmail → Firestore sync service.
@@ -49,9 +50,21 @@ import {
  *     amount number
  */
 
-// How many recent messages to scan per sync. Kept moderate — we only fetch
-// full bodies for messages whose subjects pass the filter.
+// How many recent receipt-like messages to fetch per sync.
 const MAX_MESSAGES_TO_SCAN = 200;
+
+// Gmail does the subject filtering, so the scan never has to read every inbox
+// email just to check its subject. Gmail matches whole words, so the usual
+// forms of each word in looksLikeReceiptEmail are listed; that check still
+// runs on every message as the final say.
+const RECEIPT_SUBJECT_QUERY =
+  'subject:(receipt OR receipts OR invoice OR invoices OR payment OR payments OR ' +
+  'subscription OR subscriptions OR billing OR renewal OR charge OR charged OR charges OR ' +
+  'confirmation OR order OR purchase OR purchased)';
+
+// How many messages are fetched at once. Well under Gmail's per-user limit,
+// and retryOnRateLimit covers the odd "slow down".
+const CONCURRENT_FETCHES = 5;
 
 // How many receipts a merchant that is NOT a known subscription service needs
 // before it is treated as recurring. Two is deliberately low — the user asked
@@ -78,9 +91,11 @@ async function gmailGet(accessToken, path) {
 
   if (!response.ok) {
     const body = await response.text().catch(() => '');
-    throw new Error(
+    const error = new Error(
       `Gmail API GET ${path} failed (HTTP ${response.status})${body ? `: ${body}` : ''}`
     );
+    error.rateLimited = isRateLimitResponse(response.status, body);
+    throw error;
   }
 
   return response.json();
@@ -126,7 +141,7 @@ const gmailSyncService = {
    * Scan the inbox, parse subscription emails, and upsert results to Firestore.
    *
    * @param {string} userId  Firebase UID of the signed-in user
-   * @returns {{ scanned, parsed, created, updated }} sync summary
+   * @returns {{ scanned, parsed, created, updated, transactionsSaved, rateLimited }} sync summary
    */
   async syncSubscriptions(userId) {
     // Ensure the user has a connected Gmail account before doing anything.
@@ -137,48 +152,53 @@ const gmailSyncService = {
 
     const accessToken = await gmailAuthService.getValidAccessToken(userId);
 
-    // ── Step 1: list recent message IDs ────────────────────────────────────
-    const list = await gmailGet(
-      accessToken,
-      `/messages?maxResults=${MAX_MESSAGES_TO_SCAN}&labelIds=INBOX`
+    // ── Step 1: list recent receipt-like message IDs ───────────────────────
+    const query = new URLSearchParams({
+      maxResults: String(MAX_MESSAGES_TO_SCAN),
+      labelIds: 'INBOX',
+      q: RECEIPT_SUBJECT_QUERY,
+    });
+    const list = await retryOnRateLimit(
+      () => gmailGet(accessToken, `/messages?${query}`),
+      'inbox list'
     );
     const messageIds = (list.messages || []).map((m) => m.id);
 
-    // ── Step 2: filter by subject, then fetch and parse matching messages ──
-    const candidates = [];
-
     console.log(
-      `[gmail-sync] scanning ${messageIds.length} inbox message(s) for user ${userId}`
+      `[gmail-sync] found ${messageIds.length} possible receipt email(s) for user ${userId}`
     );
 
-    for (const id of messageIds) {
-      // Fetch metadata-only first (cheap) to check the subject.
-      let meta;
+    // ── Step 2: fetch and parse the matching messages ──────────────────────
+    // Set when Gmail keeps refusing after the retries. No new fetches start
+    // after that, and the scan saves what it already found.
+    let rateLimited = false;
+
+    const messages = await mapWithConcurrency(messageIds, CONCURRENT_FETCHES, async (id) => {
+      if (rateLimited) return null;
       try {
-        meta = await gmailGet(
-          accessToken,
-          `/messages/${id}?format=metadata` +
-            '&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date'
+        return await retryOnRateLimit(
+          () => gmailGet(accessToken, `/messages/${id}?format=full`),
+          `message ${id}`
         );
       } catch (err) {
-        console.warn(`Gmail sync: metadata fetch failed for ${id}:`, err.message);
-        continue;
+        console.warn(`Gmail sync: fetch failed for ${id}:`, err.message);
+        if (err.rateLimited) rateLimited = true;
+        return null;
       }
+    });
 
-      const headers = meta.payload?.headers || [];
+    const candidates = [];
+    let scanned = 0;
+
+    for (const full of messages) {
+      if (!full) continue;
+      scanned += 1;
+
+      const headers = full.payload?.headers || [];
       const subject = headers.find((h) => h.name.toLowerCase() === 'subject')?.value || '';
       const from = headers.find((h) => h.name.toLowerCase() === 'from')?.value || '';
 
       if (!looksLikeReceiptEmail(subject)) continue;
-
-      // Subject looks promising — fetch the full message for body parsing.
-      let full;
-      try {
-        full = await gmailGet(accessToken, `/messages/${id}?format=full`);
-      } catch (err) {
-        console.warn(`Gmail sync: full fetch failed for ${id}:`, err.message);
-        continue;
-      }
 
       const parsed = parseReceiptEmail(full);
       if (parsed) {
@@ -300,16 +320,18 @@ const gmailSyncService = {
     }
 
     console.log(
-      `[gmail-sync] done for ${userId}: scanned ${messageIds.length}, parsed ${candidates.length}, ` +
-        `subscriptions +${created}/~${updated}, transactions saved ${transactionsSaved}`
+      `[gmail-sync] done for ${userId}: scanned ${scanned}/${messageIds.length}, parsed ${candidates.length}, ` +
+        `subscriptions +${created}/~${updated}, transactions saved ${transactionsSaved}` +
+        (rateLimited ? ' (stopped early: Gmail rate limit)' : '')
     );
 
     return {
-      scanned: messageIds.length,
+      scanned,
       parsed: candidates.length,
       created,
       updated,
       transactionsSaved,
+      rateLimited,
     };
   },
 };
