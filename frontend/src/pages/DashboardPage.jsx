@@ -85,6 +85,14 @@ const DASHBOARD_TEXT = [
   'Confirm',
   'Reject',
   'Could not update this subscription:',
+
+  // Source filter buttons.
+  'Filter subscriptions by source',
+  'All',
+  'Only Bank',
+  'Only Email',
+  'No bank-detected subscriptions.',
+  'No email-detected subscriptions.',
 ]
 
 function formatDate(iso) {
@@ -156,7 +164,17 @@ function DashboardPage() {
     confirmText,
     rejectText,
     reviewErrorText,
+    filterBySourceText,
+    allText,
+    onlyBankText,
+    onlyEmailText,
+    noBankSubsText,
+    noEmailSubsText,
   ] = useTranslations(DASHBOARD_TEXT)
+
+  // Which subscriptions "My Subscriptions" shows: 'all', 'bank' or 'email'.
+  const [sourceFilter, setSourceFilter] =
+    useState('all')
 
   // Which pending row is saving, and why the last confirm/reject failed.
   const [reviewingId, setReviewingId] =
@@ -524,6 +542,32 @@ function DashboardPage() {
     a.name.localeCompare(b.name),
   )
 
+  const visibleSubs = sorted.filter(
+    (subscription) => {
+      if (sourceFilter === 'bank') {
+        return (
+          subscription.source ===
+          'anz-detected'
+        )
+      }
+
+      if (sourceFilter === 'email') {
+        return (
+          subscription.source ===
+          'gmail-detected'
+        )
+      }
+
+      return true
+    },
+  )
+
+  const sourceFilters = [
+    { value: 'all', label: allText },
+    { value: 'bank', label: onlyBankText },
+    { value: 'email', label: onlyEmailText },
+  ]
+
   // Prefer the bank's spend figure once a connection has synced.
   // Otherwise use manually tracked subscription spending.
   // bankStats lags one conversion behind a new dashboard response; until it
@@ -777,9 +821,45 @@ function DashboardPage() {
         animate="show"
       >
         <Card variants={fadeUp}>
-          <h3>
-            {mySubscriptionsText}
-          </h3>
+          <div className="dashboard-subs__header">
+            <h3>
+              {mySubscriptionsText}
+            </h3>
+
+            {sorted.length > 0 && (
+              <div
+                className="dashboard-filter"
+                role="group"
+                aria-label={filterBySourceText}
+              >
+                {sourceFilters.map(
+                  (filter) => (
+                    <button
+                      key={filter.value}
+                      type="button"
+                      className={`dashboard-filter__button ${
+                        sourceFilter ===
+                        filter.value
+                          ? 'dashboard-filter__button--active'
+                          : ''
+                      }`}
+                      aria-pressed={
+                        sourceFilter ===
+                        filter.value
+                      }
+                      onClick={() =>
+                        setSourceFilter(
+                          filter.value,
+                        )
+                      }
+                    >
+                      {filter.label}
+                    </button>
+                  ),
+                )}
+              </div>
+            )}
+          </div>
 
           {sorted.length === 0 ? (
             <div className="dashboard-empty">
@@ -874,12 +954,18 @@ function DashboardPage() {
                 {addSubscriptionText}
               </Link>
             </div>
+          ) : visibleSubs.length === 0 ? (
+            <p className="dashboard-subs__none">
+              {sourceFilter === 'bank'
+                ? noBankSubsText
+                : noEmailSubsText}
+            </p>
           ) : (
             <motion.ul
               className="dashboard-subs"
               variants={stagger(0.1, 0.04)}
             >
-              {sorted.map(
+              {visibleSubs.map(
                 (subscription) => (
                   <motion.li
                     key={

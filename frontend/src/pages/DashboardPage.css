@@ -111,6 +111,58 @@
   gap: var(--space-md);
 }
 
+/* "My Subscriptions" title with the All / Only Bank / Only Email buttons. */
+.dashboard-subs__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.dashboard-filter {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--color-surface-alt);
+}
+
+.dashboard-filter__button {
+  border: none;
+  background: transparent;
+  color: var(--color-ink-soft);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.dashboard-filter__button:hover {
+  color: var(--color-ink);
+}
+
+.dashboard-filter__button--active {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.dashboard-filter__button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.dashboard-subs__none {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  font-size: 14px;
+  color: var(--color-ink-soft);
+  text-align: center;
+}
+
 .dashboard-subs {
   list-style: none;
   margin: var(--space-md) 0 0;
