@@ -1,8 +1,11 @@
 import { useContext, useState, useRef, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import { AnimatePresence, motion } from 'motion/react'
 import { AuthContext } from '../context/authContext.js'
 import { ProfileContext } from '../context/ProfileProvider.jsx'
 import { useTranslations } from '../hooks/useTranslations.js'
+import { EASE_OUT, SPRING } from '../components/ui/motionPresets.js'
+import Logo from '../components/ui/Logo.jsx'
 import './AppShell.css'
 
 const NAV_ITEMS = [
@@ -229,7 +232,11 @@ function AppShell({
     <div className="app-shell">
       <aside className="app-shell__sidebar">
         <div className="app-shell__logo">
-          🌱 SpendWise
+          <Logo
+            className="app-shell__logo-mark"
+            height={26}
+          />
+          SpendWise
         </div>
 
         <nav className="app-shell__nav">
@@ -245,11 +252,26 @@ function AppShell({
               }
               to={item.path}
             >
-              <span className="app-shell__nav-icon">
-                {item.icon}
-              </span>
+              {({ isActive }) => (
+                <>
+                  {/* One shared pill that glides to whichever item is active. */}
+                  {isActive && (
+                    <motion.span
+                      className="app-shell__nav-pill"
+                      layoutId="app-shell-nav-pill"
+                      transition={SPRING}
+                    />
+                  )}
 
-              {translatedNavLabels[item.label]}
+                  <span className="app-shell__nav-icon">
+                    {item.icon}
+                  </span>
+
+                  <span className="app-shell__nav-label">
+                    {translatedNavLabels[item.label]}
+                  </span>
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
@@ -287,7 +309,11 @@ function AppShell({
       <div className="app-shell__main">
         <header className="app-shell__topbar">
           {!hideTopbarTitle && (
-            <div>
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: EASE_OUT }}
+            >
               <p>
                 {getGreeting()}
                 {displayName && `, ${displayName}`}
@@ -296,7 +322,7 @@ function AppShell({
               <h2>
                 {translatedNavLabels[activeNav] || activeNav}
               </h2>
-            </div>
+            </motion.div>
           )}
 
           <div
@@ -328,8 +354,15 @@ function AppShell({
                 )}
               </button>
 
+              <AnimatePresence>
               {menuOpen && (
-                <div className="app-shell__avatar-menu">
+                <motion.div
+                  className="app-shell__avatar-menu"
+                  initial={{ opacity: 0, scale: 0.95, y: -6 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -6 }}
+                  transition={{ duration: 0.16, ease: EASE_OUT }}
+                >
                   {currentUser?.email && (
                     <div className="app-shell__avatar-menu-email">
                       {currentUser.email}
@@ -353,15 +386,22 @@ function AppShell({
                       ? loggingOutText
                       : logoutText}
                   </button>
-                </div>
+                </motion.div>
               )}
+              </AnimatePresence>
             </div>
           </div>
         </header>
 
-        <main className="app-shell__content">
+        {/* Each page renders its own AppShell, so this plays on every route change. */}
+        <motion.main
+          className="app-shell__content"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: EASE_OUT }}
+        >
           {children}
-        </main>
+        </motion.main>
       </div>
     </div>
   )

@@ -59,6 +59,7 @@
 }
 
 .auth-panel .sw-field__input {
+  transition: border-color 0.15s ease, box-shadow 0.2s var(--ease-out);
   width: 100%;
   padding: 15px 14px;
   font-size: 15px;
@@ -215,11 +216,18 @@
   border: 1px solid var(--auth-social-border);
   background: rgba(255, 255, 255, 0.9);
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, transform 0.2s var(--ease-out),
+    box-shadow 0.2s var(--ease-out);
 }
 
 .auth-form__social-button:hover:not(:disabled) {
   background: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
+}
+
+.auth-form__social-button:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
 }
 
 .auth-form__social-button:disabled {

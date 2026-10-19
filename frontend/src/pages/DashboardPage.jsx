@@ -1,10 +1,18 @@
 import { useContext, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { onAuthStateChanged } from 'firebase/auth'
+import { motion } from 'motion/react'
 
 import { auth } from '../firebase'
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
+import AnimatedNumber from '../components/ui/AnimatedNumber.jsx'
+import {
+  EASE_OUT,
+  fadeUp,
+  hoverLift,
+  stagger,
+} from '../components/ui/motionPresets.js'
 import PriceChangeAlerts from '../components/PriceChangeAlerts.jsx'
 import { BudgetContext } from '../context/BudgetProvider.jsx'
 import { useSubscriptions } from '../context/subscriptionsContext.js'
@@ -326,6 +334,7 @@ function DashboardPage() {
             s.detectedSubs,
           currency:
             preferredCurrency,
+          from: dashboard,
         })
 
         setBills(convertedBills)
@@ -351,6 +360,7 @@ function DashboardPage() {
           detectedSubs:
             s.detectedSubs,
           currency: source,
+          from: dashboard,
         })
 
         setBills(upcomingBills)
@@ -434,16 +444,38 @@ function DashboardPage() {
 
   // Prefer the bank's spend figure once a connection has synced.
   // Otherwise use manually tracked subscription spending.
-  const spentDisplay =
-    dashboard.hasData &&
-    bankStats
-      ? formatCurrency(
-          bankStats.spentThisMonth,
+  // bankStats lags one conversion behind a new dashboard response; until it
+  // catches up it still holds the empty placeholder's zeros, which the
+  // count-up would otherwise animate down to.
+  const bankStatsReady =
+    bankStats?.from === dashboard
+
+  const useBankSpend =
+    dashboard.hasData && bankStatsReady
+
+  const spentValue = useBankSpend
+    ? bankStats.spentThisMonth
+    : totalMonthlySpend
+
+  const formatSpent = useBankSpend
+    ? (amount) =>
+        formatCurrency(
+          amount,
           bankStats.currency,
         )
-      : showMoney(
-          totalMonthlySpend,
-        )
+    : showMoney
+
+  const budgetPercent = budget
+    ? Math.min(
+        100,
+        (totalMonthlySpend /
+          normalizeBudgetToMonthly(
+            budget.amount,
+            budget.period,
+          )) *
+          100,
+      )
+    : 0
 
   return (
     <AppShell activeNav="Dashboard">
@@ -481,53 +513,72 @@ function DashboardPage() {
 
       <PriceChangeAlerts />
 
-      <div className="dashboard-stats">
+      <motion.div
+        className="dashboard-stats"
+        variants={stagger()}
+        initial="hidden"
+        animate="show"
+      >
         <Card
           tone="forest"
           className="dashboard-stat"
+          variants={fadeUp}
+          whileHover={hoverLift}
         >
           <p>
             {spentThisMonthText}
           </p>
 
           <h2 className="money">
-            {spentDisplay}
+            <AnimatedNumber
+              value={spentValue}
+              format={formatSpent}
+            />
           </h2>
         </Card>
 
         <Card
           tone="forest"
           className="dashboard-stat"
+          variants={fadeUp}
+          whileHover={hoverLift}
         >
           <p>
             {activeSubsText}
           </p>
 
           <h2>
-            {
-              activeSubscriptions.length
-            }
+            <AnimatedNumber
+              value={
+                activeSubscriptions.length
+              }
+            />
           </h2>
         </Card>
 
         <Card
           tone="forest"
           className="dashboard-stat"
+          variants={fadeUp}
+          whileHover={hoverLift}
         >
           <p>
             {dueThisWeekText}
           </p>
 
           <h2 className="money">
-            {showMoney(
-              dueThisWeekTotal,
-            )}
+            <AnimatedNumber
+              value={dueThisWeekTotal}
+              format={showMoney}
+            />
           </h2>
         </Card>
 
         <Card
           tone="forest"
           className="dashboard-stat"
+          variants={fadeUp}
+          whileHover={hoverLift}
         >
           <p>
             {dashboard.hasData
@@ -536,16 +587,25 @@ function DashboardPage() {
           </p>
 
           <h2>
-            {dashboard.hasData &&
-            bankStats
-              ? bankStats.detectedSubs
-              : alerts.length}
+            <AnimatedNumber
+              value={
+                dashboard.hasData &&
+                bankStatsReady
+                  ? bankStats.detectedSubs
+                  : alerts.length
+              }
+            />
           </h2>
         </Card>
-      </div>
+      </motion.div>
 
-      <div className="dashboard-grid">
-        <Card>
+      <motion.div
+        className="dashboard-grid"
+        variants={stagger(0.15, 0.08)}
+        initial="hidden"
+        animate="show"
+      >
+        <Card variants={fadeUp}>
           <h3>
             {mySubscriptionsText}
           </h3>
@@ -600,7 +660,7 @@ function DashboardPage() {
                   cx="36"
                   cy="34"
                   r="8"
-                  fill="var(--color-white)"
+                  fill="var(--color-surface)"
                   stroke="currentColor"
                   strokeWidth="2"
                 />
@@ -644,14 +704,18 @@ function DashboardPage() {
               </Link>
             </div>
           ) : (
-            <ul className="dashboard-subs">
+            <motion.ul
+              className="dashboard-subs"
+              variants={stagger(0.1, 0.04)}
+            >
               {sorted.map(
                 (subscription) => (
-                  <li
+                  <motion.li
                     key={
                       subscription.id
                     }
                     className="dashboard-subs__item"
+                    variants={fadeUp}
                   >
                     <Link
                       to={`/subscriptions/${subscription.id}`}
@@ -685,15 +749,18 @@ function DashboardPage() {
                         )}
                       </span>
                     </Link>
-                  </li>
+                  </motion.li>
                 ),
               )}
-            </ul>
+            </motion.ul>
           )}
         </Card>
 
-        <div className="dashboard-side">
-          <Card>
+        <motion.div
+          className="dashboard-side"
+          variants={stagger(0, 0.08)}
+        >
+          <Card variants={fadeUp}>
             <h3>
               {currentBudgetText}
             </h3>
@@ -722,22 +789,20 @@ function DashboardPage() {
                 </p>
 
                 <div className="dashboard-budget-bar">
-                  <div
+                  <motion.div
                     className={`dashboard-budget-bar__fill ${
                       nearBudgetLimit
                         ? 'dashboard-budget-bar__fill--warning'
                         : ''
                     }`}
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        (totalMonthlySpend /
-                          normalizeBudgetToMonthly(
-                            budget.amount,
-                            budget.period,
-                          )) *
-                          100,
-                      )}%`,
+                    initial={{ width: 0 }}
+                    animate={{
+                      width: `${budgetPercent}%`,
+                    }}
+                    transition={{
+                      duration: 0.9,
+                      delay: 0.3,
+                      ease: EASE_OUT,
                     }}
                   />
                 </div>
@@ -756,10 +821,13 @@ function DashboardPage() {
             )}
           </Card>
 
-          <Card>
+          <Card variants={fadeUp}>
             <h3>{alertsText}</h3>
 
-            <div className="dashboard-chips">
+            <motion.div
+              className="dashboard-chips"
+              variants={stagger(0.1, 0.05)}
+            >
               {alerts.length === 0 ? (
                 <p>
                   {noAlertsText}
@@ -767,28 +835,33 @@ function DashboardPage() {
               ) : (
                 alerts.map(
                   (alert) => (
-                    <span
+                    <motion.span
                       key={alert}
                       className="dashboard-chip"
+                      variants={fadeUp}
                     >
                       {alert}
-                    </span>
+                    </motion.span>
                   ),
                 )
               )}
-            </div>
+            </motion.div>
           </Card>
 
           {bills.length > 0 && (
-            <Card>
+            <Card variants={fadeUp}>
               <h3>
                 {upcomingBillsText}
               </h3>
 
-              <ul className="dashboard-list">
+              <motion.ul
+                className="dashboard-list"
+                variants={stagger(0.1, 0.04)}
+              >
                 {bills.map(
                   (bill) => (
-                    <li
+                    <motion.li
+                      variants={fadeUp}
                       key={`${bill.name}-${bill.due}`}
                       className="dashboard-list__item"
                     >
@@ -811,24 +884,28 @@ function DashboardPage() {
                           bill.currency,
                         )}
                       </span>
-                    </li>
+                    </motion.li>
                   ),
                 )}
-              </ul>
+              </motion.ul>
             </Card>
           )}
 
           {transactions.length >
             0 && (
-            <Card>
+            <Card variants={fadeUp}>
               <h3>
                 {recentActivityText}
               </h3>
 
-              <ul className="dashboard-list">
+              <motion.ul
+                className="dashboard-list"
+                variants={stagger(0.1, 0.04)}
+              >
                 {transactions.map(
                   (transaction) => (
-                    <li
+                    <motion.li
+                      variants={fadeUp}
                       key={
                         transaction.transactionId ||
                         `${transaction.merchant}-${transaction.bookedAt}`
@@ -859,14 +936,14 @@ function DashboardPage() {
                           transaction.currency,
                         )}
                       </span>
-                    </li>
+                    </motion.li>
                   ),
                 )}
-              </ul>
+              </motion.ul>
             </Card>
           )}
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </AppShell>
   )
 }

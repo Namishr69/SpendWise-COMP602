@@ -130,3 +130,11 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+/* Forest is too dark to read or spot on the dark background. */
+:root[data-theme="dark"] .settings-budget-current {
+  color: var(--color-sage);
+}
+
+:root[data-theme="dark"] .settings-toggle input:checked + .settings-toggle__slider {
+  background-color: var(--color-sage);
+}
