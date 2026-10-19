@@ -7,6 +7,7 @@ import { auth } from '../firebase'
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
 import AnimatedNumber from '../components/ui/AnimatedNumber.jsx'
+import { BankIcon, MailIcon } from '../components/ui/icons.jsx'
 import {
   EASE_OUT,
   fadeUp,
@@ -72,6 +73,10 @@ const DASHBOARD_TEXT = [
   'Active',
   'Cancelled',
   'Paused',
+
+  // Source icon labels.
+  sourceLabel('anz-detected'),
+  sourceLabel('gmail-detected'),
 ]
 
 function formatDate(iso) {
@@ -133,7 +138,41 @@ function DashboardPage() {
     activeText,
     cancelledText,
     pausedText,
+    fromBankText,
+    fromEmailText,
   ] = useTranslations(DASHBOARD_TEXT)
+
+  // Small icon showing where an auto-detected subscription came from.
+  // Manually added subscriptions have no source icon.
+  function renderSourceIcon(source) {
+    if (source === 'anz-detected') {
+      return (
+        <span
+          className="dashboard-subs__source dashboard-subs__source--bank"
+          title={fromBankText}
+          aria-label={fromBankText}
+          role="img"
+        >
+          <BankIcon />
+        </span>
+      )
+    }
+
+    if (source === 'gmail-detected') {
+      return (
+        <span
+          className="dashboard-subs__source dashboard-subs__source--email"
+          title={fromEmailText}
+          aria-label={fromEmailText}
+          role="img"
+        >
+          <MailIcon />
+        </span>
+      )
+    }
+
+    return null
+  }
 
   const showMoney = (amount) =>
     formatCurrency(
@@ -726,6 +765,10 @@ function DashboardPage() {
                           {
                             subscription.name
                           }
+
+                          {renderSourceIcon(
+                            subscription.source,
+                          )}
                         </p>
 
                         <p className="dashboard-subs__meta">

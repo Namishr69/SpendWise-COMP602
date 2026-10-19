@@ -126,7 +126,9 @@
 }
 
 .subscription-source {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 2px 8px;
   border-radius: 999px;
   background: #e8efe0;

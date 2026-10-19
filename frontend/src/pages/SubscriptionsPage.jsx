@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 
 import AppShell from '../layouts/AppShell'
 import Card from '../components/ui/Card'
+import { BankIcon, MailIcon } from '../components/ui/icons.jsx'
 import { useSubscriptions } from '../context/subscriptionsContext'
 import { useCurrencyRate } from '../hooks/useCurrencyRate.js'
 import { useTranslations } from '../hooks/useTranslations.js'
@@ -797,6 +798,14 @@ function SubscriptionsPage() {
 
                       {sourceLabel(subscription.source) && (
                         <span className="subscription-source">
+                          {subscription.source === 'anz-detected' && (
+                            <BankIcon />
+                          )}
+
+                          {subscription.source === 'gmail-detected' && (
+                            <MailIcon />
+                          )}
+
                           {sourceLabel(subscription.source)}
                         </span>
                       )}
