@@ -1,6 +1,7 @@
 import subscriptionRepo from '../repositories/subscriptionRepo.js';
 import priceAlertService, { findPriceChanges } from './priceAlertService.js';
 import providerPriceAlertService from './providerPriceAlertService.js';
+import { REVIEW_STATUSES } from './subscriptionReview.js';
 
 const subscriptionService = {
     async listSubscriptions(userId) {
@@ -115,6 +116,15 @@ const subscriptionService = {
             }
 
             update.status = status;
+        }
+
+        // Confirm or reject an email-detected subscription waiting in Pending.
+        if (changes.reviewStatus !== undefined) {
+            if (!REVIEW_STATUSES.includes(changes.reviewStatus)) {
+                throw new Error('Invalid review status');
+            }
+
+            update.reviewStatus = changes.reviewStatus;
         }
 
         if (changes.notes !== undefined) {

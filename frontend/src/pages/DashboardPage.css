@@ -37,6 +37,67 @@
   background: var(--color-gold);
 }
 
+/* Email finds waiting for the user to confirm or reject them. */
+.dashboard-pending {
+  margin-bottom: var(--space-lg);
+  border-left: 3px solid var(--color-gold);
+}
+
+.dashboard-pending__count {
+  display: inline-block;
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--color-gold);
+  color: var(--color-forest-dark);
+  font-size: 12px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.dashboard-pending__hint {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--color-ink-soft);
+}
+
+.dashboard-pending__error {
+  margin-top: var(--space-sm);
+  font-size: 13px;
+  color: var(--color-danger);
+}
+
+.dashboard-pending__list {
+  list-style: none;
+  margin: var(--space-md) 0 0;
+  padding: 0;
+}
+
+.dashboard-pending__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-md);
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dashboard-pending__item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.dashboard-pending__actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.dashboard-pending__actions .sw-button {
+  font-size: 13px;
+  padding: 6px 14px;
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;

@@ -2,6 +2,7 @@ import priceAlertRepo from '../repositories/priceAlertRepo.js';
 import subscriptionRepo from '../repositories/subscriptionRepo.js';
 import priceChangeGmailService from './priceChangeGmailService.js';
 import { parsePriceChangeEmail } from './priceChangeEmailParser.js';
+import { countsAsSubscription } from './subscriptionReview.js';
 
 /**
  * Turns price change announcements from subscription providers (e.g. "your
@@ -191,7 +192,10 @@ const providerPriceAlertService = {
 
         const created = [];
 
-        for (const alert of findProviderPriceAlerts(subscriptions, announcements, existingAlerts)) {
+        // Only subscriptions the user has, not pending or rejected email finds.
+        const counted = subscriptions.filter(countsAsSubscription);
+
+        for (const alert of findProviderPriceAlerts(counted, announcements, existingAlerts)) {
             const stored = await priceAlertRepo.createIfAbsent(userId, announcementAlertId(alert), {
                 ...alert,
                 source: 'gmail',

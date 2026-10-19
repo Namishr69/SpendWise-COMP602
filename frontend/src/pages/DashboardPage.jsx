@@ -6,6 +6,7 @@ import { motion } from 'motion/react'
 import { auth } from '../firebase'
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
+import Button from '../components/ui/Button.jsx'
 import AnimatedNumber from '../components/ui/AnimatedNumber.jsx'
 import { BankIcon, MailIcon } from '../components/ui/icons.jsx'
 import {
@@ -77,6 +78,13 @@ const DASHBOARD_TEXT = [
   'Found via bank transaction',
   'Found via email receipt',
   'on',
+
+  // Pending email finds.
+  'Pending',
+  'Found in your email. Confirm to start tracking it, or reject to hide it.',
+  'Confirm',
+  'Reject',
+  'Could not update this subscription:',
 ]
 
 function formatDate(iso) {
@@ -99,6 +107,8 @@ function DashboardPage() {
 
   const {
     subscriptions,
+    pendingSubscriptions,
+    updateSubscription,
     loading: subsLoading,
     error: subsError,
   } = useSubscriptions()
@@ -141,7 +151,36 @@ function DashboardPage() {
     foundViaBankText,
     foundViaEmailText,
     onText,
+    pendingText,
+    pendingHintText,
+    confirmText,
+    rejectText,
+    reviewErrorText,
   ] = useTranslations(DASHBOARD_TEXT)
+
+  // Which pending row is saving, and why the last confirm/reject failed.
+  const [reviewingId, setReviewingId] =
+    useState(null)
+
+  const [reviewError, setReviewError] =
+    useState(null)
+
+  // Confirm moves an email find into the real subscriptions; reject hides
+  // it (the record is kept so the next inbox scan doesn't bring it back).
+  async function reviewSubscription(id, reviewStatus) {
+    setReviewingId(id)
+    setReviewError(null)
+
+    try {
+      await updateSubscription(id, {
+        reviewStatus,
+      })
+    } catch (err) {
+      setReviewError(err.message)
+    } finally {
+      setReviewingId(null)
+    }
+  }
 
   // Small icon showing where an auto-detected subscription came from, with a
   // hover sentence like "Found via email receipt on 18 Oct." built from the
@@ -555,6 +594,95 @@ function DashboardPage() {
         )}
 
       <PriceChangeAlerts />
+
+      {pendingSubscriptions.length > 0 && (
+        <Card className="dashboard-pending">
+          <h3>
+            {pendingText}{' '}
+            <span className="dashboard-pending__count">
+              {pendingSubscriptions.length}
+            </span>
+          </h3>
+
+          <p className="dashboard-pending__hint">
+            {pendingHintText}
+          </p>
+
+          {reviewError && (
+            <p
+              className="dashboard-pending__error"
+              role="alert"
+            >
+              {reviewErrorText}{' '}
+              {reviewError}
+            </p>
+          )}
+
+          <ul className="dashboard-pending__list">
+            {pendingSubscriptions.map(
+              (subscription) => (
+                <li
+                  key={subscription.id}
+                  className="dashboard-pending__item"
+                >
+                  <div>
+                    <p className="dashboard-subs__name">
+                      {subscription.name}
+
+                      {renderSourceIcon(
+                        subscription,
+                      )}
+                    </p>
+
+                    <p className="dashboard-subs__meta">
+                      {showMoney(
+                        subscription.amount,
+                      )}{' '}
+                      /{' '}
+                      {translatePeriod(
+                        subscription.billingCycle,
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="dashboard-pending__actions">
+                    <Button
+                      onClick={() =>
+                        reviewSubscription(
+                          subscription.id,
+                          'confirmed',
+                        )
+                      }
+                      disabled={
+                        reviewingId ===
+                        subscription.id
+                      }
+                    >
+                      {confirmText}
+                    </Button>
+
+                    <Button
+                      variant="secondary"
+                      onClick={() =>
+                        reviewSubscription(
+                          subscription.id,
+                          'rejected',
+                        )
+                      }
+                      disabled={
+                        reviewingId ===
+                        subscription.id
+                      }
+                    >
+                      {rejectText}
+                    </Button>
+                  </div>
+                </li>
+              ),
+            )}
+          </ul>
+        </Card>
+      )}
 
       <motion.div
         className="dashboard-stats"

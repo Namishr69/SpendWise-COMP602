@@ -1,5 +1,6 @@
 import bankDataRepo from '../repositories/bankDataRepo.js';
 import subscriptionRepo from '../repositories/subscriptionRepo.js';
+import { countsAsSubscription } from './subscriptionReview.js';
 
 /**
  * Computes the figures the dashboard shows from data already stored in
@@ -48,8 +49,10 @@ const dashboardService = {
             )
             .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
+        // Email finds still waiting in Pending (or rejected) are not real
+        // subscriptions yet, so they stay out of the bills and totals.
         const activeSubs = subscriptions.filter(
-            (s) => (s.status || 'Active') === 'Active'
+            (s) => countsAsSubscription(s) && (s.status || 'Active') === 'Active'
         );
 
         // Subscriptions falling due within the next week.
