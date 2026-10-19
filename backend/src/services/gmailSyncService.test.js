@@ -45,14 +45,25 @@ const rateLimited = () =>
  * response to use instead, e.g. a rate limit for one message.
  */
 function mockGmail(ids, override = () => null) {
+    let inFlight = 0;
+    const stats = { maxInFlight: 0 };
+
     globalThis.fetch = vi.fn(async (url) => {
         const path = url.replace('https://gmail.googleapis.com/gmail/v1/users/me', '');
-        const custom = override(path);
-        if (custom) return custom;
-        if (path.startsWith('/messages?')) return respond(200, { messages: ids.map((id) => ({ id })) });
+        if (path.startsWith('/messages?')) {
+            return override(path) || respond(200, { messages: ids.map((id) => ({ id })) });
+        }
+
+        inFlight += 1;
+        stats.maxInFlight = Math.max(stats.maxInFlight, inFlight);
+        await Promise.resolve();
+        inFlight -= 1;
+
         const id = path.match(/^\/messages\/([^?]+)/)[1];
-        return respond(200, netflixReceipt(id));
+        return override(path) || respond(200, netflixReceipt(id));
     });
+
+    return stats;
 }
 
 function requestedPaths() {
@@ -88,7 +99,7 @@ describe('gmailSyncService.syncSubscriptions under Gmail rate limits', () => {
     it('retries a message that hit the rate limit instead of dropping its subscription', async () => {
         let limited = false;
         mockGmail(['m1'], (path) => {
-            if (path.startsWith('/messages/m1?format=full') && !limited) {
+            if (path.startsWith('/messages/m1?') && !limited) {
                 limited = true;
                 return rateLimited();
             }
@@ -104,9 +115,31 @@ describe('gmailSyncService.syncSubscriptions under Gmail rate limits', () => {
         expect(result.created).toBe(1);
     });
 
+    it('asks Gmail to search for receipts instead of checking every inbox email', async () => {
+        mockGmail(['m1']);
+
+        await sync();
+
+        const [listUrl] = requestedPaths();
+        expect(new URL(listUrl).searchParams.get('q')).toMatch(/subject:\(.*receipt.*\)/);
+        expect(requestedPaths().some((url) => url.includes('format=metadata'))).toBe(false);
+    });
+
+    it('fetches several receipts at once, but no more than 5', async () => {
+        const ids = Array.from({ length: 12 }, (_, i) => `m${i}`);
+        const stats = mockGmail(ids);
+
+        const result = await sync();
+
+        expect(result.parsed).toBe(12);
+        expect(stats.maxInFlight).toBeGreaterThan(1);
+        expect(stats.maxInFlight).toBeLessThanOrEqual(5);
+    });
+
     it('saves what it already found when the rate limit does not clear', async () => {
-        mockGmail(['m1', 'm2', 'm3'], (path) =>
-            path.startsWith('/messages/m2?') ? rateLimited() : null
+        const ids = Array.from({ length: 10 }, (_, i) => `m${i + 1}`);
+        mockGmail(ids, (path) =>
+            path.startsWith('/messages/') && !path.startsWith('/messages/m1?') ? rateLimited() : null
         );
 
         const result = await sync();
@@ -118,6 +151,6 @@ describe('gmailSyncService.syncSubscriptions under Gmail rate limits', () => {
         expect(transactionRepo.upsertById).toHaveBeenCalledWith('user1', 'gmail_m1', expect.any(Object));
         expect(result).toMatchObject({ created: 1, scanned: 1, rateLimited: true });
         // Once Gmail keeps refusing, later messages are not requested at all.
-        expect(requestedPaths().some((url) => url.includes('/messages/m3'))).toBe(false);
+        expect(requestedPaths().some((url) => url.includes('/messages/m10'))).toBe(false);
     });
 });
