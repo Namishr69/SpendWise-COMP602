@@ -20,7 +20,6 @@ import { useSubscriptions } from '../context/subscriptionsContext.js'
 import { convertCurrency } from '../api/exchangeRateApi.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
 import { normalizeBudgetToMonthly } from '../utils/budgetCalculations.js'
-import { sourceLabel } from '../utils/subscriptionSource.js'
 import { getDashboard } from '../api/bankDataApi.js'
 import { useAlerts } from '../hooks/useAlerts.js'
 import { useCurrencyRate } from '../hooks/useCurrencyRate.js'
@@ -74,9 +73,10 @@ const DASHBOARD_TEXT = [
   'Cancelled',
   'Paused',
 
-  // Source icon labels.
-  sourceLabel('anz-detected'),
-  sourceLabel('gmail-detected'),
+  // Source icon hover sentences.
+  'Found via bank transaction',
+  'Found via email receipt',
+  'on',
 ]
 
 function formatDate(iso) {
@@ -138,40 +138,44 @@ function DashboardPage() {
     activeText,
     cancelledText,
     pausedText,
-    fromBankText,
-    fromEmailText,
+    foundViaBankText,
+    foundViaEmailText,
+    onText,
   ] = useTranslations(DASHBOARD_TEXT)
 
-  // Small icon showing where an auto-detected subscription came from.
-  // Manually added subscriptions have no source icon.
-  function renderSourceIcon(source) {
-    if (source === 'anz-detected') {
-      return (
-        <span
-          className="dashboard-subs__source dashboard-subs__source--bank"
-          title={fromBankText}
-          aria-label={fromBankText}
-          role="img"
-        >
-          <BankIcon />
-        </span>
-      )
+  // Small icon showing where an auto-detected subscription came from, with a
+  // hover sentence like "Found via email receipt on 18 Oct." built from the
+  // date the sync first created it. Manually added subscriptions have no icon.
+  function renderSourceIcon(subscription) {
+    let icon
+    let foundVia
+
+    if (subscription.source === 'anz-detected') {
+      icon = <BankIcon />
+      foundVia = foundViaBankText
+    } else if (subscription.source === 'gmail-detected') {
+      icon = <MailIcon />
+      foundVia = foundViaEmailText
+    } else {
+      return null
     }
 
-    if (source === 'gmail-detected') {
-      return (
-        <span
-          className="dashboard-subs__source dashboard-subs__source--email"
-          title={fromEmailText}
-          aria-label={fromEmailText}
-          role="img"
-        >
-          <MailIcon />
-        </span>
-      )
-    }
+    const foundOn = formatDate(subscription.createdAt)
 
-    return null
+    const sentence = foundOn
+      ? `${foundVia} ${onText} ${foundOn}.`
+      : `${foundVia}.`
+
+    return (
+      <span
+        className="dashboard-subs__source"
+        data-tooltip={sentence}
+        aria-label={sentence}
+        role="img"
+      >
+        {icon}
+      </span>
+    )
   }
 
   const showMoney = (amount) =>
@@ -767,7 +771,7 @@ function DashboardPage() {
                           }
 
                           {renderSourceIcon(
-                            subscription.source,
+                            subscription,
                           )}
                         </p>
 
