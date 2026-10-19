@@ -13,6 +13,7 @@ import {
   hoverLift,
   stagger,
 } from '../components/ui/motionPresets.js'
+import Logo from '../components/ui/Logo.jsx'
 
 const MotionLink = motion.create(Link)
 
@@ -23,25 +24,6 @@ const PREVIEW_CARDS = [
   { dot: 'var(--color-forest)', width: '48%', offset: 48, duration: 7 },
   { dot: 'var(--color-cream)', width: '70%', offset: 12, duration: 6.5 },
 ]
-
-// Small inline logo mark, matching the
-// sprout used elsewhere in the app.
-function LogoMark() {
-  return (
-    <svg
-      className="landing-logo__mark"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path
-        d="M12 21c0-4 0-6-1.5-7.5S6 12 6 9c3 0 4.5.5 6 2m0 10c0-5 0-7.5 1.5-9S18 8 18 5c-3 0-4.5.5-6 2v14Z"
-        fill="currentColor"
-      />
-    </svg>
-  )
-}
 
 const LANDING_TEXT = [
   'Sign up',
@@ -159,7 +141,10 @@ function LandingPage() {
           variants={fadeUp}
         >
           <div className="landing-logo">
-            <LogoMark />
+            <Logo
+              className="landing-logo__mark"
+              height={44}
+            />
             <span>SpendWise</span>
           </div>
 

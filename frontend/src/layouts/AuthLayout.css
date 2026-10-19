@@ -96,7 +96,8 @@
 }
 
 .auth-shell__logo-mark {
-  color: var(--auth-fg);
+  flex-shrink: 0;
+  color: var(--color-gold);
 }
 
 .auth-shell__content {

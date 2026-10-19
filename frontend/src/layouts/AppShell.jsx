@@ -5,6 +5,7 @@ import { AuthContext } from '../context/authContext.js'
 import { ProfileContext } from '../context/ProfileProvider.jsx'
 import { useTranslations } from '../hooks/useTranslations.js'
 import { EASE_OUT, SPRING } from '../components/ui/motionPresets.js'
+import Logo from '../components/ui/Logo.jsx'
 import './AppShell.css'
 
 const NAV_ITEMS = [
@@ -231,16 +232,10 @@ function AppShell({
     <div className="app-shell">
       <aside className="app-shell__sidebar">
         <div className="app-shell__logo">
-          <svg
+          <Logo
             className="app-shell__logo-mark"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              d="M12 21c0-4 0-6-1.5-7.5S6 12 6 9c3 0 4.5.5 6 2m0 10c0-5 0-7.5 1.5-9S18 8 18 5c-3 0-4.5.5-6 2v14Z"
-              fill="currentColor"
-            />
-          </svg>
+            height={26}
+          />
           SpendWise
         </div>
 

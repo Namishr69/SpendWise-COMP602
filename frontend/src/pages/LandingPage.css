@@ -69,13 +69,11 @@
     font-weight: 700;
     font-size: 44px;
     color: var(--color-ink);
-    margin-left: -20px;
 }
 
 .landing-logo__mark {
-    width: 44px;
-    height: 44px;
-    color: var(--color-ink);
+    flex-shrink: 0;
+    color: #000;
 }
 
 .landing-nav {
