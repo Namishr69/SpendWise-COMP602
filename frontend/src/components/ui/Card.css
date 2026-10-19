@@ -19,7 +19,23 @@
   color: var(--color-white);
 }
 
+:root[data-theme="dark"] .sw-card--cream {
+  background: linear-gradient(180deg, #18221c, var(--color-surface));
+}
+
+:root[data-theme="dark"] .sw-card--forest {
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(232, 196, 104, 0.12), transparent 55%),
+    linear-gradient(160deg, #1f3a29, #0f1d15);
+  border: 1px solid rgba(232, 196, 104, 0.18);
+}
+
 .sw-card--forest .sw-field__label,
 .sw-card--forest p {
   color: rgba(255, 255, 255, 0.75);
+}
+
+:root[data-theme="dark"] .sw-card--forest .sw-field__label,
+:root[data-theme="dark"] .sw-card--forest p {
+  color: rgba(255, 255, 255, 0.88);
 }

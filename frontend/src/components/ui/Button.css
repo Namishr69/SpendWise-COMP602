@@ -32,7 +32,16 @@
 
 /* Gold stays gold in dark mode, so its label keeps dark ink for contrast. */
 :root[data-theme="dark"] .sw-button--primary {
-  color: var(--color-forest-dark);
+  color: #16291f;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset, 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="dark"] .sw-button--primary:hover:not(:disabled) {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset, 0 6px 18px rgba(232, 196, 104, 0.18);
+}
+
+:root[data-theme="dark"] .sw-button--secondary:hover:not(:disabled) {
+  background: var(--color-surface-alt);
 }
 
 .sw-button--secondary {
@@ -47,6 +56,6 @@
 }
 
 .sw-button:focus-visible {
-  outline: 2px solid var(--color-forest);
+  outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }

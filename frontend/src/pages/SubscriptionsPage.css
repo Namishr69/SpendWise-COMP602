@@ -346,3 +346,54 @@
   color: #a12d2d;
   border: 1px solid #e6b5b5;
 }
+/* Forest text is too dark to read on the dark background. */
+:root[data-theme="dark"] .subscription-cancel {
+  color: var(--color-sage);
+}
+
+/* Dark mode: the hardcoded dark greens above are unreadable on the dark
+   background, so swap them for the theme's lighter text colours. */
+:root[data-theme="dark"] .subscriptions-eyebrow,
+:root[data-theme="dark"] .subscription-link {
+  color: var(--color-sage);
+}
+
+:root[data-theme="dark"] .subscription-source {
+  background: rgba(169, 194, 159, 0.15);
+  color: var(--color-sage);
+}
+
+:root[data-theme="dark"] .subscriptions-bulk-bar {
+  background: var(--color-surface-alt);
+  border-color: var(--color-border);
+}
+
+:root[data-theme="dark"] .subscriptions-select-all,
+:root[data-theme="dark"] .subscription-select {
+  color: var(--color-ink);
+}
+
+:root[data-theme="dark"] .subscriptions-select-all input,
+:root[data-theme="dark"] .subscription-select input {
+  accent-color: var(--color-gold);
+}
+
+:root[data-theme="dark"] .subscriptions-selected-count {
+  color: var(--color-ink-soft);
+}
+
+:root[data-theme="dark"] .subscriptions-bulk-actions button {
+  background: var(--color-surface);
+  border-color: var(--color-sage);
+  color: var(--color-ink);
+}
+
+:root[data-theme="dark"] .subscriptions-bulk-message--success {
+  background: rgba(169, 194, 159, 0.15);
+  border-color: rgba(169, 194, 159, 0.35);
+  color: var(--color-ink);
+}
+
+:root[data-theme="dark"] .subscriptions-bulk-actions button:hover:not(:disabled) {
+  background: var(--color-surface-alt);
+}

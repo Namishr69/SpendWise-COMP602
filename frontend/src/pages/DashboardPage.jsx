@@ -660,7 +660,7 @@ function DashboardPage() {
                   cx="36"
                   cy="34"
                   r="8"
-                  fill="var(--color-white)"
+                  fill="var(--color-surface)"
                   stroke="currentColor"
                   strokeWidth="2"
                 />

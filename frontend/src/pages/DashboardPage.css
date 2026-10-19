@@ -95,7 +95,7 @@
   margin-left: 8px;
   padding: 1px 7px;
   border-radius: 999px;
-  background: var(--color-surface-alt, #eef2e8);
+  background: var(--color-surface-alt);
   color: var(--color-ink-soft);
   font-size: 10px;
   font-weight: 700;
@@ -133,6 +133,21 @@
 .dashboard-subs__status--cancelled {
   color: var(--color-danger);
   background: var(--color-danger-bg);
+}
+
+/* The light pill colours above glare on dark cards, so use tinted ones. */
+:root[data-theme="dark"] .dashboard-subs__status--active {
+  background: rgba(116, 211, 148, 0.12);
+}
+
+:root[data-theme="dark"] .dashboard-subs__status--paused {
+  background: rgba(232, 196, 104, 0.12);
+  color: var(--color-gold);
+  border-color: rgba(232, 196, 104, 0.35);
+}
+
+:root[data-theme="dark"] .dashboard-subs__link:hover {
+  background: var(--color-surface-alt);
 }
 
 .dashboard-empty {
@@ -302,4 +317,21 @@
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Dark mode: stat figures in gold so they pop off the forest tiles. */
+:root[data-theme="dark"] .dashboard-stat h2 {
+  color: var(--color-gold);
+}
+
+:root[data-theme="dark"] .dashboard-stat:hover {
+  box-shadow: var(--shadow-hover), 0 0 0 1px rgba(232, 196, 104, 0.35);
+}
+
+:root[data-theme="dark"] .dashboard-chip {
+  background: rgba(232, 196, 104, 0.08);
+}
+
+:root[data-theme="dark"] .dashboard-budget-bar {
+  background: var(--color-surface-alt);
 }

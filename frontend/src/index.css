@@ -16,6 +16,8 @@
   --color-tan: #f3e6c8;
   --color-white: #ffffff;
   --color-surface: var(--color-white);
+  --color-surface-alt: #eef2e8;
+  --color-focus: var(--color-forest);
   --color-ink: #1a1a1a;
   --color-ink-soft: #5c6b60;
   --color-border: #e2ddd0;
@@ -49,18 +51,27 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Dark mode: green-tinted charcoal rather than flat black, with three clear
+   depth steps (page, card, raised) so cards still read as separate surfaces. */
 :root[data-theme="dark"] {
-  --color-cream: #121a16;
-  --color-surface: #1c2420;
-  --color-tan: #3a3324;
-  --color-ink: #f0ede4;
-  --color-ink-soft: #a9b3ac;
-  --color-border: #2e3a33;
-  --color-danger: #e07a7a;
-  --color-danger-bg: #3a2222;
-  --color-success: #6fcf8e;
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
-  --shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.35), 0 16px 32px rgba(0, 0, 0, 0.45);
+  --color-forest: #24432f;
+  --color-forest-dark: #172b1f;
+  --color-sage: #a9c29f;
+  --color-cream: #0b120e;
+  --color-surface: #141d18;
+  --color-surface-alt: #1d2822;
+  --color-tan: #2b2719;
+  --color-focus: var(--color-gold);
+  --color-ink: #eef0e8;
+  --color-ink-soft: #c0cbc3;
+  --color-border: #253229;
+  --color-danger: #e88a8a;
+  --color-danger-bg: rgba(232, 138, 138, 0.12);
+  --color-success: #84dba2;
+  --shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 1px 2px rgba(0, 0, 0, 0.4),
+    0 8px 24px rgba(0, 0, 0, 0.3);
+  --shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 2px 4px rgba(0, 0, 0, 0.45),
+    0 16px 32px rgba(0, 0, 0, 0.45);
   color-scheme: dark;
 }
 
