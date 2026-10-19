@@ -7,6 +7,7 @@ import {
   looksLikeReceiptEmail,
   parseReceiptEmail,
 } from './gmailEmailParser.js';
+import { isRateLimitResponse, retryOnRateLimit } from './gmailRateLimit.js';
 
 /**
  * Gmail → Firestore sync service.
@@ -78,9 +79,11 @@ async function gmailGet(accessToken, path) {
 
   if (!response.ok) {
     const body = await response.text().catch(() => '');
-    throw new Error(
+    const error = new Error(
       `Gmail API GET ${path} failed (HTTP ${response.status})${body ? `: ${body}` : ''}`
     );
+    error.rateLimited = isRateLimitResponse(response.status, body);
+    throw error;
   }
 
   return response.json();
@@ -126,7 +129,7 @@ const gmailSyncService = {
    * Scan the inbox, parse subscription emails, and upsert results to Firestore.
    *
    * @param {string} userId  Firebase UID of the signed-in user
-   * @returns {{ scanned, parsed, created, updated }} sync summary
+   * @returns {{ scanned, parsed, created, updated, transactionsSaved, rateLimited }} sync summary
    */
   async syncSubscriptions(userId) {
     // Ensure the user has a connected Gmail account before doing anything.
@@ -138,14 +141,18 @@ const gmailSyncService = {
     const accessToken = await gmailAuthService.getValidAccessToken(userId);
 
     // ── Step 1: list recent message IDs ────────────────────────────────────
-    const list = await gmailGet(
-      accessToken,
-      `/messages?maxResults=${MAX_MESSAGES_TO_SCAN}&labelIds=INBOX`
+    const list = await retryOnRateLimit(
+      () => gmailGet(accessToken, `/messages?maxResults=${MAX_MESSAGES_TO_SCAN}&labelIds=INBOX`),
+      'inbox list'
     );
     const messageIds = (list.messages || []).map((m) => m.id);
 
     // ── Step 2: filter by subject, then fetch and parse matching messages ──
     const candidates = [];
+    let scanned = 0;
+    // Set when Gmail keeps refusing after the retries. The scan stops there and
+    // saves what it already found instead of failing every remaining message.
+    let rateLimited = false;
 
     console.log(
       `[gmail-sync] scanning ${messageIds.length} inbox message(s) for user ${userId}`
@@ -155,15 +162,24 @@ const gmailSyncService = {
       // Fetch metadata-only first (cheap) to check the subject.
       let meta;
       try {
-        meta = await gmailGet(
-          accessToken,
-          `/messages/${id}?format=metadata` +
-            '&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date'
+        meta = await retryOnRateLimit(
+          () =>
+            gmailGet(
+              accessToken,
+              `/messages/${id}?format=metadata` +
+                '&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date'
+            ),
+          `message ${id}`
         );
       } catch (err) {
         console.warn(`Gmail sync: metadata fetch failed for ${id}:`, err.message);
+        if (err.rateLimited) {
+          rateLimited = true;
+          break;
+        }
         continue;
       }
+      scanned += 1;
 
       const headers = meta.payload?.headers || [];
       const subject = headers.find((h) => h.name.toLowerCase() === 'subject')?.value || '';
@@ -174,9 +190,16 @@ const gmailSyncService = {
       // Subject looks promising — fetch the full message for body parsing.
       let full;
       try {
-        full = await gmailGet(accessToken, `/messages/${id}?format=full`);
+        full = await retryOnRateLimit(
+          () => gmailGet(accessToken, `/messages/${id}?format=full`),
+          `message ${id}`
+        );
       } catch (err) {
         console.warn(`Gmail sync: full fetch failed for ${id}:`, err.message);
+        if (err.rateLimited) {
+          rateLimited = true;
+          break;
+        }
         continue;
       }
 
@@ -300,16 +323,18 @@ const gmailSyncService = {
     }
 
     console.log(
-      `[gmail-sync] done for ${userId}: scanned ${messageIds.length}, parsed ${candidates.length}, ` +
-        `subscriptions +${created}/~${updated}, transactions saved ${transactionsSaved}`
+      `[gmail-sync] done for ${userId}: scanned ${scanned}/${messageIds.length}, parsed ${candidates.length}, ` +
+        `subscriptions +${created}/~${updated}, transactions saved ${transactionsSaved}` +
+        (rateLimited ? ' (stopped early: Gmail rate limit)' : '')
     );
 
     return {
-      scanned: messageIds.length,
+      scanned,
       parsed: candidates.length,
       created,
       updated,
       transactionsSaved,
+      rateLimited,
     };
   },
 };

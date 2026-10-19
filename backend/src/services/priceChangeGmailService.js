@@ -1,3 +1,5 @@
+import { isRateLimitResponse, mapWithConcurrency, retryOnRateLimit } from './gmailRateLimit.js';
+
 /**
  * Reads likely price change emails from the user's Gmail with the access
  * token (gmail.readonly) of their Connect Gmail connection.
@@ -11,6 +13,10 @@ const PRICE_CHANGE_QUERY =
     'newer_than:180d (subject:price OR subject:pricing OR "price is changing" OR "price increase" OR "new price")';
 
 const MAX_MESSAGES = 25;
+
+// How many messages are fetched at once. Firing all of them together is what
+// tripped Gmail's per-user rate limit.
+const CONCURRENT_FETCHES = 5;
 
 function gmailError(status, message) {
     const error = new Error(message);
@@ -29,6 +35,12 @@ async function gmailGet(accessToken, path) {
 
     const data = await res.json().catch(() => null);
     const googleMessage = data?.error?.message || '';
+
+    if (isRateLimitResponse(res.status, JSON.stringify(data))) {
+        const error = gmailError(429, `Gmail rate limit reached: ${googleMessage || res.status}`);
+        error.rateLimited = true;
+        throw error;
+    }
 
     // Google's consent screen lists Gmail as a checkbox; leaving it unticked
     // still returns a token, just one that cannot read mail.
@@ -96,14 +108,24 @@ const priceChangeGmailService = {
      */
     async fetchPriceChangeEmails(accessToken) {
         const query = new URLSearchParams({ q: PRICE_CHANGE_QUERY, maxResults: String(MAX_MESSAGES) });
-        const list = await gmailGet(accessToken, `/messages?${query}`);
+        const list = await retryOnRateLimit(
+            () => gmailGet(accessToken, `/messages?${query}`),
+            'price change search'
+        );
         const ids = (list.messages || []).map((message) => message.id);
 
-        const messages = await Promise.all(
-            ids.map((id) => gmailGet(accessToken, `/messages/${id}?format=full`))
+        // A message still rate limited after its retries is skipped, so the
+        // rest of the search is not thrown away with it.
+        const messages = await mapWithConcurrency(ids, CONCURRENT_FETCHES, (id) =>
+            retryOnRateLimit(() => gmailGet(accessToken, `/messages/${id}?format=full`), `message ${id}`)
+                .catch((error) => {
+                    if (!error.rateLimited) throw error;
+                    console.warn(`[price-change] skipping message ${id}: ${error.message}`);
+                    return null;
+                })
         );
 
-        return messages.map((message) => ({
+        return messages.filter(Boolean).map((message) => ({
             id: message.id,
             from: header(message.payload, 'From'),
             subject: header(message.payload, 'Subject'),
