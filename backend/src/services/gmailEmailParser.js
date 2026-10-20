@@ -70,14 +70,19 @@ function extractBody(payload) {
  * Subscription-confirmation sender patterns.
  * Each entry maps a domain fragment to a clean merchant label.
  * The list is ordered longest-first so more-specific domains win.
+ *
+ * `mixed` marks senders that mostly email receipts for one-off purchases
+ * (rides, food, orders, games, apps) and only sometimes a subscription. Their
+ * receipts only count as a subscription when the subject says so (see
+ * SUBSCRIPTION_SUBJECT_RE); otherwise they are judged like any other shop.
  */
 const SENDER_PATTERNS = [
   { pattern: /netflix/i,          label: 'Netflix' },
   { pattern: /spotify/i,          label: 'Spotify' },
   { pattern: /disneyplus|disney\+/i, label: 'Disney+' },
-  { pattern: /youtube/i,          label: 'YouTube Premium' },
-  { pattern: /apple/i,            label: 'Apple' },
-  { pattern: /microsoft|office/i, label: 'Microsoft 365' },
+  { pattern: /youtube/i,          label: 'YouTube Premium', mixed: true },
+  { pattern: /apple/i,            label: 'Apple', mixed: true },
+  { pattern: /microsoft|office\s*365/i, label: 'Microsoft 365', mixed: true },
   { pattern: /adobe/i,            label: 'Adobe' },
   { pattern: /dropbox/i,          label: 'Dropbox' },
   { pattern: /notion/i,           label: 'Notion' },
@@ -88,27 +93,29 @@ const SENDER_PATTERNS = [
   { pattern: /audible/i,          label: 'Audible' },
   { pattern: /substack/i,         label: 'Substack' },
   { pattern: /patreon/i,          label: 'Patreon' },
-  { pattern: /amazon/i,           label: 'Amazon' },
-  { pattern: /playstation|psn/i,  label: 'PlayStation Plus' },
-  { pattern: /xbox|game\s*pass/i, label: 'Xbox / Game Pass' },
-  { pattern: /nintendo/i,         label: 'Nintendo Switch Online' },
-  { pattern: /steam/i,            label: 'Steam' },
+  { pattern: /amazon/i,           label: 'Amazon', mixed: true },
+  { pattern: /playstation|psn/i,  label: 'PlayStation Plus', mixed: true },
+  { pattern: /xbox|game\s*pass/i, label: 'Xbox / Game Pass', mixed: true },
+  { pattern: /nintendo/i,         label: 'Nintendo Switch Online', mixed: true },
+  { pattern: /steam/i,            label: 'Steam', mixed: true },
   { pattern: /twitch/i,           label: 'Twitch' },
   { pattern: /paramount/i,        label: 'Paramount+' },
   { pattern: /neon/i,             label: 'Neon NZ' },
   { pattern: /spark/i,            label: 'Spark NZ' },
   { pattern: /sky\s*(tv|sport|nz)/i, label: 'Sky TV NZ' },
   { pattern: /lesmills|les mills/i, label: 'Les Mills' },
-  { pattern: /uber/i,             label: 'Uber' },
+  { pattern: /uber/i,             label: 'Uber', mixed: true },
 ];
 
-/** Derive a merchant label from the From header, or null if unrecognised. */
-function merchantFromSender(from) {
+// Subject wording that marks a `mixed` sender's email as a subscription
+// receipt ("Your Uber One membership receipt") rather than a purchase.
+const SUBSCRIPTION_SUBJECT_RE =
+  /subscription|membership|renew|uber one|prime video|prime membership|game pass|ps plus|playstation plus|switch online|icloud|apple one|youtube premium|microsoft 365|office 365/i;
+
+/** The known-service entry matching the From header, or null if unrecognised. */
+function knownSender(from) {
   if (!from) return null;
-  for (const { pattern, label } of SENDER_PATTERNS) {
-    if (pattern.test(from)) return label;
-  }
-  return null;
+  return SENDER_PATTERNS.find(({ pattern }) => pattern.test(from)) || null;
 }
 
 /** Title-cases a raw label: "URBAN THREADS" / "urban threads" → "Urban Threads". */
@@ -367,10 +374,16 @@ export function parseReceiptEmail(message) {
   // Known subscription services get a canonical label and feed subscription
   // detection; any other sender still becomes a transaction, labelled from the
   // sender's display name / domain.
-  const knownMerchant = merchantFromSender(from);
+  const known = knownSender(from);
+  const knownMerchant = known?.label;
   const merchant =
     knownMerchant || merchantFromSubject(subject) || merchantFromSenderName(from);
   if (!merchant) return null; // Couldn't name the merchant at all — skip.
+
+  // A ride or order from a mixed sender (Uber, Amazon, Apple…) is a purchase
+  // unless the subject says it's a subscription.
+  const isSubscriptionMerchant =
+    Boolean(known) && (!known.mixed || SUBSCRIPTION_SUBJECT_RE.test(subject));
 
   const date         = extractDate(dateHdr);
   const billingCycle = detectBillingCycle(searchText);
@@ -387,7 +400,7 @@ export function parseReceiptEmail(message) {
     date,
     billingCycle,
     gmailMessageId: message.id,
-    isSubscriptionMerchant: Boolean(knownMerchant),
+    isSubscriptionMerchant,
     // Kept for display: the subject usually names the merchant more precisely
     // than the sender does ("Your order from URBAN THREADS - Order UT-36482"),
     // and the address lets a user verify where a row came from.

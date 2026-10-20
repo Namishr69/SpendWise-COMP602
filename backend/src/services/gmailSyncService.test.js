@@ -154,3 +154,163 @@ describe('gmailSyncService.syncSubscriptions under Gmail rate limits', () => {
         expect(requestedPaths().some((url) => url.includes('/messages/m10'))).toBe(false);
     });
 });
+
+function email({ id, from, subject, date, body }) {
+    return {
+        id,
+        payload: {
+            mimeType: 'text/plain',
+            headers: [
+                { name: 'Subject', value: subject },
+                { name: 'From', value: from },
+                { name: 'Date', value: `${date} 10:00:00 +1200` },
+            ],
+            body: { data: Buffer.from(body).toString('base64url') },
+        },
+    };
+}
+
+/** Serves exactly these messages as the inbox. */
+function mockInbox(messages) {
+    const byId = new Map(messages.map((m) => [m.id, m]));
+
+    globalThis.fetch = vi.fn(async (url) => {
+        const path = url.replace('https://gmail.googleapis.com/gmail/v1/users/me', '');
+        if (path.startsWith('/messages?')) {
+            return respond(200, { messages: messages.map((m) => ({ id: m.id })) });
+        }
+        const id = path.match(/^\/messages\/([^?]+)/)[1];
+        return respond(200, byId.get(id));
+    });
+}
+
+const UBER = 'Uber Receipts <noreply@uber.com>';
+const SHOP = 'Urban Threads <orders@urbanthreads.co.nz>';
+
+const uberEats = (id, date, amount) =>
+    email({ id, from: UBER, subject: 'Your Uber Eats order receipt', date, body: `Total $${amount}` });
+
+const shopOrder = (id, date, amount) =>
+    email({ id, from: SHOP, subject: 'Your order from URBAN THREADS', date, body: `Order total $${amount}` });
+
+describe('gmailSyncService.syncSubscriptions telling subscriptions from regular purchases', () => {
+    const realFetch = globalThis.fetch;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.spyOn(console, 'log').mockImplementation(() => {});
+        gmailConnectionRepo.getConnection.mockResolvedValue({ connected: true });
+        gmailAuthService.getValidAccessToken.mockResolvedValue('token');
+        subscriptionRepo.getAll.mockResolvedValue([]);
+        subscriptionRepo.create.mockImplementation(async (userId, data) => ({ id: 'sub1', ...data }));
+    });
+
+    afterEach(() => {
+        globalThis.fetch = realFetch;
+        vi.restoreAllMocks();
+    });
+
+    const created = () => subscriptionRepo.create.mock.calls.map(([, data]) => data);
+
+    it('keeps Uber Eats orders as transactions, not a subscription', async () => {
+        mockInbox([uberEats('u1', '3 Sep 2026', '32.50'), uberEats('u2', '10 Sep 2026', '18.20')]);
+
+        const result = await gmailSyncService.syncSubscriptions('user1');
+
+        expect(created()).toEqual([]);
+        expect(result.transactionsSaved).toBe(2);
+    });
+
+    it('still picks up an Uber One membership from one receipt', async () => {
+        mockInbox([
+            email({
+                id: 'one',
+                from: UBER,
+                subject: 'Your Uber One membership receipt',
+                date: '1 Sep 2026',
+                body: 'Total $14.99 per month',
+            }),
+        ]);
+
+        await gmailSyncService.syncSubscriptions('user1');
+
+        expect(created()).toEqual([expect.objectContaining({ name: 'Uber', amount: 14.99 })]);
+    });
+
+    it('prices an Uber One membership from its own receipts, not from a food order', async () => {
+        mockInbox([
+            email({
+                id: 'one',
+                from: UBER,
+                subject: 'Your Uber One membership receipt',
+                date: '1 Sep 2026',
+                body: 'Total $14.99 per month',
+            }),
+            uberEats('u1', '20 Sep 2026', '45.00'),
+        ]);
+
+        await gmailSyncService.syncSubscriptions('user1');
+
+        expect(created()).toEqual([expect.objectContaining({ name: 'Uber', amount: 14.99 })]);
+    });
+
+    it('ignores two orders from a shop a few days apart', async () => {
+        mockInbox([shopOrder('s1', '1 Sep 2026', '40.00'), shopOrder('s2', '6 Sep 2026', '40.00')]);
+
+        await gmailSyncService.syncSubscriptions('user1');
+
+        expect(created()).toEqual([]);
+    });
+
+    it('ignores monthly orders from a shop when the amounts are different', async () => {
+        mockInbox([shopOrder('s1', '1 Aug 2026', '25.00'), shopOrder('s2', '1 Sep 2026', '80.00')]);
+
+        await gmailSyncService.syncSubscriptions('user1');
+
+        expect(created()).toEqual([]);
+    });
+
+    it('detects a shop that charges the same amount every month', async () => {
+        mockInbox([
+            shopOrder('s1', '1 Jul 2026', '15.00'),
+            shopOrder('s2', '1 Aug 2026', '15.00'),
+            shopOrder('s3', '1 Sep 2026', '15.00'),
+        ]);
+
+        await gmailSyncService.syncSubscriptions('user1');
+
+        expect(created()).toEqual([
+            expect.objectContaining({ amount: 15, billingCycle: 'Monthly' }),
+        ]);
+    });
+
+    it('detects a weekly charge once it has three receipts', async () => {
+        mockInbox([
+            shopOrder('w1', '1 Sep 2026', '9.00'),
+            shopOrder('w2', '8 Sep 2026', '9.00'),
+            shopOrder('w3', '15 Sep 2026', '9.00'),
+        ]);
+
+        await gmailSyncService.syncSubscriptions('user1');
+
+        expect(created()).toEqual([
+            expect.objectContaining({ amount: 9, billingCycle: 'Weekly' }),
+        ]);
+    });
+
+    it('does not mistake a sender with "office" in its name for Microsoft 365', async () => {
+        mockInbox([
+            email({
+                id: 't1',
+                from: 'Ticket Office <tickets@ticketoffice.co.nz>',
+                subject: 'Your ticket order confirmation',
+                date: '1 Sep 2026',
+                body: 'Total $60.00',
+            }),
+        ]);
+
+        await gmailSyncService.syncSubscriptions('user1');
+
+        expect(created()).toEqual([]);
+    });
+});
