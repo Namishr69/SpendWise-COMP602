@@ -254,12 +254,16 @@ describe('gmailSyncService.syncSubscriptions telling subscriptions from regular 
         expect(created()).toEqual([expect.objectContaining({ name: 'Uber', amount: 14.99 })]);
     });
 
-    it('ignores two orders from a shop a few days apart', async () => {
+    it('detects two same-price receipts even when they arrive close together', async () => {
         mockInbox([shopOrder('s1', '1 Sep 2026', '40.00'), shopOrder('s2', '6 Sep 2026', '40.00')]);
 
         await gmailSyncService.syncSubscriptions('user1');
 
-        expect(created()).toEqual([]);
+        // Two receipts 5 days apart can't prove a weekly cycle, so the cycle
+        // comes from the email wording (Monthly when it names none).
+        expect(created()).toEqual([
+            expect.objectContaining({ amount: 40, billingCycle: 'Monthly' }),
+        ]);
     });
 
     it('ignores monthly orders from a shop when the amounts are different', async () => {

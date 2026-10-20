@@ -69,10 +69,14 @@ const CONCURRENT_FETCHES = 5;
 // How many receipts a merchant that is NOT a known subscription service needs
 // before it is treated as recurring. Two is deliberately low — the user asked
 // for repeat receipts from one merchant to surface as a subscription — so the
-// receipts must also arrive on a real billing cycle (cycleFromDates) and
-// charge about the same amount each time. That keeps a shop you just order
-// from often as transactions only.
+// receipts must also charge about the same amount each time. Spacing is not
+// checked, so receipts that arrive close together (e.g. a test inbox) still
+// count; orders of different sizes stay transactions only.
 const MIN_EMAILS_FOR_SUBSCRIPTION = 2;
+
+// Cycles that two receipts alone can't prove: two orders a few days apart
+// would otherwise be labelled "Weekly".
+const SHORT_CYCLES = ['Weekly', 'Fortnightly'];
 
 // How far each receipt may stray from the typical (median) amount and still
 // look like the same recurring charge. Allows for a small price change.
@@ -154,20 +158,26 @@ function amountsConsistent(amounts) {
 
 /**
  * Receipts from a merchant that is not a known subscription service look like
- * a subscription only when there are enough of them, on a regular cycle, for
- * about the same amount. Two orders a few days apart, or monthly orders of
- * different sizes, are just shopping.
+ * a subscription when there are enough of them for about the same amount.
+ * Orders of different sizes are just shopping.
  */
 function looksRecurring(receipts) {
-  const cycle = cycleFromDates(receipts.map((c) => c.date));
-  if (!cycle) return false;
+  return (
+    receipts.length >= MIN_EMAILS_FOR_SUBSCRIPTION &&
+    amountsConsistent(receipts.map((c) => c.amount))
+  );
+}
 
-  // Two orders a few days apart would pass as "weekly", and a real weekly or
-  // fortnightly charge sends a third receipt soon enough, so wait for it.
-  const needed =
-    cycle === 'Weekly' || cycle === 'Fortnightly' ? 3 : MIN_EMAILS_FOR_SUBSCRIPTION;
+/**
+ * The billing cycle from when receipts arrived, else the email's wording.
+ * A weekly or fortnightly gap needs 3+ receipts to be believed.
+ */
+function billingCycleFor(receipts) {
+  const fromDates = cycleFromDates(receipts.map((c) => c.date));
+  const trusted =
+    fromDates && (receipts.length >= 3 || !SHORT_CYCLES.includes(fromDates));
 
-  return receipts.length >= needed && amountsConsistent(receipts.map((c) => c.amount));
+  return trusted ? fromDates : receipts[receipts.length - 1].billingCycle;
 }
 
 const gmailSyncService = {
@@ -286,8 +296,7 @@ const gmailSyncService = {
       const latest = receipts[receipts.length - 1];
 
       // With several dated receipts the real spacing beats a keyword guess.
-      const billingCycle =
-        cycleFromDates(receipts.map((c) => c.date)) || latest.billingCycle;
+      const billingCycle = billingCycleFor(receipts);
 
       const key = `gmail|${merchant}|${billingCycle}`;
       const match = byKey.get(key);
