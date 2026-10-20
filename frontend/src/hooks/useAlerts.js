@@ -5,7 +5,10 @@ import {
 } from '../utils/budgetCalculations.js'
 
 import { formatCurrency } from '../utils/formatCurrency.js'
-import { classifySubscriptionAlerts } from '../utils/alertRules.js'
+import {
+  classifySubscriptionAlerts,
+  groupNewSubscriptions,
+} from '../utils/alertRules.js'
 import { useDismissedAlerts } from './useDismissedAlerts.js'
 import { useTranslations } from './useTranslations.js'
 
@@ -21,6 +24,7 @@ const ALERT_TEXT = [
   'payment of',
   'is due',
   'New subscription found in your email:',
+  'new subscriptions found in your email.',
 ]
 
 // Most urgent first: red (failed payments), orange (trials ending), blue.
@@ -66,6 +70,7 @@ export function useAlerts(
     paymentOfText,
     isDueText,
     newSubscriptionText,
+    newSubscriptionsText,
   ] = useTranslations(ALERT_TEXT)
 
   const { dismissed, dismiss } =
@@ -95,7 +100,8 @@ export function useAlerts(
       preferredCurrency,
     )
 
-  // Each alert is { id, kind, level, message, subscriptionId? }, where level
+  // Each alert is { id, kind, level, message, subscriptionId? }, plus
+  // `subscriptions` on a grouped new-subscriptions alert, where level
   // is 'red', 'orange' or 'blue' (see utils/alertRules.js). Ids include the
   // date or month an alert is about, so a dismissed one comes back next time.
   const alerts = classifySubscriptionAlerts(
@@ -127,17 +133,32 @@ export function useAlerts(
     },
   )
 
-  // Email finds waiting in Pending, answered with Confirm / Reject.
-  for (const subscription of pendingSubscriptions) {
-    alerts.push({
-      id: `newSubscription-${subscription.id}`,
-      kind: 'newSubscription',
-      level: 'blue',
-      message: `${newSubscriptionText} ${subscription.name}, ${showMoney(
-        subscription.amount,
-      )} / ${subscription.billingCycle}.`,
-      subscriptionId: subscription.id,
-    })
+  // Email finds waiting in Pending, answered with Confirm / Reject. Several
+  // at once share one "N new subscriptions found" alert.
+  for (const group of groupNewSubscriptions(
+    pendingSubscriptions,
+  )) {
+    if (group.kind === 'newSubscription') {
+      const { subscription } = group
+
+      alerts.push({
+        id: `newSubscription-${subscription.id}`,
+        kind: 'newSubscription',
+        level: 'blue',
+        message: `${newSubscriptionText} ${subscription.name}, ${showMoney(
+          subscription.amount,
+        )} / ${subscription.billingCycle}.`,
+        subscriptionId: subscription.id,
+      })
+    } else {
+      alerts.push({
+        id: 'newSubscriptions',
+        kind: 'newSubscriptions',
+        level: 'blue',
+        message: `${group.subscriptions.length} ${newSubscriptionsText}`,
+        subscriptions: group.subscriptions,
+      })
+    }
   }
 
   if (nearBudgetLimit) {

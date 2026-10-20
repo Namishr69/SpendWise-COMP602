@@ -9,6 +9,7 @@ import { useAlerts } from '../hooks/useAlerts.js'
 import { useCurrencyRate } from '../hooks/useCurrencyRate.js'
 import { useTranslations } from '../hooks/useTranslations.js'
 import { resolveCancellation } from '../utils/cancellationLinks.js'
+import { formatCurrency } from '../utils/formatCurrency.js'
 
 import './AlertsPage.css'
 
@@ -34,6 +35,9 @@ const ALERTS_TEXT = [
   'Confirm',
   'Reject',
   'Could not update this subscription:',
+  'Confirm all',
+  'Review',
+  'Hide',
 ]
 
 function AlertsPage() {
@@ -72,6 +76,9 @@ function AlertsPage() {
     confirmText,
     rejectText,
     actionErrorText,
+    confirmAllText,
+    reviewText,
+    hideText,
   ] = useTranslations(ALERTS_TEXT)
 
   const { alerts, dismissAlert } = useAlerts(
@@ -89,15 +96,22 @@ function AlertsPage() {
   const [actionError, setActionError] =
     useState(null)
 
-  async function updateFromAlert(alert, changes) {
-    setBusyId(alert.id)
+  // Whether the grouped "N new subscriptions found" alert is expanded.
+  const [reviewOpen, setReviewOpen] =
+    useState(false)
+
+  const showMoney = (amount) =>
+    formatCurrency(
+      (Number(amount) || 0) * rate,
+      preferredCurrency,
+    )
+
+  async function runAction(key, action) {
+    setBusyId(key)
     setActionError(null)
 
     try {
-      await updateSubscription(
-        alert.subscriptionId,
-        changes,
-      )
+      await action()
     } catch (err) {
       setActionError(err.message)
     } finally {
@@ -105,9 +119,71 @@ function AlertsPage() {
     }
   }
 
+  function updateFromAlert(alert, changes) {
+    return runAction(alert.id, () =>
+      updateSubscription(
+        alert.subscriptionId,
+        changes,
+      ),
+    )
+  }
+
+  // Confirms every find in the grouped alert, one after another.
+  function confirmAll(alert) {
+    return runAction(alert.id, async () => {
+      for (const subscription of alert.subscriptions) {
+        await updateSubscription(
+          subscription.id,
+          { reviewStatus: 'confirmed' },
+        )
+      }
+    })
+  }
+
+  // One find inside the expanded grouped alert.
+  function reviewOne(subscription, reviewStatus) {
+    return runAction(
+      `review-${subscription.id}`,
+      () =>
+        updateSubscription(
+          subscription.id,
+          { reviewStatus },
+        ),
+    )
+  }
+
   // Buttons for each kind of alert, so it can be handled right here.
   function renderActions(alert) {
     const busy = busyId === alert.id
+
+    if (alert.kind === 'newSubscriptions') {
+      return (
+        <>
+          <Button
+            onClick={() =>
+              confirmAll(alert)
+            }
+            disabled={busyId !== null}
+          >
+            {confirmAllText}
+          </Button>
+
+          <Button
+            variant="secondary"
+            aria-expanded={reviewOpen}
+            onClick={() =>
+              setReviewOpen(
+                (open) => !open,
+              )
+            }
+          >
+            {reviewOpen
+              ? hideText
+              : reviewText}
+          </Button>
+        </>
+      )
+    }
 
     if (alert.kind === 'newSubscription') {
       return (
@@ -301,6 +377,76 @@ function AlertsPage() {
                             alert,
                           )}
                         </div>
+
+                        {alert.kind ===
+                          'newSubscriptions' &&
+                          reviewOpen && (
+                            <ul className="alerts-review">
+                              {alert.subscriptions.map(
+                                (subscription) => (
+                                  <li
+                                    key={
+                                      subscription.id
+                                    }
+                                    className="alerts-review__item"
+                                  >
+                                    <span>
+                                      <strong>
+                                        {
+                                          subscription.name
+                                        }
+                                      </strong>
+                                      {', '}
+                                      {showMoney(
+                                        subscription.amount,
+                                      )}{' '}
+                                      /{' '}
+                                      {
+                                        subscription.billingCycle
+                                      }
+                                    </span>
+
+                                    <div className="alerts-list__actions">
+                                      <Button
+                                        onClick={() =>
+                                          reviewOne(
+                                            subscription,
+                                            'confirmed',
+                                          )
+                                        }
+                                        disabled={
+                                          busyId !==
+                                          null
+                                        }
+                                      >
+                                        {
+                                          confirmText
+                                        }
+                                      </Button>
+
+                                      <Button
+                                        variant="secondary"
+                                        onClick={() =>
+                                          reviewOne(
+                                            subscription,
+                                            'rejected',
+                                          )
+                                        }
+                                        disabled={
+                                          busyId !==
+                                          null
+                                        }
+                                      >
+                                        {
+                                          rejectText
+                                        }
+                                      </Button>
+                                    </div>
+                                  </li>
+                                ),
+                              )}
+                            </ul>
+                          )}
                       </li>
                     ),
                   )}

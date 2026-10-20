@@ -85,3 +85,16 @@ export function classifySubscriptionAlerts(subscriptions, now = new Date()) {
     })
     .filter(Boolean)
 }
+
+// Email finds waiting in Pending. One find gets its own alert; several found
+// together become a single "N new subscriptions found" alert instead of one
+// alert each.
+export function groupNewSubscriptions(pendingSubscriptions) {
+  if (pendingSubscriptions.length === 0) return []
+
+  if (pendingSubscriptions.length === 1) {
+    return [{ kind: 'newSubscription', subscription: pendingSubscriptions[0] }]
+  }
+
+  return [{ kind: 'newSubscriptions', subscriptions: pendingSubscriptions }]
+}

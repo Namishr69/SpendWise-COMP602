@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest'
 import {
   daysUntil,
   classifySubscriptionAlerts,
+  groupNewSubscriptions,
 } from './alertRules.js'
 
 // Local noon on 20 Oct 2026, so time zones can't shift the day.
@@ -97,5 +98,25 @@ describe('classifySubscriptionAlerts', () => {
         },
       ]),
     ).toEqual([])
+  })
+})
+
+describe('groupNewSubscriptions', () => {
+  it('has no alert when nothing is waiting', () => {
+    expect(groupNewSubscriptions([])).toEqual([])
+  })
+
+  it('keeps a single find as its own alert', () => {
+    const uber = { id: 'uber' }
+    expect(groupNewSubscriptions([uber])).toEqual([
+      { kind: 'newSubscription', subscription: uber },
+    ])
+  })
+
+  it('rolls several finds into one alert', () => {
+    const finds = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }]
+    expect(groupNewSubscriptions(finds)).toEqual([
+      { kind: 'newSubscriptions', subscriptions: finds },
+    ])
   })
 })
