@@ -17,7 +17,8 @@ const ALERTS_TEXT = [
   'Loading alerts...',
   'Could not load alerts:',
   'Alerts',
-  'No alerts right now.',
+  "You're all caught up!",
+  "We'll let you know here when something needs your attention.",
 
   // Urgency groups, most urgent first.
   'Urgent',
@@ -62,7 +63,8 @@ function AlertsPage() {
     loadingAlertsText,
     loadErrorText,
     alertsText,
-    noAlertsText,
+    caughtUpText,
+    caughtUpHintText,
     urgentText,
     urgentHintText,
     endingSoonText,
@@ -332,7 +334,40 @@ function AlertsPage() {
         )}
 
         {alerts.length === 0 ? (
-          <p>{noAlertsText}</p>
+          <div className="alerts-empty">
+            <svg
+              className="alerts-empty__icon"
+              width="48"
+              height="48"
+              viewBox="0 0 48 48"
+              fill="none"
+              aria-hidden="true"
+            >
+              <circle
+                cx="24"
+                cy="24"
+                r="18"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+
+              <path
+                d="m16 24.5 5.5 5.5L32 19"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+
+            <p className="alerts-empty__title">
+              {caughtUpText}
+            </p>
+
+            <p className="alerts-empty__hint">
+              {caughtUpHintText}
+            </p>
+          </div>
         ) : (
           <div className="alerts-groups">
             {groups.map((group) => (

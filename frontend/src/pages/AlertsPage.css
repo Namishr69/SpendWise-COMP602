@@ -137,3 +137,42 @@
   padding: 8px 0;
   font-size: 14px;
 }
+
+/* Shown once every alert has been handled or dismissed. */
+.alerts-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-2xl) var(--space-lg);
+  text-align: center;
+  animation: alertsEmptyIn 0.3s ease;
+}
+
+.alerts-empty__icon {
+  color: var(--color-sage);
+  margin-bottom: var(--space-md);
+}
+
+.alerts-empty__title {
+  color: var(--color-ink);
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: var(--space-xs);
+}
+
+.alerts-empty__hint {
+  font-size: 14px;
+  color: var(--color-ink-soft);
+}
+
+@keyframes alertsEmptyIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
