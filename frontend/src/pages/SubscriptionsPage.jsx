@@ -18,7 +18,6 @@ import './SubscriptionsPage.css'
 const SUBSCRIPTIONS_TEXT = [
   'Loading subscriptions...',
   'Could not load subscriptions:',
-  'Subscriptions',
   'View and manage your recurring payments.',
   '+ Add subscription',
   'No subscriptions yet.',
@@ -126,7 +125,6 @@ function SubscriptionsPage() {
   const [
     loadingSubscriptionsText,
     loadErrorText,
-    subscriptionsText,
     descriptionText,
     addSubscriptionText,
     noSubscriptionsText,
@@ -607,12 +605,6 @@ function SubscriptionsPage() {
     <AppShell activeNav="Subscriptions">
       <header className="subscriptions-header">
         <div>
-          <p className="subscriptions-eyebrow">
-            SpendWise
-          </p>
-
-          <h1>{subscriptionsText}</h1>
-
           <p>{descriptionText}</p>
         </div>
 

@@ -6,19 +6,7 @@
   gap: var(--space-md);
 }
 
-.transactions-eyebrow {
-  margin-bottom: 0.4rem;
-  font-weight: 700;
-  color: #5f6f52;
-}
-
-.transactions-header h1 {
-  margin: 0;
-  line-height: 1.15;
-}
-
-.transactions-header h1 + p {
-  margin-top: 0.5rem;
+.transactions-header > div:first-child p {
   line-height: 1.5;
 }
 
@@ -231,9 +219,4 @@
   .transactions-list__manual {
     gap: var(--space-sm);
   }
-}
-
-/* Dark green text is too dark to read on the dark background. */
-:root[data-theme="dark"] .transactions-eyebrow {
-  color: var(--color-sage);
 }

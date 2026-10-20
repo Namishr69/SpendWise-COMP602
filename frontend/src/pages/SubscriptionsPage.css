@@ -77,17 +77,6 @@
   background: var(--color-cream);
 }
 
-.subscriptions-eyebrow {
-  margin-bottom: 0.4rem;
-  font-weight: 700;
-  color: #5f6f52;
-}
-
-.subscriptions-header h1 {
-  margin: 0 0 0.5rem;
-  line-height: 1.2;
-}
-
 .subscriptions-grid {
   display: grid;
   grid-template-columns: repeat(
@@ -395,7 +384,6 @@
 
 /* Dark mode: the hardcoded dark greens above are unreadable on the dark
    background, so swap them for the theme's lighter text colours. */
-:root[data-theme="dark"] .subscriptions-eyebrow,
 :root[data-theme="dark"] .subscription-link {
   color: var(--color-sage);
 }

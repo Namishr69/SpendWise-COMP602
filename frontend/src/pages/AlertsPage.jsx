@@ -16,7 +16,6 @@ import './AlertsPage.css'
 const ALERTS_TEXT = [
   'Loading alerts...',
   'Could not load alerts:',
-  'Alerts',
   "You're all caught up!",
   "We'll let you know here when something needs your attention.",
 
@@ -62,7 +61,6 @@ function AlertsPage() {
   const [
     loadingAlertsText,
     loadErrorText,
-    alertsText,
     caughtUpText,
     caughtUpHintText,
     urgentText,
@@ -321,8 +319,6 @@ function AlertsPage() {
   return (
     <AppShell activeNav="Alerts">
       <Card>
-        <h3>{alertsText}</h3>
-
         {actionError && (
           <p
             className="alerts-error"
