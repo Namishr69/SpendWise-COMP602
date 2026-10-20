@@ -7,6 +7,7 @@ import { auth } from '../firebase'
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
 import AnimatedNumber from '../components/ui/AnimatedNumber.jsx'
+import { BankIcon, MailIcon } from '../components/ui/icons.jsx'
 import {
   EASE_OUT,
   fadeUp,
@@ -19,7 +20,6 @@ import { useSubscriptions } from '../context/subscriptionsContext.js'
 import { convertCurrency } from '../api/exchangeRateApi.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
 import { normalizeBudgetToMonthly } from '../utils/budgetCalculations.js'
-import { sourceLabel } from '../utils/subscriptionSource.js'
 import { getDashboard } from '../api/bankDataApi.js'
 import { useAlerts } from '../hooks/useAlerts.js'
 import { useCurrencyRate } from '../hooks/useCurrencyRate.js'
@@ -50,6 +50,7 @@ const DASHBOARD_TEXT = [
   'Active subs',
   'Due this week',
   'Detected subs',
+  'Found automatically from your bank transactions and the email receipts you confirmed.',
   'Alerts',
   'My Subscriptions',
   'No subscriptions yet',
@@ -72,6 +73,24 @@ const DASHBOARD_TEXT = [
   'Active',
   'Cancelled',
   'Paused',
+
+  // Source icon hover sentences.
+  'Found via bank transaction',
+  'Found via email receipt',
+  'on',
+
+  // Pending email finds, reviewed on the Alerts page.
+  'Pending',
+  'Found in your email and waiting for you to confirm or reject them.',
+  'Review in Alerts →',
+
+  // Source filter buttons.
+  'Filter subscriptions by source',
+  'All',
+  'Only Bank',
+  'Only Email',
+  'No bank-detected subscriptions.',
+  'No email-detected subscriptions.',
 ]
 
 function formatDate(iso) {
@@ -94,6 +113,7 @@ function DashboardPage() {
 
   const {
     subscriptions,
+    pendingSubscriptions,
     loading: subsLoading,
     error: subsError,
   } = useSubscriptions()
@@ -113,6 +133,7 @@ function DashboardPage() {
     activeSubsText,
     dueThisWeekText,
     detectedSubsText,
+    detectedHintText,
     alertsText,
     mySubscriptionsText,
     noSubscriptionsText,
@@ -133,7 +154,58 @@ function DashboardPage() {
     activeText,
     cancelledText,
     pausedText,
+    foundViaBankText,
+    foundViaEmailText,
+    onText,
+    pendingText,
+    pendingHintText,
+    reviewInAlertsText,
+    filterBySourceText,
+    allText,
+    onlyBankText,
+    onlyEmailText,
+    noBankSubsText,
+    noEmailSubsText,
   ] = useTranslations(DASHBOARD_TEXT)
+
+  // Which subscriptions "My Subscriptions" shows: 'all', 'bank' or 'email'.
+  const [sourceFilter, setSourceFilter] =
+    useState('all')
+
+  // Small icon showing where an auto-detected subscription came from, with a
+  // hover sentence like "Found via email receipt on 18 Oct." built from the
+  // date the sync first created it. Manually added subscriptions have no icon.
+  function renderSourceIcon(subscription) {
+    let icon
+    let foundVia
+
+    if (subscription.source === 'anz-detected') {
+      icon = <BankIcon />
+      foundVia = foundViaBankText
+    } else if (subscription.source === 'gmail-detected') {
+      icon = <MailIcon />
+      foundVia = foundViaEmailText
+    } else {
+      return null
+    }
+
+    const foundOn = formatDate(subscription.createdAt)
+
+    const sentence = foundOn
+      ? `${foundVia} ${onText} ${foundOn}.`
+      : `${foundVia}.`
+
+    return (
+      <span
+        className="dashboard-subs__source"
+        data-tooltip={sentence}
+        aria-label={sentence}
+        role="img"
+      >
+        {icon}
+      </span>
+    )
+  }
 
   const showMoney = (amount) =>
     formatCurrency(
@@ -442,6 +514,32 @@ function DashboardPage() {
     a.name.localeCompare(b.name),
   )
 
+  const visibleSubs = sorted.filter(
+    (subscription) => {
+      if (sourceFilter === 'bank') {
+        return (
+          subscription.source ===
+          'anz-detected'
+        )
+      }
+
+      if (sourceFilter === 'email') {
+        return (
+          subscription.source ===
+          'gmail-detected'
+        )
+      }
+
+      return true
+    },
+  )
+
+  const sourceFilters = [
+    { value: 'all', label: allText },
+    { value: 'bank', label: onlyBankText },
+    { value: 'email', label: onlyEmailText },
+  ]
+
   // Prefer the bank's spend figure once a connection has synced.
   // Otherwise use manually tracked subscription spending.
   // bankStats lags one conversion behind a new dashboard response; until it
@@ -513,6 +611,30 @@ function DashboardPage() {
 
       <PriceChangeAlerts />
 
+      {pendingSubscriptions.length > 0 && (
+        <Card className="dashboard-pending">
+          <div>
+            <h3>
+              {pendingText}{' '}
+              <span className="dashboard-pending__count">
+                {pendingSubscriptions.length}
+              </span>
+            </h3>
+
+            <p className="dashboard-pending__hint">
+              {pendingHintText}
+            </p>
+          </div>
+
+          <Link
+            to="/alerts"
+            className="dashboard-pending__link"
+          >
+            {reviewInAlertsText}
+          </Link>
+        </Card>
+      )}
+
       <motion.div
         className="dashboard-stats"
         variants={stagger()}
@@ -581,9 +703,24 @@ function DashboardPage() {
           whileHover={hoverLift}
         >
           <p>
-            {dashboard.hasData
-              ? detectedSubsText
-              : alertsText}
+            {dashboard.hasData ? (
+              <>
+                {detectedSubsText}
+
+                {/* Where detected subs come from: the bank and email. */}
+                <span
+                  className="dashboard-stat__icons"
+                  data-tooltip={detectedHintText}
+                  aria-label={detectedHintText}
+                  role="img"
+                >
+                  <BankIcon />
+                  <MailIcon />
+                </span>
+              </>
+            ) : (
+              alertsText
+            )}
           </p>
 
           <h2>
@@ -606,9 +743,45 @@ function DashboardPage() {
         animate="show"
       >
         <Card variants={fadeUp}>
-          <h3>
-            {mySubscriptionsText}
-          </h3>
+          <div className="dashboard-subs__header">
+            <h3>
+              {mySubscriptionsText}
+            </h3>
+
+            {sorted.length > 0 && (
+              <div
+                className="dashboard-filter"
+                role="group"
+                aria-label={filterBySourceText}
+              >
+                {sourceFilters.map(
+                  (filter) => (
+                    <button
+                      key={filter.value}
+                      type="button"
+                      className={`dashboard-filter__button ${
+                        sourceFilter ===
+                        filter.value
+                          ? 'dashboard-filter__button--active'
+                          : ''
+                      }`}
+                      aria-pressed={
+                        sourceFilter ===
+                        filter.value
+                      }
+                      onClick={() =>
+                        setSourceFilter(
+                          filter.value,
+                        )
+                      }
+                    >
+                      {filter.label}
+                    </button>
+                  ),
+                )}
+              </div>
+            )}
+          </div>
 
           {sorted.length === 0 ? (
             <div className="dashboard-empty">
@@ -703,12 +876,18 @@ function DashboardPage() {
                 {addSubscriptionText}
               </Link>
             </div>
+          ) : visibleSubs.length === 0 ? (
+            <p className="dashboard-subs__none">
+              {sourceFilter === 'bank'
+                ? noBankSubsText
+                : noEmailSubsText}
+            </p>
           ) : (
             <motion.ul
               className="dashboard-subs"
               variants={stagger(0.1, 0.04)}
             >
-              {sorted.map(
+              {visibleSubs.map(
                 (subscription) => (
                   <motion.li
                     key={
@@ -726,6 +905,10 @@ function DashboardPage() {
                           {
                             subscription.name
                           }
+
+                          {renderSourceIcon(
+                            subscription,
+                          )}
                         </p>
 
                         <p className="dashboard-subs__meta">
@@ -836,11 +1019,11 @@ function DashboardPage() {
                 alerts.map(
                   (alert) => (
                     <motion.span
-                      key={alert}
+                      key={alert.id}
                       className="dashboard-chip"
                       variants={fadeUp}
                     >
-                      {alert}
+                      {alert.message}
                     </motion.span>
                   ),
                 )

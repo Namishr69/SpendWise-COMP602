@@ -1,6 +1,7 @@
 import subscriptionRepo from '../repositories/subscriptionRepo.js';
 import priceAlertService, { findPriceChanges } from './priceAlertService.js';
 import providerPriceAlertService from './providerPriceAlertService.js';
+import { REVIEW_STATUSES } from './subscriptionReview.js';
 
 const subscriptionService = {
     async listSubscriptions(userId) {
@@ -48,6 +49,10 @@ const subscriptionService = {
             subscriptionDate,
             status: (data.status || 'Active').trim(),
             notes: (data.notes || '').trim().slice(0, 500),
+            // A free trial and the date it ends, for the "trial ending soon"
+            // alert. The end date only means something while isTrial is set.
+            isTrial: data.isTrial === true,
+            trialEndDate: data.isTrial === true ? String(data.trialEndDate || '').trim() : '',
             devices: [],
             createdAt: new Date().toISOString(),
         };
@@ -115,6 +120,23 @@ const subscriptionService = {
             }
 
             update.status = status;
+        }
+
+        if (changes.isTrial !== undefined) {
+            update.isTrial = changes.isTrial === true;
+        }
+
+        if (changes.trialEndDate !== undefined) {
+            update.trialEndDate = String(changes.trialEndDate).trim();
+        }
+
+        // Confirm or reject an email-detected subscription waiting in Pending.
+        if (changes.reviewStatus !== undefined) {
+            if (!REVIEW_STATUSES.includes(changes.reviewStatus)) {
+                throw new Error('Invalid review status');
+            }
+
+            update.reviewStatus = changes.reviewStatus;
         }
 
         if (changes.notes !== undefined) {

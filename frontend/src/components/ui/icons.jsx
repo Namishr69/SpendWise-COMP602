@@ -36,3 +36,25 @@ export function AppleIcon() {
     </svg>
   )
 }
+
+export function BankIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 10 12 4l9 6" />
+      <line x1="5" y1="10" x2="5" y2="18" />
+      <line x1="10" y1="10" x2="10" y2="18" />
+      <line x1="14" y1="10" x2="14" y2="18" />
+      <line x1="19" y1="10" x2="19" y2="18" />
+      <line x1="3" y1="20" x2="21" y2="20" />
+    </svg>
+  )
+}
+
+export function MailIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 7 9 6 9-6" />
+    </svg>
+  )
+}

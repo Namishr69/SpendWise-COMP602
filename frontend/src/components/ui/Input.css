@@ -52,3 +52,20 @@
 :root[data-theme="dark"] .sw-field__input {
   background: var(--color-cream);
 }
+
+/* Checkbox with its label on one line, e.g. "This is a free trial". */
+.sw-field__check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.sw-field__check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-forest);
+}

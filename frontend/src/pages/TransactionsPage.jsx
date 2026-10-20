@@ -28,7 +28,6 @@ import './TransactionsPage.css'
 
 const TRANSACTIONS_TEXT = [
   'Loading transactions...',
-  'Transactions',
   'Balances and activity synced from your bank.',
   'Syncing...',
   'Refresh',
@@ -83,7 +82,6 @@ function TransactionsPage() {
 
   const [
     loadingTransactionsText,
-    transactionsText,
     descriptionText,
     syncingText,
     refreshText,
@@ -290,8 +288,6 @@ function TransactionsPage() {
     <AppShell activeNav="Transactions">
       <header className="transactions-header">
         <div>
-          <p className="transactions-eyebrow">SpendWise</p>
-          <h1>{transactionsText}</h1>
           <p>{headerSubtitleText || descriptionText}</p>
         </div>
 

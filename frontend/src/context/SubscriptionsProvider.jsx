@@ -1,11 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '../firebase'
 import { SubscriptionsContext } from './subscriptionsContext'
 import * as subscriptionApi from '../api/subscriptionApi'
+import {
+  countsAsSubscription,
+  isPendingReview,
+} from '../utils/subscriptionReview.js'
 
 export function SubscriptionsProvider({ children }) {
-  const [subscriptions, setSubscriptions] = useState([])
+  // Every record from the API, including email finds still waiting in
+  // Pending and rejected ones. Pages get the split lists below.
+  const [allSubscriptions, setSubscriptions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -99,8 +105,20 @@ export function SubscriptionsProvider({ children }) {
     }
   }, [])
 
+  // Real subscriptions for every page's lists and totals, and the email finds
+  // the user still has to confirm or reject.
+  const subscriptions = useMemo(
+    () => allSubscriptions.filter(countsAsSubscription),
+    [allSubscriptions],
+  )
+
+  const pendingSubscriptions = useMemo(
+    () => allSubscriptions.filter(isPendingReview),
+    [allSubscriptions],
+  )
+
   function getSubscription(id) {
-    return subscriptions.find((subscription) => subscription.id === id)
+    return allSubscriptions.find((subscription) => subscription.id === id)
   }
 
   async function updateSubscription(id, changes) {
@@ -130,6 +148,7 @@ export function SubscriptionsProvider({ children }) {
     <SubscriptionsContext.Provider
       value={{
         subscriptions,
+        pendingSubscriptions,
         loading,
         error,
         refresh,

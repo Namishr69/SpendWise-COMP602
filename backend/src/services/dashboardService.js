@@ -1,5 +1,6 @@
 import bankDataRepo from '../repositories/bankDataRepo.js';
 import subscriptionRepo from '../repositories/subscriptionRepo.js';
+import { countsAsSubscription } from './subscriptionReview.js';
 
 /**
  * Computes the figures the dashboard shows from data already stored in
@@ -48,8 +49,10 @@ const dashboardService = {
             )
             .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
+        // Email finds still waiting in Pending (or rejected) are not real
+        // subscriptions yet, so they stay out of the bills and totals.
         const activeSubs = subscriptions.filter(
-            (s) => (s.status || 'Active') === 'Active'
+            (s) => countsAsSubscription(s) && (s.status || 'Active') === 'Active'
         );
 
         // Subscriptions falling due within the next week.
@@ -94,7 +97,12 @@ const dashboardService = {
                 spentThisMonth: Number(spentThisMonth.toFixed(2)),
                 activeSubs: activeSubs.length,
                 dueThisWeek: Number(dueThisWeek.toFixed(2)),
-                detectedSubs: subscriptions.filter((s) => s.source === 'anz-detected').length,
+                // Active subscriptions SpendWise found for the user, from the
+                // bank or confirmed from email (activeSubs already leaves out
+                // pending and rejected email finds).
+                detectedSubs: activeSubs.filter(
+                    (s) => s.source === 'anz-detected' || s.source === 'gmail-detected'
+                ).length,
             },
             upcomingBills,
             recentTransactions,

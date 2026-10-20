@@ -29,6 +29,9 @@ const EDIT_SUBSCRIPTION_FORM_TEXT = [
   'Save changes',
   'Enter a subscription name.',
   'Enter an amount greater than zero.',
+  'This is a free trial',
+  'Trial end date',
+  'Enter the date the free trial ends.',
 ]
 
 function EditSubscriptionPage() {
@@ -100,6 +103,9 @@ function EditSubscriptionForm({
     saveChangesText,
     nameErrorText,
     amountErrorText,
+    freeTrialText,
+    trialEndDateText,
+    trialEndErrorText,
   ] = useTranslations(
     EDIT_SUBSCRIPTION_FORM_TEXT,
   )
@@ -110,6 +116,17 @@ function EditSubscriptionForm({
 
   const [amount, setAmount] = useState(
     String(subscription.amount),
+  )
+
+  // A free trial gets an alert shortly before it ends.
+  const [isTrial, setIsTrial] =
+    useState(subscription.isTrial === true)
+
+  const [
+    trialEndDate,
+    setTrialEndDate,
+  ] = useState(
+    subscription.trialEndDate || '',
   )
 
   const [errors, setErrors] =
@@ -133,6 +150,11 @@ function EditSubscriptionForm({
         amountErrorText
     }
 
+    if (isTrial && !trialEndDate) {
+      nextErrors.trialEndDate =
+        trialEndErrorText
+    }
+
     setErrors(nextErrors)
 
     return (
@@ -153,6 +175,10 @@ function EditSubscriptionForm({
         {
           name: name.trim(),
           amount: Number(amount),
+          isTrial,
+          trialEndDate: isTrial
+            ? trialEndDate
+            : '',
         },
       )
 
@@ -216,6 +242,35 @@ function EditSubscriptionForm({
               }
               error={errors.amount}
             />
+
+            <label className="sw-field__check">
+              <input
+                type="checkbox"
+                checked={isTrial}
+                onChange={(event) =>
+                  setIsTrial(
+                    event.target.checked,
+                  )
+                }
+              />
+
+              {freeTrialText}
+            </label>
+
+            {isTrial && (
+              <Input
+                id="subscription-trial-end"
+                label={trialEndDateText}
+                type="date"
+                value={trialEndDate}
+                onChange={(event) =>
+                  setTrialEndDate(
+                    event.target.value,
+                  )
+                }
+                error={errors.trialEndDate}
+              />
+            )}
 
             <div className="edit-form-actions">
               <Link

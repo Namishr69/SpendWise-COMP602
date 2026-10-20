@@ -68,9 +68,19 @@ const CONCURRENT_FETCHES = 5;
 
 // How many receipts a merchant that is NOT a known subscription service needs
 // before it is treated as recurring. Two is deliberately low — the user asked
-// for repeat receipts from one merchant to surface as a subscription — and the
-// cycle is then taken from the real gap between them where possible.
+// for repeat receipts from one merchant to surface as a subscription — so the
+// receipts must also charge about the same amount each time. Spacing is not
+// checked, so receipts that arrive close together (e.g. a test inbox) still
+// count; orders of different sizes stay transactions only.
 const MIN_EMAILS_FOR_SUBSCRIPTION = 2;
+
+// Cycles that two receipts alone can't prove: two orders a few days apart
+// would otherwise be labelled "Weekly".
+const SHORT_CYCLES = ['Weekly', 'Fortnightly'];
+
+// How far each receipt may stray from the typical (median) amount and still
+// look like the same recurring charge. Allows for a small price change.
+const AMOUNT_TOLERANCE = 0.2;
 
 const CADENCE_DAYS = {
   Weekly:      7,
@@ -134,6 +144,40 @@ function cycleFromDates(dates) {
   );
 
   return hit ? hit[0] : null;
+}
+
+/** True when every amount is within AMOUNT_TOLERANCE of the median amount. */
+function amountsConsistent(amounts) {
+  const sorted = [...amounts].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  const median =
+    sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+
+  return amounts.every((amount) => Math.abs(amount - median) <= median * AMOUNT_TOLERANCE);
+}
+
+/**
+ * Receipts from a merchant that is not a known subscription service look like
+ * a subscription when there are enough of them for about the same amount.
+ * Orders of different sizes are just shopping.
+ */
+function looksRecurring(receipts) {
+  return (
+    receipts.length >= MIN_EMAILS_FOR_SUBSCRIPTION &&
+    amountsConsistent(receipts.map((c) => c.amount))
+  );
+}
+
+/**
+ * The billing cycle from when receipts arrived, else the email's wording.
+ * A weekly or fortnightly gap needs 3+ receipts to be believed.
+ */
+function billingCycleFor(receipts) {
+  const fromDates = cycleFromDates(receipts.map((c) => c.date));
+  const trusted =
+    fromDates && (receipts.length >= 3 || !SHORT_CYCLES.includes(fromDates));
+
+  return trusted ? fromDates : receipts[receipts.length - 1].billingCycle;
 }
 
 const gmailSyncService = {
@@ -240,14 +284,19 @@ const gmailSyncService = {
 
     for (const [merchant, group] of byMerchant) {
       const sorted = [...group].sort((a, b) => (a.date < b.date ? -1 : 1));
-      const latest = sorted[sorted.length - 1];
-      const isKnownService = group.some((c) => c.isSubscriptionMerchant);
 
-      if (!isKnownService && sorted.length < MIN_EMAILS_FOR_SUBSCRIPTION) continue;
+      // For a known service, only its subscription receipts count, so an Uber
+      // One membership is priced from its own receipts and not a food order.
+      const subscriptionReceipts = sorted.filter((c) => c.isSubscriptionMerchant);
+      const isKnownService = subscriptionReceipts.length > 0;
+
+      if (!isKnownService && !looksRecurring(sorted)) continue;
+
+      const receipts = isKnownService ? subscriptionReceipts : sorted;
+      const latest = receipts[receipts.length - 1];
 
       // With several dated receipts the real spacing beats a keyword guess.
-      const billingCycle =
-        cycleFromDates(sorted.map((c) => c.date)) || latest.billingCycle;
+      const billingCycle = billingCycleFor(receipts);
 
       const key = `gmail|${merchant}|${billingCycle}`;
       const match = byKey.get(key);
@@ -284,9 +333,9 @@ const gmailSyncService = {
         created += 1;
       }
 
-      // Every receipt in the group is a payment, keyed by its Gmail message id
+      // Every subscription receipt is a payment, keyed by its Gmail message id
       // so re-syncing the same email updates rather than duplicates it.
-      for (const c of sorted) {
+      for (const c of receipts) {
         await subscriptionRepo.upsertPayment(
           userId,
           subscriptionId,

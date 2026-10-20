@@ -15,6 +15,46 @@
   border-radius: 8px;
 }
 
+/* Notice for email finds waiting for review on the Alerts page. */
+.subscriptions-pending {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  border-left: 3px solid var(--color-gold);
+}
+
+.subscriptions-pending__title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.subscriptions-pending__hint {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--color-ink-soft);
+}
+
+.subscriptions-pending__link {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--color-forest);
+  color: var(--color-white);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.subscriptions-pending__link:hover {
+  background: var(--color-forest-dark);
+}
+
 .subscriptions-header__actions {
   display: flex;
   align-items: center;
@@ -35,17 +75,6 @@
 
 .subscriptions-export:hover {
   background: var(--color-cream);
-}
-
-.subscriptions-eyebrow {
-  margin-bottom: 0.4rem;
-  font-weight: 700;
-  color: #5f6f52;
-}
-
-.subscriptions-header h1 {
-  margin: 0 0 0.5rem;
-  line-height: 1.2;
 }
 
 .subscriptions-grid {
@@ -126,7 +155,9 @@
 }
 
 .subscription-source {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 2px 8px;
   border-radius: 999px;
   background: #e8efe0;
@@ -353,7 +384,6 @@
 
 /* Dark mode: the hardcoded dark greens above are unreadable on the dark
    background, so swap them for the theme's lighter text colours. */
-:root[data-theme="dark"] .subscriptions-eyebrow,
 :root[data-theme="dark"] .subscription-link {
   color: var(--color-sage);
 }
