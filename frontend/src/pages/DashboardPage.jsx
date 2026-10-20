@@ -50,6 +50,7 @@ const DASHBOARD_TEXT = [
   'Active subs',
   'Due this week',
   'Detected subs',
+  'Found automatically from your bank transactions and the email receipts you confirmed.',
   'Alerts',
   'My Subscriptions',
   'No subscriptions yet',
@@ -132,6 +133,7 @@ function DashboardPage() {
     activeSubsText,
     dueThisWeekText,
     detectedSubsText,
+    detectedHintText,
     alertsText,
     mySubscriptionsText,
     noSubscriptionsText,
@@ -701,9 +703,24 @@ function DashboardPage() {
           whileHover={hoverLift}
         >
           <p>
-            {dashboard.hasData
-              ? detectedSubsText
-              : alertsText}
+            {dashboard.hasData ? (
+              <>
+                {detectedSubsText}
+
+                {/* Where detected subs come from: the bank and email. */}
+                <span
+                  className="dashboard-stat__icons"
+                  data-tooltip={detectedHintText}
+                  aria-label={detectedHintText}
+                  role="img"
+                >
+                  <BankIcon />
+                  <MailIcon />
+                </span>
+              </>
+            ) : (
+              alertsText
+            )}
           </p>
 
           <h2>

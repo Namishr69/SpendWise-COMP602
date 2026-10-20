@@ -63,6 +63,13 @@ const SUBSCRIPTIONS_TEXT = [
   'Cancel subscription ↗',
   'Find how to cancel ↗',
   'No cancellation link available',
+
+  // Email finds waiting for review, which this page doesn't list yet.
+  'subscription found in your email is waiting for review.',
+  'subscriptions found in your email are waiting for review.',
+  'Accept it on the Alerts page before it shows here.',
+  'Accept them on the Alerts page before they show here.',
+  'Review in Alerts →',
 ]
 
 // Effective dates are plain YYYY-MM-DD, so read them as local dates.
@@ -81,6 +88,7 @@ function formatDate(isoDate) {
 function SubscriptionsPage() {
   const {
     subscriptions,
+    pendingSubscriptions,
     loading,
     error,
     updateSubscription,
@@ -163,6 +171,11 @@ function SubscriptionsPage() {
     cancelSubscriptionText,
     findHowToCancelText,
     noCancellationLinkText,
+    pendingOneText,
+    pendingManyText,
+    pendingHintOneText,
+    pendingHintManyText,
+    reviewInAlertsText,
   ] = useTranslations(SUBSCRIPTIONS_TEXT)
 
   const showMoney = (amount) =>
@@ -620,6 +633,34 @@ function SubscriptionsPage() {
           </Link>
         </div>
       </header>
+
+      {/* Pending email finds are hidden from this list until accepted, so
+          say so rather than let a fresh inbox scan look like it found nothing. */}
+      {pendingSubscriptions.length > 0 && (
+        <Card className="subscriptions-pending">
+          <div>
+            <p className="subscriptions-pending__title">
+              {pendingSubscriptions.length}{' '}
+              {pendingSubscriptions.length === 1
+                ? pendingOneText
+                : pendingManyText}
+            </p>
+
+            <p className="subscriptions-pending__hint">
+              {pendingSubscriptions.length === 1
+                ? pendingHintOneText
+                : pendingHintManyText}
+            </p>
+          </div>
+
+          <Link
+            className="subscriptions-pending__link"
+            to="/alerts"
+          >
+            {reviewInAlertsText}
+          </Link>
+        </Card>
+      )}
 
       {subscriptions.length === 0 ? (
         <p>{noSubscriptionsText}</p>

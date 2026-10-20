@@ -21,6 +21,54 @@
   margin-bottom: var(--space-sm);
 }
 
+/* Bank + email icons after the "Detected subs" label. */
+.dashboard-stat__icons {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 8px;
+  vertical-align: -2px;
+  cursor: help;
+}
+
+/* The icons' hover box drops below the tile, so the tile must not clip it,
+   and a hovered tile sits above the cards underneath. */
+.sw-card.dashboard-stat {
+  overflow: visible;
+}
+
+.dashboard-stat:hover {
+  z-index: 2;
+}
+
+/* Light hover box explaining the tile. The icons aren't positioned, so it
+   lines up with the tile itself: just below it, the same width. */
+.dashboard-stat__icons::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: #1a1a1a;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: normal;
+  text-transform: none;
+  box-shadow: var(--shadow-hover);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease;
+}
+
+.dashboard-stat__icons:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
 .dashboard-stat h2 {
   color: var(--color-white);
   font-size: 30px;
