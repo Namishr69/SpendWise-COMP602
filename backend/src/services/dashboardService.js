@@ -97,7 +97,12 @@ const dashboardService = {
                 spentThisMonth: Number(spentThisMonth.toFixed(2)),
                 activeSubs: activeSubs.length,
                 dueThisWeek: Number(dueThisWeek.toFixed(2)),
-                detectedSubs: subscriptions.filter((s) => s.source === 'anz-detected').length,
+                // Active subscriptions SpendWise found for the user, from the
+                // bank or confirmed from email (activeSubs already leaves out
+                // pending and rejected email finds).
+                detectedSubs: activeSubs.filter(
+                    (s) => s.source === 'anz-detected' || s.source === 'gmail-detected'
+                ).length,
             },
             upcomingBills,
             recentTransactions,
