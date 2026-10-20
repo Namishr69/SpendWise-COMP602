@@ -1,6 +1,70 @@
+/* Traffic-light groups: each sets its colour once and the rest reads it. */
+.alerts-group--red {
+  --alert-color: var(--color-danger);
+  --alert-bg: var(--color-danger-bg);
+}
+
+.alerts-group--orange {
+  --alert-color: #b25d09;
+  --alert-bg: #fdf0e2;
+}
+
+.alerts-group--blue {
+  --alert-color: #2f6fb0;
+  --alert-bg: #e8f1fb;
+}
+
+:root[data-theme="dark"] .alerts-group--orange {
+  --alert-color: #f0a35e;
+  --alert-bg: rgba(240, 163, 94, 0.12);
+}
+
+:root[data-theme="dark"] .alerts-group--blue {
+  --alert-color: #7fb3ea;
+  --alert-bg: rgba(127, 179, 234, 0.12);
+}
+
+.alerts-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  margin-top: var(--space-md);
+}
+
+.alerts-group__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 15px;
+  color: var(--alert-color);
+}
+
+.alerts-group__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--alert-color);
+}
+
+.alerts-group__count {
+  min-width: 20px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--alert-bg);
+  font-size: 12px;
+  text-align: center;
+}
+
+.alerts-group__hint {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--color-ink-soft);
+}
+
 .alerts-list {
   list-style: none;
-  margin: var(--space-md) 0 0;
+  margin: var(--space-sm) 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -8,7 +72,8 @@
 }
 
 .alerts-list__item {
-  background: var(--color-tan);
+  background: var(--alert-bg);
+  border-left: 4px solid var(--alert-color);
   color: var(--color-ink);
   font-size: 14px;
   font-weight: 500;

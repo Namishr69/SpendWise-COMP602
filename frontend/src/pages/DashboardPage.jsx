@@ -1097,11 +1097,11 @@ function DashboardPage() {
                 alerts.map(
                   (alert) => (
                     <motion.span
-                      key={alert}
+                      key={alert.id}
                       className="dashboard-chip"
                       variants={fadeUp}
                     >
-                      {alert}
+                      {alert.message}
                     </motion.span>
                   ),
                 )
