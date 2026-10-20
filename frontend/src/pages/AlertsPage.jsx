@@ -1,12 +1,14 @@
-import { useContext } from 'react'
+import { useContext, useState } from 'react'
 
 import AppShell from '../layouts/AppShell.jsx'
 import Card from '../components/ui/Card.jsx'
+import Button from '../components/ui/Button.jsx'
 import { BudgetContext } from '../context/BudgetProvider.jsx'
 import { useSubscriptions } from '../context/subscriptionsContext.js'
 import { useAlerts } from '../hooks/useAlerts.js'
 import { useCurrencyRate } from '../hooks/useCurrencyRate.js'
 import { useTranslations } from '../hooks/useTranslations.js'
+import { resolveCancellation } from '../utils/cancellationLinks.js'
 
 import './AlertsPage.css'
 
@@ -23,6 +25,15 @@ const ALERTS_TEXT = [
   'Free trials about to end.',
   'Reminders',
   'Upcoming payments and budget notes.',
+
+  // Buttons inside alerts.
+  'Dismiss',
+  'Cancel Trial',
+  'Open cancel page ↗',
+  'Find how to cancel ↗',
+  'Confirm',
+  'Reject',
+  'Could not update this subscription:',
 ]
 
 function AlertsPage() {
@@ -31,6 +42,9 @@ function AlertsPage() {
 
   const {
     subscriptions,
+    pendingSubscriptions,
+    getSubscription,
+    updateSubscription,
     loading,
     error,
   } = useSubscriptions()
@@ -51,14 +65,132 @@ function AlertsPage() {
     endingSoonHintText,
     remindersText,
     remindersHintText,
+    dismissText,
+    cancelTrialText,
+    openCancelPageText,
+    findHowToCancelText,
+    confirmText,
+    rejectText,
+    actionErrorText,
   ] = useTranslations(ALERTS_TEXT)
 
-  const { alerts } = useAlerts(
+  const { alerts, dismissAlert } = useAlerts(
     subscriptions,
     budget,
     preferredCurrency,
     rate,
+    pendingSubscriptions,
   )
+
+  // Which alert's button is saving, and why the last one failed.
+  const [busyId, setBusyId] =
+    useState(null)
+
+  const [actionError, setActionError] =
+    useState(null)
+
+  async function updateFromAlert(alert, changes) {
+    setBusyId(alert.id)
+    setActionError(null)
+
+    try {
+      await updateSubscription(
+        alert.subscriptionId,
+        changes,
+      )
+    } catch (err) {
+      setActionError(err.message)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  // Buttons for each kind of alert, so it can be handled right here.
+  function renderActions(alert) {
+    const busy = busyId === alert.id
+
+    if (alert.kind === 'newSubscription') {
+      return (
+        <>
+          <Button
+            onClick={() =>
+              updateFromAlert(alert, {
+                reviewStatus: 'confirmed',
+              })
+            }
+            disabled={busy}
+          >
+            {confirmText}
+          </Button>
+
+          <Button
+            variant="secondary"
+            onClick={() =>
+              updateFromAlert(alert, {
+                reviewStatus: 'rejected',
+              })
+            }
+            disabled={busy}
+          >
+            {rejectText}
+          </Button>
+        </>
+      )
+    }
+
+    const dismissButton = (
+      <Button
+        variant="secondary"
+        onClick={() =>
+          dismissAlert(alert.id)
+        }
+        disabled={busy}
+      >
+        {dismissText}
+      </Button>
+    )
+
+    if (alert.kind === 'trialEnding') {
+      // Cancel Trial marks it cancelled in SpendWise; the link is where the
+      // user actually cancels with the provider.
+      const cancellation = resolveCancellation(
+        getSubscription(alert.subscriptionId)
+          ?.name,
+      )
+
+      return (
+        <>
+          <Button
+            onClick={() =>
+              updateFromAlert(alert, {
+                status: 'Cancelled',
+              })
+            }
+            disabled={busy}
+          >
+            {cancelTrialText}
+          </Button>
+
+          {cancellation && (
+            <a
+              className="alerts-list__link"
+              href={cancellation.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {cancellation.kind === 'official'
+                ? openCancelPageText
+                : findHowToCancelText}
+            </a>
+          )}
+
+          {dismissButton}
+        </>
+      )
+    }
+
+    return dismissButton
+  }
 
   // Traffic-light groups: red for failed payments, orange for free trials
   // ending soon, blue for standard reminders. Empty groups are not shown.
@@ -113,6 +245,16 @@ function AlertsPage() {
       <Card>
         <h3>{alertsText}</h3>
 
+        {actionError && (
+          <p
+            className="alerts-error"
+            role="alert"
+          >
+            {actionErrorText}{' '}
+            {actionError}
+          </p>
+        )}
+
         {alerts.length === 0 ? (
           <p>{noAlertsText}</p>
         ) : (
@@ -150,7 +292,15 @@ function AlertsPage() {
                         key={alert.id}
                         className="alerts-list__item"
                       >
-                        {alert.message}
+                        <span className="alerts-list__message">
+                          {alert.message}
+                        </span>
+
+                        <div className="alerts-list__actions">
+                          {renderActions(
+                            alert,
+                          )}
+                        </div>
                       </li>
                     ),
                   )}

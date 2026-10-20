@@ -6,6 +6,7 @@ import {
 
 import { formatCurrency } from '../utils/formatCurrency.js'
 import { classifySubscriptionAlerts } from '../utils/alertRules.js'
+import { useDismissedAlerts } from './useDismissedAlerts.js'
 import { useTranslations } from './useTranslations.js'
 
 const ALERT_TEXT = [
@@ -19,6 +20,7 @@ const ALERT_TEXT = [
   'free trial ends',
   'payment of',
   'is due',
+  'New subscription found in your email:',
 ]
 
 // Most urgent first: red (failed payments), orange (trials ending), blue.
@@ -50,6 +52,7 @@ export function useAlerts(
   budget,
   preferredCurrency,
   rate,
+  pendingSubscriptions = [],
 ) {
   const [
     youveSpentText,
@@ -62,7 +65,11 @@ export function useAlerts(
     freeTrialEndsText,
     paymentOfText,
     isDueText,
+    newSubscriptionText,
   ] = useTranslations(ALERT_TEXT)
+
+  const { dismissed, dismiss } =
+    useDismissedAlerts()
 
   const activeSubscriptions =
     subscriptions.filter(
@@ -88,8 +95,9 @@ export function useAlerts(
       preferredCurrency,
     )
 
-  // Each alert is { id, level, message, subscriptionId? }, where level is
-  // 'red', 'orange' or 'blue' (see utils/alertRules.js).
+  // Each alert is { id, kind, level, message, subscriptionId? }, where level
+  // is 'red', 'orange' or 'blue' (see utils/alertRules.js). Ids include the
+  // date or month an alert is about, so a dismissed one comes back next time.
   const alerts = classifySubscriptionAlerts(
     subscriptions,
   ).map(
@@ -110,13 +118,27 @@ export function useAlerts(
       }
 
       return {
-        id: `${kind}-${subscription.id}`,
+        id: `${kind}-${subscription.id}-${date}`,
+        kind,
         level,
         message,
         subscriptionId: subscription.id,
       }
     },
   )
+
+  // Email finds waiting in Pending, answered with Confirm / Reject.
+  for (const subscription of pendingSubscriptions) {
+    alerts.push({
+      id: `newSubscription-${subscription.id}`,
+      kind: 'newSubscription',
+      level: 'blue',
+      message: `${newSubscriptionText} ${subscription.name}, ${showMoney(
+        subscription.amount,
+      )} / ${subscription.billingCycle}.`,
+      subscriptionId: subscription.id,
+    })
+  }
 
   if (nearBudgetLimit) {
     const monthlyBudget =
@@ -125,8 +147,14 @@ export function useAlerts(
         budget.period,
       )
 
+    const now = new Date()
+    const month = `${now.getFullYear()}-${String(
+      now.getMonth() + 1,
+    ).padStart(2, '0')}`
+
     alerts.push({
-      id: 'budget',
+      id: `budget-${month}`,
+      kind: 'budget',
       level: 'blue',
       message: `${youveSpentText} ${showMoney(
         totalMonthlySpend,
@@ -142,7 +170,8 @@ export function useAlerts(
 
   if (cancelledCount > 0) {
     alerts.push({
-      id: 'cancelled',
+      id: `cancelled-${cancelledCount}`,
+      kind: 'cancelled',
       level: 'blue',
       message: `${cancelledCount} ${
         cancelledCount === 1
@@ -152,14 +181,20 @@ export function useAlerts(
     })
   }
 
-  alerts.sort(
-    (a, b) =>
-      LEVEL_ORDER[a.level] -
-      LEVEL_ORDER[b.level],
-  )
+  const visibleAlerts = alerts
+    .filter(
+      (alert) =>
+        !dismissed.includes(alert.id),
+    )
+    .sort(
+      (a, b) =>
+        LEVEL_ORDER[a.level] -
+        LEVEL_ORDER[b.level],
+    )
 
   return {
-    alerts,
+    alerts: visibleAlerts,
+    dismissAlert: dismiss,
     activeSubscriptions,
     totalMonthlySpend,
     nearBudgetLimit,
