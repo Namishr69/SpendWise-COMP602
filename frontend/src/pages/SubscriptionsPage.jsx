@@ -273,20 +273,30 @@ function SubscriptionsPage() {
     })
   }
 
+  const filteredSubscriptions = subscriptions.filter((sub) => {
+    if (sortBy === 'source-bank') {
+      return sub.source === 'anz-detected'
+    }
+    if (sortBy === 'source-email') {
+      return sub.source === 'gmail-detected'
+    }
+    if (sortBy === 'source-manual') {
+      return !sub.source || sub.source === 'manual'
+    }
+    return true
+  })
+
   function handleSelectAll() {
     setBulkMessage('')
     setBulkError('')
 
-    if (
-      selectedSubscriptions.length ===
-      subscriptions.length
-    ) {
+    if (allSelected) {
       setSelectedSubscriptions([])
       return
     }
 
     setSelectedSubscriptions(
-      subscriptions.map(
+      filteredSubscriptions.map(
         (subscription) => subscription.id,
       ),
     )
@@ -533,9 +543,10 @@ function SubscriptionsPage() {
   }
 
   const allSelected =
-    subscriptions.length > 0 &&
-    selectedSubscriptions.length ===
-      subscriptions.length
+    filteredSubscriptions.length > 0 &&
+    filteredSubscriptions.every((subscription) =>
+      selectedSubscriptions.includes(subscription.id),
+    )
 
   if (loading) {
     return (
@@ -554,19 +565,6 @@ function SubscriptionsPage() {
       </AppShell>
     )
   }
-
-  const filteredSubscriptions = subscriptions.filter((sub) => {
-    if (sortBy === 'source-bank') {
-      return sub.source === 'anz-detected'
-    }
-    if (sortBy === 'source-email') {
-      return sub.source === 'gmail-detected'
-    }
-    if (sortBy === 'source-manual') {
-      return !sub.source || sub.source === 'manual'
-    }
-    return true
-  })
 
   const sortedSubscriptions =
     sortBy === 'recent' ||
@@ -781,7 +779,11 @@ function SubscriptionsPage() {
               id="subscriptions-sort"
               className="subscriptions-sort__select"
               value={sortBy}
-              onChange={(event) => setSortBy(event.target.value)}
+              onChange={(event) => {
+                // Drop the selection so bulk actions never hit subs the new filter hides.
+                setSelectedSubscriptions([])
+                setSortBy(event.target.value)
+              }}
             >
               <option value="recent">Newest</option>
               <option value="renewal">Renewal date</option>

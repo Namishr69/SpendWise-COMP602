@@ -1,4 +1,5 @@
 import {
+  calculateOverBudgetAmount,
   calculateTotalMonthlySpend,
   isNearBudgetLimit,
   normalizeBudgetToMonthly,
@@ -16,6 +17,8 @@ const ALERT_TEXT = [
   "You've spent",
   'of your',
   'monthly budget',
+  "That's",
+  'over budget.',
   'cancelled subscription',
   'cancelled subscriptions',
   'payment may have failed. It was due',
@@ -27,7 +30,7 @@ const ALERT_TEXT = [
   'new subscriptions found in your email.',
 ]
 
-// Most urgent first: red (failed payments), orange (trials ending), blue.
+// Most urgent first: red (failed payments, over budget), orange (trials ending), blue.
 const LEVEL_ORDER = {
   red: 0,
   orange: 1,
@@ -62,6 +65,8 @@ export function useAlerts(
     youveSpentText,
     ofYourText,
     monthlyBudgetText,
+    thatsText,
+    overBudgetText,
     cancelledSubscriptionText,
     cancelledSubscriptionsText,
     mayHaveFailedText,
@@ -90,6 +95,12 @@ export function useAlerts(
 
   const nearBudgetLimit =
     isNearBudgetLimit(
+      totalMonthlySpend,
+      budget,
+    )
+
+  const overBudgetAmount =
+    calculateOverBudgetAmount(
       totalMonthlySpend,
       budget,
     )
@@ -173,15 +184,25 @@ export function useAlerts(
       now.getMonth() + 1,
     ).padStart(2, '0')}`
 
+    // Going over gets its own id, so dismissing the near-limit note
+    // doesn't also hide the over-budget one.
     alerts.push({
-      id: `budget-${month}`,
+      id: `${
+        overBudgetAmount > 0 ? 'budgetOver' : 'budget'
+      }-${month}`,
       kind: 'budget',
-      level: 'blue',
+      level: overBudgetAmount > 0 ? 'red' : 'blue',
       message: `${youveSpentText} ${showMoney(
         totalMonthlySpend,
       )} ${ofYourText} ${showMoney(
         monthlyBudget,
-      )} ${monthlyBudgetText}`,
+      )} ${monthlyBudgetText}${
+        overBudgetAmount > 0
+          ? `. ${thatsText} ${showMoney(
+              overBudgetAmount,
+            )} ${overBudgetText}`
+          : ''
+      }`,
     })
   }
 
@@ -219,5 +240,6 @@ export function useAlerts(
     activeSubscriptions,
     totalMonthlySpend,
     nearBudgetLimit,
+    overBudgetAmount,
   }
 }
