@@ -451,6 +451,13 @@
   margin-top: 6px;
 }
 
+.dashboard-budget-over {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-danger);
+  margin-top: 4px;
+}
+
 /* Bank-synced lists (upcoming bills, recent activity). */
 .dashboard-list {
   list-style: none;

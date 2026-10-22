@@ -21,7 +21,7 @@ const ALERTS_TEXT = [
 
   // Urgency groups, most urgent first.
   'Urgent',
-  'Payments that may have failed.',
+  'Payments that may have failed and going over budget.',
   'Ending soon',
   'Free trials about to end.',
   'Reminders',
@@ -268,7 +268,7 @@ function AlertsPage() {
     return dismissButton
   }
 
-  // Traffic-light groups: red for failed payments, orange for free trials
+  // Traffic-light groups: red for failed payments and going over budget, orange for free trials
   // ending soon, blue for standard reminders. Empty groups are not shown.
   const groups = [
     {

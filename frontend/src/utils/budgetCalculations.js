@@ -49,3 +49,13 @@ export function isNearBudgetLimit(totalMonthlySpend, budget) {
   const monthlyBudget = normalizeBudgetToMonthly(budget.amount, budget.period)
   return totalMonthlySpend >= monthlyBudget * NEAR_LIMIT_THRESHOLD
 }
+
+// How far monthly spend is over the budget's monthly equivalent, or 0 when under.
+export function calculateOverBudgetAmount(totalMonthlySpend, budget) {
+  if (!budget || !budget.amount) {
+    return 0
+  }
+
+  const monthlyBudget = normalizeBudgetToMonthly(budget.amount, budget.period)
+  return Math.max(0, totalMonthlySpend - monthlyBudget)
+}

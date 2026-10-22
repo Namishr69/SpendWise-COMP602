@@ -59,6 +59,7 @@ const DASHBOARD_TEXT = [
   'Current Budget',
   'per month',
   'spent so far',
+  'over budget',
   'No budget set. Add one in Settings.',
   'No alerts right now.',
   'Upcoming bills',
@@ -142,6 +143,7 @@ function DashboardPage() {
     currentBudgetText,
     perMonthText,
     spentSoFarText,
+    overBudgetText,
     noBudgetText,
     noAlertsText,
     upcomingBillsText,
@@ -457,6 +459,7 @@ function DashboardPage() {
     activeSubscriptions,
     totalMonthlySpend,
     nearBudgetLimit,
+    overBudgetAmount,
   } = useAlerts(
     subscriptions,
     budget,
@@ -996,6 +999,15 @@ function DashboardPage() {
                   )}{' '}
                   {spentSoFarText}
                 </p>
+
+                {overBudgetAmount > 0 && (
+                  <p className="dashboard-budget-over">
+                    {showMoney(
+                      overBudgetAmount,
+                    )}{' '}
+                    {overBudgetText}
+                  </p>
+                )}
               </>
             ) : (
               <p>
